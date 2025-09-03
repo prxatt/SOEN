@@ -1,0 +1,18 @@
+{
+  "short_name": "Praxis",
+  "name": "Praxis by Surface Tension",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#9333EA",
+  "background_color": "#0A0A0A",
+  "description": "A web application for Pratt @ Surface Tension to manage education, projects, and business growth by connecting learning to real-world applications with AI-powered insights."
+}

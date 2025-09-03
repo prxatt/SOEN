@@ -1,13 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PRAXIS AI</title>
-  <link rel="stylesheet" href="globals.css" />
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Praxis by Surface Tension</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#A855F7">
+    <link rel="apple-touch-icon" href="/icon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'accent': 'var(--color-accent)',
+              'accent-hover': 'var(--color-accent-hover)',
+              
+              'light-bg': '#FFFFFF',
+              'light-card': '#F7F7F7',
+              'light-border': '#EAEAEA',
+              'light-text': '#111827',
+              'light-text-secondary': '#6B7280',
+
+              'dark-bg': '#101010',
+              'dark-card': '#1C1C1E',
+              'dark-border': '#2D2D2F',
+              'dark-text': '#F3F4F6',
+              'dark-text-secondary': '#9CA3AF',
+
+              // Widget colors from image
+              'widget-bg': '#1A1A1A',
+              'widget-dark-teal': '#2D4A4F',
+              'widget-teal': '#42949D',
+              'widget-beige': '#D8C9B8',
+              'widget-beige-text': '#4F4A45',
+              'widget-purple': '#6D5A92',
+              'widget-pink': '#D8A6C9',
+              'widget-pink-text': '#6D4A5F',
+            },
+            borderRadius: {
+              'xl': '1rem',
+              '2xl': '1.5rem',
+            },
+            fontFamily: {
+              sans: ['"Instrument Sans"', 'sans-serif'],
+              display: ['Poppins', 'sans-serif'],
+            },
+            backdropBlur: {
+              'xl': '24px',
+            },
+            keyframes: {
+              'subtle-pulse': {
+                '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+                '50%': { opacity: '.9', transform: 'scale(1.02)' },
+              },
+              'fade-in': {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              'fade-in-fast': {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              }
+            },
+            animation: {
+              'subtle-pulse': 'subtle-pulse 3s ease-in-out infinite',
+              'fade-in': 'fade-in 0.5s ease-out forwards',
+              'fade-in-fast': 'fade-in-fast 0.2s ease-out forwards',
+            },
+          }
+        }
+      }
+    </script>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-accent: #A855F7;
+      --color-accent-hover: #9333EA;
+    }
+    [data-theme="solaris"] {
+      --color-accent: #F97316;
+      --color-accent-hover: #EA580C;
+    }
+    [data-theme="crimson"] {
+      --color-accent: #DC2626;
+      --color-accent-hover: #B91C1C;
+    }
+    [data-theme="oceanic"] {
+      --color-accent: #0EA5E9;
+      --color-accent-hover: #0284C7;
+    }
+    body {
+      color: #111827; /* light-text */
+      background-color: #FFFFFF; /* light-bg */
+    }
+    .dark body {
+      color: #F3F4F6; /* dark-text */
+      background-color: #000000; /* dark-bg */
+    }
+    /* Updated solid card style for better visibility */
+    .card {
+        @apply bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border;
+    }
+    .glass-card { /* Kept for navigation */
+        @apply bg-light-card/80 dark:bg-dark-card/80 backdrop-blur-xl border border-light-border dark:border-dark-border;
+    }
+    /* Consistent focus styles */
+    input:focus, select:focus, textarea:focus, button:focus-visible, [contenteditable]:focus {
+        @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-light-bg dark:ring-offset-dark-bg rounded-sm;
+    }
+    .break-word {
+      overflow-wrap: break-word;
+    }
+    .break-all {
+        word-break: break-all;
+    }
+  </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "react": "https://esm.sh/react@^19.1.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "react-draggable": "https://esm.sh/react-draggable@4.4.6",
+    "framer-motion": "https://esm.sh/framer-motion@^11.3.19",
+    "@google/genai": "https://esm.sh/@google/genai@^1.15.0",
+    "recharts": "https://esm.sh/recharts@^3.1.2"
+  }
+}
+</script>
+<script type="module" src="/index.js"></script>
 </head>
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
+  <body class="transition-colors duration-300 font-sans">
+    <div id="root"></div>
+  </body>
 </html>

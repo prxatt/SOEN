@@ -109,6 +109,7 @@ export type KikoTaskType =
     | 'generate_completion_image'
     | 'generate_note_thumbnail'
     | 'generate_note_text'
+    | 'generate_note_tags'
     | 'generate_note_title';
 
 export const kikoRequest = async (
@@ -190,6 +191,32 @@ export const kikoRequest = async (
             }
             break;
         
+        case 'generate_note_tags': {
+            if (!ai) throw new Error("Gemini AI not available.");
+            const { title, content } = payload as { title: string, content: string };
+            const prompt = `Analyze the following note title and content. Extract 3 to 5 relevant single-word or two-word tags for categorization. Focus on key concepts, technologies, people, or themes. Respond ONLY with a valid JSON object with a single key "tags" containing an array of strings. Note Title: "${title}". Content: "${(content || '').replace(/<[^>]*>?/gm, '').substring(0, 500)}...".`;
+            const schema = { type: Type.OBJECT, properties: { tags: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ["tags"] };
+            
+            primaryAgent = async () => {
+                const response = await ai.models.generateContent({ 
+                    model: "gemini-2.5-flash", 
+                    contents: prompt, 
+                    config: { responseMimeType: "application/json", responseSchema: schema } 
+                });
+                const jsonString = extractJson(response.text);
+                if (!jsonString) return [];
+                const result = JSON.parse(jsonString);
+                return result.tags || [];
+            };
+            
+            fallbackAgent = async () => {
+                const gptPrompt = `Analyze the note title and content, then return a JSON object with a single key "tags" containing an array of 3-5 relevant string tags. Title: "${title}", Content: "${(content || '').replace(/<[^>]*>?/gm, '').substring(0, 500)}..."`;
+                const result = await generateTextWithGPT4o(gptPrompt, { tags: [] });
+                return result.tags || [];
+            }
+            break;
+        }
+
         default:
              console.error(`Unknown Kiko task type or no primary agent defined: ${taskType}`);
              return { data: null, fallbackUsed: false };

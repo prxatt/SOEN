@@ -12,7 +12,7 @@ interface ProfileProps {
 
 const Profile: React.FC<ProfileProps> = ({ isDarkMode, toggleTheme, onLogout, praxisFlow, setScreen }) => {
   return (
-    <div>
+    <div className="h-full overflow-y-auto pb-4">
       <div className="flex items-center gap-4 mb-8">
         <img src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop" alt="Pratt" className="w-20 h-20 rounded-full object-cover"/>
         <div>

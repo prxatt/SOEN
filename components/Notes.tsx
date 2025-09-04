@@ -137,6 +137,7 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
     const [isLoadingAI, setIsLoadingAI] = useState(false);
     const editorContainerRef = useRef<HTMLDivElement>(null);
     const [isFocusMode, setIsFocusMode] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const filteredNotes = useMemo(() => {
         let filtered = notes;
@@ -226,7 +227,82 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
             debouncedUpdateNote(updated);
         }
     }
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0] && selectedNote) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const updatedNote = { ...selectedNote, imageUrl: reader.result as string };
+                setSelectedNote(updatedNote);
+                updateNote(updatedNote);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleAnalyzeImage = async () => {
+        if (!selectedNote || !selectedNote.imageUrl) return;
+
+        setIsLoadingAI(true);
+        try {
+            const [header, base64] = selectedNote.imageUrl.split(',');
+            const mimeTypeMatch = header.match(/:(.*?);/);
+            const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/png';
+
+            if (!base64 || !mimeType) throw new Error("Invalid image URL format");
+
+            const result = await kikoRequest('analyze_image', {
+                base64,
+                mimeType,
+                prompt: "Analyze this image in detail. Describe the objects, setting, mood, and potential significance."
+            });
+            
+            const analysisText = result.data;
+            const newContent = `${selectedNote.content}<hr><h3>Image Analysis</h3><p>${analysisText}</p>`;
+            handleNoteContentChange(newContent);
+
+        } catch (error) {
+            console.error("Image analysis failed", error);
+            // TODO: show toast with error
+        } finally {
+            setIsLoadingAI(false);
+        }
+    };
     
+    const handleGenerateTags = async () => {
+        if (!selectedNote) return;
+        setIsLoadingAI(true);
+        try {
+            const result = await kikoRequest('generate_note_tags', {
+                title: selectedNote.title,
+                content: selectedNote.content,
+            });
+
+            if (result.data && Array.isArray(result.data)) {
+                // Merge with existing tags, removing duplicates
+                const newTags = [...new Set([...selectedNote.tags, ...result.data])];
+                const updatedNote = { ...selectedNote, tags: newTags };
+                setSelectedNote(updatedNote);
+                updateNote(updatedNote);
+            }
+        } catch (error) {
+            console.error("Error generating tags:", error);
+            // TODO: show a toast notification on error
+        } finally {
+            setIsLoadingAI(false);
+        }
+    };
+
+    const handleRemoveTag = (tagToRemove: string) => {
+        if (selectedNote) {
+            const newTags = selectedNote.tags.filter(tag => tag !== tagToRemove);
+            const updatedNote = { ...selectedNote, tags: newTags };
+            setSelectedNote(updatedNote);
+            updateNote(updatedNote);
+        }
+    };
+
     const handleAICommand = async (command: 'summarize' | 'expand' | 'findActionItems' | 'createTable' | 'generateProposal', fullNote: boolean) => {
         if (!selectedNote) return;
         const selection = window.getSelection();
@@ -288,7 +364,7 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
     );
     
     return (
-        <div className="card rounded-2xl h-[78vh] flex overflow-hidden relative">
+        <div className="card rounded-2xl h-full flex overflow-hidden relative">
              {isNewNoteModalOpen && <NewNoteModal onClose={() => setIsNewNoteModalOpen(false)} onCreate={handleCreateNote} />}
              {isLoadingAI && <div className="absolute inset-0 bg-black/30 z-20 flex items-center justify-center text-white"><SparklesIcon className="w-6 h-6 animate-pulse"/></div>}
             
@@ -345,10 +421,52 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
                         <div className="p-3 border-b border-light-border dark:border-dark-border flex-shrink-0">
                              <div className="flex items-center">
                                 <input type="text" value={selectedNote.title} onChange={e => handleNoteTitleChange(e.target.value)} className="font-bold text-xl bg-transparent w-full focus:outline-none"/>
+                                <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
+                                <button onClick={handleGenerateTags} disabled={isLoadingAI} className="p-2 rounded-full hover:bg-accent/20 disabled:opacity-50" title="Generate Tags with AI">
+                                    <SparklesIcon className="w-5 h-5 text-light-text-secondary"/>
+                                </button>
+                                <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-full hover:bg-accent/20" title="Attach Image"><PhotoIcon className="w-5 h-5 text-light-text-secondary"/></button>
                                 <button onClick={() => setIsFocusMode(!isFocusMode)} className="p-2 rounded-full hover:bg-accent/20" title="Toggle Focus Mode"><ArrowsPointingOutIcon className="w-5 h-5 text-light-text-secondary"/></button>
                                 <button onClick={() => handleDeleteNote(selectedNote.id)} className="p-2 rounded-full hover:bg-red-500/10 text-light-text-secondary"><TrashIcon className="w-5 h-5"/></button>
                              </div>
+                             {selectedNote.tags.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2 pt-2">
+                                    {selectedNote.tags.map(tag => (
+                                        <div key={tag} className="flex items-center gap-1 bg-accent/10 text-accent text-xs font-semibold px-2 py-1 rounded-full animate-fade-in-fast">
+                                            <span>{tag}</span>
+                                            <button onClick={() => handleRemoveTag(tag)} className="hover:text-red-500 rounded-full">
+                                                <XMarkIcon className="w-3 h-3"/>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                             )}
                         </div>
+                        {selectedNote.imageUrl && (
+                            <div className="p-4 border-b border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg/50">
+                                <div className="relative group max-w-xs mx-auto">
+                                    <img src={selectedNote.imageUrl} alt="Note attachment" className="rounded-lg shadow-md w-full object-contain" />
+                                    <button 
+                                        onClick={() => {
+                                            if (selectedNote) {
+                                                const updated = {...selectedNote, imageUrl: undefined};
+                                                setSelectedNote(updated);
+                                                updateNote(updated);
+                                            }
+                                        }}
+                                        className="absolute top-2 right-2 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                                        aria-label="Remove image"
+                                    >
+                                        <XMarkIcon className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className="text-center mt-3">
+                                    <button onClick={handleAnalyzeImage} disabled={isLoadingAI} className="flex items-center gap-2 text-sm font-semibold py-2 px-4 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors mx-auto disabled:bg-gray-500">
+                                        <SparklesIcon className="w-5 h-5"/> Analyze with Kiko
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         <EditorToolbar onCommand={handleEditorCommand} onAiCommand={handleAICommand} onChat={handleChatFromSelection} />
                         <div className="relative flex-grow overflow-hidden">
                            <LightweightEditor key={selectedNote.id} content={selectedNote.content} onChange={handleNoteContentChange} />

@@ -187,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 h-full overflow-y-auto pb-4"
         >
             <GreetingWidget />
             <PerformanceWidget praxisFlow={props.praxisFlow} dailyStreak={props.dailyStreak} completionPercentage={props.completionPercentage} />

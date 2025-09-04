@@ -1,8 +1,9 @@
-import { ActionableInsight, Goal, HealthData, Task } from "../types";
+// FIX: Added 'Note' to the import to resolve type error.
+import { ActionableInsight, Goal, HealthData, MissionBriefing, Task, Note } from "../types";
 
 // NOTE: This service requires the OPENAI_API_KEY environment variable to be set.
-// Use the primary API_KEY if the specific one isn't available, for proxy/gateway compatibility.
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.API_KEY;
+// If it is not provided, the service will fall back to mocked responses.
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 /**
  * Analyzes an image with a text prompt using the OpenAI GPT-4o vision model.
@@ -62,7 +63,8 @@ export const analyzeImageWithGPT4o = async (base64Image: string, mimeType: strin
 
     } catch (error) {
         console.error("Error calling OpenAI API:", error);
-        return `Sorry, an error occurred while analyzing the image. ${error instanceof Error ? error.message : ''}`;
+        // Re-throw for the orchestrator to handle failover
+        throw error;
     }
 };
 
@@ -126,8 +128,8 @@ export const generateTextWithGPT4o = async (prompt: string, schema?: object): Pr
 
     } catch (error) {
         console.error("Error calling OpenAI text generation:", error);
-        if (schema) return {};
-        return `Sorry, an error occurred during text generation. ${error instanceof Error ? error.message : ''}`;
+        // Re-throw for the orchestrator to handle failover
+        throw error;
     }
 };
 
@@ -198,6 +200,47 @@ export const generateActionableInsightsWithGPT4o = async (task: Task, healthData
         return result;
     } catch (error) {
         console.error("Error generating insights with GPT-4o fallback:", error);
-        return { widgets: [{ type: 'text', title: 'Fallback Error', icon: 'SparklesIcon', content: 'The primary and backup AI models are currently unavailable. Please try again later.' }] };
+        throw error;
     }
 };
+
+/**
+ * Fallback function to generate the mission briefing using GPT-4o.
+ */
+export const generateBriefingWithGPT4o = async (
+    timeframe: 'day' | 'week' | 'month',
+    tasks: Task[],
+    notes: Note[],
+    healthData: HealthData
+): Promise<MissionBriefing> => {
+     const prompt = `You are Kiko, an AI Systems Architect, acting as a fallback model. Generate a mission briefing JSON based on the provided data. The output must be a valid JSON object matching the specified structure precisely.
+
+    **Data for Analysis:**
+    - Timeframe: ${timeframe}
+    - Tasks: ${tasks.length} tasks, including titles like "${tasks.slice(0, 2).map(t => t.title).join(', ')}..."
+    - Health Data: Energy is '${healthData.energyLevel}', Sleep is '${healthData.sleepQuality}'.
+
+    **JSON Structure to follow:**
+    {
+      "title": "string",
+      "summary": "string",
+      "metrics": [{ "label": "string", "value": "string", "icon": "string" }],
+      "healthRings": [{ "name": "'Activity' | 'Energy' | 'Sleep'", "value": "number (0-100)", "fill": "string (hex)" }],
+      "focusBreakdown": [{ "name": "string (category)", "value": "number (minutes)", "fill": "string (hex)" }],
+      "activityTrend": [{ "name": "string (day/date)", "value": "number (tasks completed)", "fill": "string (hex)" }],
+      "commentary": "string",
+      "categoryAnalysis": [{ "category": "string", "analysis": "string" }]
+    }
+
+    Generate a complete, valid JSON object with plausible data based on the inputs. Respond ONLY with the JSON.`;
+
+    const schema = { title: "string", summary: "string", metrics: [], healthRings: [], focusBreakdown: [], activityTrend: [], commentary: "string", categoryAnalysis: [] };
+    
+    try {
+        const result = await generateTextWithGPT4o(prompt, schema);
+        return result as MissionBriefing;
+    } catch(e) {
+        console.error("Error in GPT-4o briefing fallback:", e);
+        throw e;
+    }
+}

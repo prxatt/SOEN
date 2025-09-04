@@ -138,7 +138,10 @@ const App: React.FC = () => {
    }, [tasks]);
 
   const toggleTheme = useCallback(() => setIsDarkMode(prev => !prev), []);
-  
+  const showToast = useCallback((message: string) => {
+    setToast({ message, visible: true });
+  }, []);
+
   const addInsights = (newInsights: Insight[]) => {
     setInsights(prev => [...newInsights, ...prev]);
   }
@@ -222,13 +225,17 @@ const App: React.FC = () => {
     if (viewingTask?.id === taskId) setViewingTask(null);
 
     // AI Generations in parallel, now routed through the Kiko "Muse" Agent
-    const [imageUrl, summary] = await Promise.all([
-        (taskToComplete.location && !taskToComplete.isVirtual ? Promise.resolve(generateMapsStaticImageUrl(taskToComplete)) : kikoRequest('generate_completion_image', { task: taskToComplete })),
+    const [imageResult, summaryResult] = await Promise.all([
+        kikoRequest('generate_completion_image', { task: taskToComplete }),
         kikoRequest('generate_completion_summary', { task: taskToComplete })
     ]);
+    
+    if (summaryResult.fallbackUsed) {
+        showToast("Kiko is using a backup model for this summary.");
+    }
 
     // Final update with all AI content
-    let finalCompletedTask: Task = { ...tempCompletedTask, completionImageUrl: imageUrl, completionSummary: summary, isGeneratingInsights: true };
+    let finalCompletedTask: Task = { ...tempCompletedTask, completionImageUrl: imageResult.data, completionSummary: summaryResult.data, isGeneratingInsights: true };
     updateTask(finalCompletedTask);
     
     // Trigger background insight generation for the *completed* task
@@ -341,11 +348,12 @@ const App: React.FC = () => {
     let responseText;
     if (attachment) {
         // Route image analysis to the Vision Agent via the orchestrator
-        responseText = await kikoRequest('analyze_image', {
+        const result = await kikoRequest('analyze_image', {
             base64: attachment.base64,
             mimeType: attachment.mimeType,
             prompt: message
         });
+        responseText = result.data;
     } else {
         // Standard text chat goes to the Gemini chat model
         responseText = await continueChat(newMessages);
@@ -393,9 +401,9 @@ const App: React.FC = () => {
   const renderScreen = () => {
     switch (screen) {
       case 'Dashboard': return <Dashboard tasks={tasks} notes={notes} goals={goals} praxisFlow={totalFlow} dailyStreak={dailyStreak} completionPercentage={completionPercentage} setScreen={setScreen} />;
-      case 'Schedule': return <Schedule tasks={tasks} updateTask={updateTask} onViewTask={setViewingTask} addTask={addTask} projects={projects} notes={notes} onUndoTask={handleUndoCompleteTask} onCompleteTask={handleCompleteTask} categories={allCategories} onSyncCalendar={handleCalendarSync} />;
+      case 'Schedule': return <Schedule tasks={tasks} updateTask={updateTask} onViewTask={setViewingTask} addTask={addTask} projects={projects} notes={notes} onUndoTask={handleUndoCompleteTask} onCompleteTask={handleCompleteTask} categories={allCategories} onSyncCalendar={handleCalendarSync} showToast={showToast} />;
       case 'Notes': return <Notes notes={notes} setNotes={setNotes} notebooks={notebooks} setNotebooks={setNotebooks} addInsights={addInsights} updateNote={updateNote} addTask={(title, notebookId) => addTask({title, category: 'Prototyping', plannedDuration: 60, notebookId, startTime: new Date()})} startChatWithContext={startChatWithContext} />;
-      case 'KikoAI': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} addTask={(title) => addTask({title, category: 'Prototyping', plannedDuration: 60, startTime: new Date()})} startChatWithContext={startChatWithContext} searchHistory={searchHistory} setSearchHistory={setSearchHistory} visionHistory={visionHistory} setVisionHistory={setVisionHistory} addNote={addNote} goals={goals} setGoals={setGoals} applyInsight={applyInsight} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} projects={projects} healthData={parseHealthDataFromTasks(tasks)} />;
+      case 'KikoAI': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} addTask={(title) => addTask({title, category: 'Prototyping', plannedDuration: 60, startTime: new Date()})} startChatWithContext={startChatWithContext} searchHistory={searchHistory} setSearchHistory={setSearchHistory} visionHistory={visionHistory} setVisionHistory={setVisionHistory} addNote={addNote} goals={goals} setGoals={setGoals} applyInsight={applyInsight} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} projects={projects} healthData={parseHealthDataFromTasks(tasks)} showToast={showToast} />;
       case 'Profile': return <Profile isDarkMode={isDarkMode} toggleTheme={toggleTheme} onLogout={() => setIsAuthenticated(false)} praxisFlow={totalFlow} setScreen={setScreen} />;
       case 'Rewards': return <Rewards onBack={() => setScreen('Profile')} praxisFlow={totalFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={setActiveTheme} onPurchase={purchaseReward} />;
       default: return <Dashboard tasks={tasks} notes={notes} goals={goals} praxisFlow={totalFlow} dailyStreak={dailyStreak} completionPercentage={completionPercentage} setScreen={setScreen} />;
@@ -412,7 +420,7 @@ const App: React.FC = () => {
       </AnimatePresence>
 
       <AnimatePresence>
-        {viewingTask && <EventDetail task={viewingTask} allTasks={tasks} notes={notes} projects={projects} goals={goals} updateTask={updateTask} onClose={() => setViewingTask(null)} onComplete={() => handleCompleteTask(viewingTask.id)} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} categories={allCategories} triggerInsightGeneration={triggerInsightGeneration} />}
+        {viewingTask && <EventDetail task={viewingTask} allTasks={tasks} notes={notes} notebooks={notebooks} projects={projects} goals={goals} updateTask={updateTask} onClose={() => setViewingTask(null)} onComplete={() => handleCompleteTask(viewingTask.id)} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} categories={allCategories} triggerInsightGeneration={triggerInsightGeneration} />}
       </AnimatePresence>
 
       <div className="max-w-7xl mx-auto p-4 pb-28">

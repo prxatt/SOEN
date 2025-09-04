@@ -2,8 +2,9 @@
 import { Task } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 
-// Use the primary API_KEY if the specific one isn't available, for proxy/gateway compatibility.
-const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.API_KEY;
+// NOTE: This service requires the GROQ_API_KEY environment variable to be set.
+// If it is not provided, the service will fall back to mocked responses.
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 /**
  * Parses a natural language command into a structured task object using Groq's Llama 3 model.
@@ -12,8 +13,6 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.API_KEY;
  * @returns A promise that resolves to a partial Task object.
  */
 export const parseCommandWithLlama3 = async (command: string): Promise<Partial<Task>> => {
-    const fallbackTitle = command.startsWith('/') ? command.substring(1).trim() : command;
-
     if (!GROQ_API_KEY) {
         console.warn("Groq API key not found. Returning mocked response for Architect Agent.");
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -21,6 +20,7 @@ export const parseCommandWithLlama3 = async (command: string): Promise<Partial<T
         if (command.toLowerCase().includes('meeting')) {
              return { title: 'Mocked Meeting', category: 'Meeting', plannedDuration: 30 };
         }
+        const fallbackTitle = command.startsWith('/') ? command.substring(1).trim() : command;
         return { title: fallbackTitle };
     }
     
@@ -90,6 +90,7 @@ export const parseCommandWithLlama3 = async (command: string): Promise<Partial<T
 
     } catch (error) {
         console.error("Error calling Groq API for command parsing:", error);
-        return { title: fallbackTitle }; // Fallback to the raw title on error
+        // Re-throw the error to be caught by the orchestrator for failover.
+        throw error;
     }
 };

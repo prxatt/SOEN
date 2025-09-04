@@ -336,7 +336,7 @@ export interface HealthData {
     energyLevel: 'low' | 'medium' | 'high'; // New simulated metric
 }
 
-export type Screen = 'Dashboard' | 'Schedule' | 'Notes' | 'KikoAI' | 'Profile' | 'Rewards' | 'Projects';
+export type Screen = 'Dashboard' | 'Schedule' | 'Notes' | 'KikoAI' | 'Profile' | 'Rewards';
 
 // New types for Weather Widgets
 export type WeatherIconType = 'sun' | 'cloud' | 'rain' | 'cloud-sun' | 'cloud-rain' | 'wind' | 'snow' | 'thunderstorm';

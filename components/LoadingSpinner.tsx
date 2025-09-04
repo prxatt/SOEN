@@ -19,7 +19,11 @@ const PraxisLogo = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-const LoadingSpinner: React.FC = () => {
+interface LoadingSpinnerProps {
+    message?: string;
+}
+
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ message = "Loading..." }) => {
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       <motion.div
@@ -36,7 +40,7 @@ const LoadingSpinner: React.FC = () => {
         <PraxisLogo className="w-16 h-16 text-accent" />
       </motion.div>
       <p className="mt-4 text-light-text-secondary dark:text-dark-text-secondary font-semibold">
-        Generating daily intelligence...
+        {message}
       </p>
     </div>
   );

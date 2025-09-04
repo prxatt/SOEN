@@ -24,14 +24,13 @@ export interface Task {
   undoStatus?: TaskStatus; // To store the previous status before completion
   notebookId?: number;
   googleCalendarEventId?: string;
-  linkedUrl?: string;
+  linkedUrl?: string; // For virtual meeting links
+  referenceUrl?: string; // For articles, youtube, learning resources
   // New contextual fields
   projectId?: number;
   location?: string;
-  locationEmbedUrl?: string; // For Google Maps embed
   insights?: ActionableInsight | null; // For caching AI insights
   isGeneratingInsights?: boolean; // For non-blocking UI
-  attachmentUrls?: string[]; // For multiple file uploads
   completionImageUrl?: string; // For the visual completion background
   completionSummary?: CompletionSummary; // For AI-generated title and insight on completion
   isVirtual?: boolean; // For smart categorization
@@ -262,6 +261,10 @@ export interface CreativeSpark {
 export interface ChatMessage {
     role: 'user' | 'model';
     text: string;
+    attachment?: {
+        base64: string;
+        mimeType: string;
+    };
 }
 
 export interface SearchResult {
@@ -352,6 +355,41 @@ export interface WeatherData {
         icon: WeatherIconType;
     }[];
 }
+
+// --- NEW MISSION CONTROL BRIEFING ---
+export interface BriefingMetric {
+    label: string;
+    value: string;
+    change?: string; // e.g., "+5%"
+    changeType?: 'positive' | 'negative';
+    icon: string; 
+}
+
+export interface BriefingChartDataPoint {
+    name: string; // e.g., 'Mon', 'Tue' or 'Learning', 'Workout'
+    value: number;
+    fill: string; // Hex color for the chart
+}
+
+// Data for the new health ring chart
+export interface HealthRingMetric {
+    name: 'Activity' | 'Energy' | 'Sleep';
+    value: number; // 0-100
+    fill: string;
+}
+
+export interface MissionBriefing {
+    title: string; // e.g., "Today's Mission"
+    summary: string;
+    metrics: BriefingMetric[];
+    healthRings: HealthRingMetric[]; // For the new multi-ring health chart
+    focusBreakdown: BriefingChartDataPoint[]; // For a pie/radial chart
+    activityTrend: BriefingChartDataPoint[]; // For a bar/line chart
+    commentary: string; // AI-driven commentary on the charts
+    // FIX: Changed from Record<string, string> to a structured array to avoid API schema errors.
+    categoryAnalysis: { category: string; analysis: string; }[];
+}
+
 
 export interface ProjectStatusReport {
     summary: string;

@@ -1,76 +1,52 @@
 import { GoogleGenAI, Type, Chat } from "@google/genai";
-import { Insight, Task, TaskPrep, ActionItem, Note, StrategicBriefing, ChatMessage, SearchResult, Goal, MindMapNode, MindMapEdge, HealthData, Category, ActionableInsight, TaskStatus, InsightWidgetData, CompletionSummary, WeatherWidget, Project, ProjectStatusReport } from '../types';
+import { Insight, Task, TaskPrep, ActionItem, Note, StrategicBriefing, ChatMessage, SearchResult, Goal, MindMapNode, MindMapEdge, HealthData, Category, ActionableInsight, TaskStatus, InsightWidgetData, CompletionSummary, WeatherWidget, Project, ProjectStatusReport, MissionBriefing } from '../types';
 import { DEFAULT_CATEGORIES } from "../constants";
 import { applyWatermark } from "../utils/imageUtils";
+import { analyzeImageWithGPT4o, generateActionableInsightsWithGPT4o } from "./openAIService";
+import { kikoRequest } from "./kikoAIService";
+import { extractJson } from "../utils/jsonUtils";
+
 
 const API_KEY = process.env.API_KEY;
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 // In a real app, you would manage chat instances more robustly.
 let chatInstance: Chat | null = null;
-let chatSystemInstruction = 'You are Kiko, a helpful and insightful AI assistant.';
+let chatSystemInstruction = `You are Kiko, the smartest and most positive AI assistant. You are a hyper-intelligent, encouraging partner to Pratt, founder of the creative brand 'Surface Tension'. Your tone is confident, insightful, and slightly edgy. Your primary goal is to help Pratt turn his ideas into highly monetizable, industry-leading projects.`;
 
-// A robust function to extract a JSON string from a larger text block
-const extractJson = (text: string): string | null => {
-    if (!text) return null;
-
-    // First, try to find a JSON blob inside markdown ```json ... ```
-    const markdownMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
-    if (markdownMatch && markdownMatch[1]) {
-        return markdownMatch[1].trim();
+// FIX: Add missing function to generate Google Maps embed URLs.
+export const generateMapsEmbedUrl = (query: string): string => {
+    if (!API_KEY) {
+        console.warn("API Key not found, returning basic maps link.");
+        return `https://www.google.com/maps?q=${encodeURIComponent(query)}`;
     }
-
-    // If no markdown, find the first '{' or '[' to start from
-    const firstBracketIndex = text.search(/[{[]/);
-    if (firstBracketIndex === -1) {
-        return null; // No JSON structure found
-    }
-
-    const startChar = text[firstBracketIndex];
-    const endChar = startChar === '{' ? '}' : ']';
-    let balance = 0;
-    let endIndex = -1;
-
-    // Iterate through the string to find the matching closing bracket
-    for (let i = firstBracketIndex; i < text.length; i++) {
-        if (text[i] === startChar) {
-            balance++;
-        } else if (text[i] === endChar) {
-            balance--;
-        }
-
-        if (balance === 0) {
-            endIndex = i;
-            // Found a balanced structure, let's try to parse it.
-            const potentialJson = text.substring(firstBracketIndex, endIndex + 1);
-            try {
-                JSON.parse(potentialJson);
-                // It's valid JSON, so we can return it.
-                return potentialJson;
-            } catch (e) {
-                // It was a false positive (e.g., mismatched brackets in a string literal).
-                // Reset end index and continue searching.
-                endIndex = -1;
-            }
-        }
-    }
-    
-    // Fallback for cases where balancing fails but there's a clear structure.
-    if (endIndex === -1) {
-      const lastBracketIndex = text.lastIndexOf(endChar);
-      if (lastBracketIndex > firstBracketIndex) {
-        return text.substring(firstBracketIndex, lastBracketIndex + 1);
-      }
-    }
-
-    return null; // Return null if no valid JSON is found
+    return `https://www.google.com/maps/embed/v1/place?key=${API_KEY}&q=${encodeURIComponent(query)}`;
 };
 
-
-export const generateMapsEmbedUrl = (query: string): string => {
-    // FIX: Use the environment variable for the API key as required for security.
-    return `https://www.google.com/maps/embed/v1/place?key=${API_KEY}&q=${encodeURIComponent(query)}`;
+export const generateMapsStaticImageUrl = (task: Task): string => {
+     if (!API_KEY || !task.location || task.isVirtual) {
+        return `https://source.unsplash.com/random/1920x1080?${encodeURIComponent(task.title)}`;
+    }
+    return `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(task.location)}&zoom=15&size=1280x720&maptype=roadmap&key=${API_KEY}`;
 }
+
+export const generateImageWithImagen = async (prompt: string, aspectRatio: '16:9' | '4:3' | '1:1'): Promise<string> => {
+    if (!ai) {
+        return `https://source.unsplash.com/random/1920x1080?${encodeURIComponent(prompt)}`;
+    }
+    try {
+        const response = await ai.models.generateImages({
+            model: 'imagen-4.0-generate-001', prompt, config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio }
+        });
+        const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
+        const watermarkedImage = await applyWatermark(`data:image/jpeg;base64,${base64ImageBytes}`);
+        return watermarkedImage;
+    } catch (error) {
+        console.error("Error generating image with Imagen:", error);
+        return `https://source.unsplash.com/random/1920x1080?error`;
+    }
+};
+
 
 export const getAutocompleteSuggestions = async (query: string): Promise<{place_name: string; address: string}[]> => {
     if (!ai || query.length < 3) return [];
@@ -106,55 +82,6 @@ export const getAutocompleteSuggestions = async (query: string): Promise<{place_
         return [];
     }
 }
-
-
-export const generateCompletionImage = async (task: Task): Promise<string> => {
-     if (!ai) {
-        return `https://source.unsplash.com/random/800x400?${encodeURIComponent(task.title)}`;
-    }
-
-    let prompt: string;
-    const workoutKeywords = ['run', 'jog', 'cardio', 'tempo run', '5k', '10k', 'marathon', 'boxing'];
-    const isWorkout = task.category === 'Workout' && workoutKeywords.some(kw => task.title.toLowerCase().includes(kw));
-
-    if (isWorkout) {
-        prompt = `Generate a visually stunning, artistic image for a completed workout: "${task.title}". The aesthetic should be like a premium fitness app's summary screen: dark, sleek, motivational, with vibrant accent colors. Instead of literal charts, use abstract shapes and dynamic lines to represent key metrics like speed, heart rate, and distance. The feeling should be energetic and triumphant.`;
-    } else {
-        prompt = `A visually stunning, triumphant, abstract, artistic representation of successfully completing the task: "${task.title}". Use a sophisticated, minimalist style with a motivational feel. Category is ${task.category}.`;
-    }
-
-    try {
-        const response = await ai.models.generateImages({
-            model: 'imagen-4.0-generate-001', prompt: prompt, config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio: '16:9' }
-        });
-        const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-        const watermarkedImage = await applyWatermark(`data:image/jpeg;base64,${base64ImageBytes}`);
-        return watermarkedImage;
-    } catch (error) {
-        console.error("Error generating completion image:", error);
-        return `https://source.unsplash.com/random/800x400?success`;
-    }
-}
-
-export const generateCompletionSummary = async (task: Task): Promise<CompletionSummary> => {
-    if(!ai) return { newTitle: `${task.title} - Done!`, shortInsight: 'Great work!'};
-    const prompt = `The user just completed the task: "${task.title}". Generate a short, triumphant, and slightly edgy new title for this completed task (e.g., "5k Run" becomes "5k Conquered"). Also, provide a one-sentence, insightful, and encouraging summary of the accomplishment. Ensure the response is grammatically correct and spelled perfectly.`;
-    const schema = {
-        type: Type.OBJECT,
-        properties: {
-            newTitle: { type: Type.STRING },
-            shortInsight: { type: Type.STRING }
-        }
-    };
-     try {
-        const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt, config: { responseMimeType: "application/json", responseSchema: schema, thinkingConfig: { thinkingBudget: 0 } } });
-        return JSON.parse(response.text) as CompletionSummary;
-    } catch (error) {
-        console.error("Error generating completion summary:", error);
-        return { newTitle: `${task.title} - Completed`, shortInsight: 'Task finished successfully.'};
-    }
-};
-
 
 export const parseHealthDataFromTasks = (tasks: Task[]): HealthData => {
     const healthData: HealthData = {
@@ -243,111 +170,119 @@ const generateImageFromNoteContext = async (task: Task, notes: Note[]): Promise<
      if(!note) return null;
 
      const prompt = `The user is working on a task "${task.title}". Based on the context of their note titled "${note.title}", generate a visually striking, artistic image that could inspire them. Note Content: "${(note?.content || '').replace(/<[^>]*>?/gm, '').substring(0, 300)}...". The image should be abstract and high-concept.`;
-     try {
-        const response = await ai.models.generateImages({
-            model: 'imagen-4.0-generate-001', prompt, config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio: '1:1' }
-        });
-        const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-        const watermarkedImage = await applyWatermark(`data:image/jpeg;base64,${base64ImageBytes}`);
-        return {
-            type: 'generated_image',
-            title: "Creative Spark",
-            prompt: `Inspired by your note: "${note.title}"`,
-            imageUrl: watermarkedImage
-        };
-     } catch (error) {
-         console.error("Error generating image from note context:", error);
-         return null;
-     }
+     const imageUrl = await generateImageWithImagen(prompt, '1:1');
+     if (imageUrl.includes('unsplash')) return null; // Check for fallback
+     return {
+        type: 'generated_image',
+        title: "Creative Spark",
+        prompt: `Inspired by your note: "${note.title}"`,
+        imageUrl
+     };
 }
 
 
 export const parseTaskFromString = async (input: string): Promise<Partial<Task>> => {
-    if (!ai || !input.startsWith('/')) {
-        return { title: input.startsWith('/') ? input.substring(1).trim() : input };
+    // This function now acts as an orchestrator, routing this specific task to the "Architect Agent" via kikoRequest.
+    if (!input.startsWith('/')) {
+        return { title: input };
     }
 
-    const prompt = `Parse the user's natural language input, which starts with '/', into a structured task. The current date is ${new Date().toDateString()}.
-    - Extract the core title.
-    - Determine a category from this list: [${DEFAULT_CATEGORIES.join(', ')}].
-    - Determine if it's an in-person or virtual event. An event is virtual if it mentions online platforms (Zoom, Google Meet) or is a digital activity (online course). Otherwise, it's in-person.
-    - Extract location query if present (e.g., "near-by stores", "at Central Park").
-    - Extract a recipe query if it's a food-related task (e.g., "Tofu Curry Bahn Mi").
-    - Extract time, duration, and repetition.
-    Input: "${input.substring(1).trim()}"
-    
-    Examples:
-    - "Grocery shopping for Tofu Curry Bahn Mi for dinner @ 5pm near-by stores" -> { "title": "Grocery Shopping", "category": "Prototyping", "isVirtual": false, "location": "nearby grocery stores", "recipeQuery": "Tofu Curry Bahn Mi for 2 people", "startTime": "17:00" }
-    - "Team sync on Zoom tomorrow at 10am for 30 minutes" -> { "title": "Team Sync", "category": "Meeting", "isVirtual": true, "linkedUrl": "Zoom", "startTime": "10:00", "plannedDuration": 30 }
-    - "Run 5k every morning at 7" -> { "title": "Run 5k", "category": "Workout", "isVirtual": false, "repeat": "daily", "startTime": "07:00" }
-    - "AI for Everyone course work" -> { "title": "AI for Everyone course work", "category": "Learning", "isVirtual": true }
-    `;
-
-    const schema = {
-        type: Type.OBJECT,
-        properties: {
-            title: { type: Type.STRING },
-            category: { type: Type.STRING, enum: DEFAULT_CATEGORIES },
-            isVirtual: { type: Type.BOOLEAN },
-            location: { type: Type.STRING },
-            linkedUrl: { type: Type.STRING },
-            recipeQuery: { type: Type.STRING },
-            startTime: { type: Type.STRING, description: "Time in HH:MM format" },
-            plannedDuration: { type: Type.INTEGER },
-            repeat: { type: Type.STRING, enum: ['none', 'daily', 'weekly', 'monthly'] },
-        }
-    };
-
     try {
-        const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt, config: { responseMimeType: "application/json", responseSchema: schema, thinkingConfig: { thinkingBudget: 0 } } });
-        const result = JSON.parse(response.text);
+        const result = await kikoRequest('parse_command', { command: input });
 
-        if (result.location) {
-            result.locationEmbedUrl = generateMapsEmbedUrl(result.location);
+        // Post-processing to ensure startTime is a Date object, as the rest of the app expects.
+        if (result.startTime && typeof result.startTime === 'string') {
+            const date = new Date(result.startTime);
+            // If the parsed date is invalid, handle it gracefully.
+            if (!isNaN(date.getTime())) {
+                result.startTime = date;
+            } else {
+                delete result.startTime; // Remove invalid date
+            }
         }
         
-        if (result.startTime) {
-            const [hours, minutes] = result.startTime.split(':');
-            const date = new Date();
-            date.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-            result.startTime = date;
-        } else {
+        // If no valid startTime was parsed, default to one hour from now.
+        if (!result.startTime) {
              const date = new Date();
              date.setHours(date.getHours() + 1, 0, 0, 0);
              result.startTime = date;
         }
 
-        return result as Partial<Task>;
+        return result;
     } catch (error) {
-        console.error("Error parsing task string:", error);
-        return { title: input.substring(1).trim() };
+        console.error("Error parsing task string via Architect Agent:", error);
+        return { title: input.substring(1).trim() }; // Fallback on error
     }
 }
 
 
-export const generateActionableInsights = async (task: Task, healthData: HealthData, notes: Note[], inferredHomeLocation: string | null, goals: Goal[], allTasks: Task[]): Promise<ActionableInsight | null> => {
+export const generateActionableInsights = async (task: Task, healthData: HealthData, notes: Note[], inferredHomeLocation: string | null, goals: Goal[], allTasks: Task[], isRegeneration = false): Promise<ActionableInsight | null> => {
     if (!ai) { return null; }
 
-    const primaryGoal = goals.find(g => g.term === 'mid' && g.status === 'active')?.text || "achieve peak performance";
-    const today = new Date().toDateString();
-    const todaysOtherTasks = allTasks
-        .filter(t => t.id !== task.id && new Date(t.startTime).toDateString() === today && t.status !== TaskStatus.Completed)
-        .map(t => t.title)
-        .join(', ');
+    const primaryGoal = goals.find(g => g.term === 'mid' && g.status === 'active')?.text || "achieve peak performance and build a successful business";
+    const todaysOtherTasks = allTasks.filter(t => t.id !== task.id && new Date(t.startTime).toDateString() === new Date().toDateString() && t.status !== TaskStatus.Completed).map(t => t.title).join(', ');
 
-    const systemInstruction = `You are Kiko, a multi-faceted AI agent acting as a strategic advisor, operations expert, and creative muse for Pratt, a creative entrepreneur. Your goal is to provide diverse, actionable, and insightful widgets related to his tasks. Strictly adhere to the provided JSON schema. Ensure all generated content is concise and directly relevant.`;
+    // Sanitize note content to prevent API errors
+    const linkedNoteContent = task.notebookId ? (notes.find(n => n.id === task.notebookId)?.content || '').replace(/<[^>]*>?/gm, '').substring(0, 500) : '';
+
+    const systemInstruction = `You are Kiko, a hyper-intelligent AI strategist. Your goal is to provide diverse, actionable, and visually engaging widgets to help Pratt, founder of 'Surface Tension', achieve his goals. Strictly adhere to the provided JSON schema. Ensure all content is concise, directly relevant, and spelled perfectly. The current date and time is ${new Date().toString()}.`;
     
-    let mission = `
-    **MISSION BRIEFING:**
-    - **Primary Goal:** "${primaryGoal}"
-    - **Task in Focus:** "${task.title}" (Category: ${task.category}, Status: ${task.status})
-    - **Today's Landscape:** Other tasks for today include: ${todaysOtherTasks || 'None'}.
-    
-    **YOUR DIRECTIVES (Generate 2-4 diverse widgets):**
-    1.  **As a Strategic Advisor:** How does this task connect to the primary goal? What's the bigger picture? (e.g., a TextWidget with strategic commentary).
-    2.  **As an Operations Expert:** Provide tools, data, or efficiency tips. (e.g., KeyMetricWidget, AreaChartWidget, MapWidget, WeatherWidget if location is present).
-    3.  **As a Creative Muse:** Offer an unexpected angle or an inspiring idea. (e.g., GeneratedImageWidget based on linked notes, or a TextWidget with out-of-the-box ideas).
-    `;
+    let mission: string;
+    const isLearningTask = task.category === 'Learning' || (task.referenceUrl && (task.referenceUrl.includes('youtube.com') || task.referenceUrl.includes('coursera.org') || task.referenceUrl.includes('edx.org'))) || (task.title.toLowerCase().includes('learning'));
+
+    if (isLearningTask) {
+        mission = `
+        **MISSION: ACT AS A LEARNING ACCELERATOR & STRATEGIST**
+        The user is engaged in a learning task. Analyze the task title and linked URL to provide visually engaging, actionable insights that connect this knowledge to their primary goal of building monetizable products.
+        
+        **TASK DATA:**
+        - **Task Title:** "${task.title}"
+        - **Reference URL:** ${task.referenceUrl || 'Not provided.'}
+        - **User Primary Goal:** "${primaryGoal}"
+
+        **YOUR DIRECTIVES (Generate 3-4 diverse, visual widgets):**
+        1.  **Key Concepts (KeyMetricWidget):** Identify 2-3 core concepts from the learning topic. Use icons like 'LightBulbIcon', 'BrainCircuitIcon', 'BookOpenIcon'. Be creative and assign a relevant value/unit, e.g., Value: "8/10", Unit: "Complexity".
+        2.  **Learning Velocity (RadialChartWidget):** Create a "Learning Velocity" score. For this task, give a score of 85% to show progress and encourage completion. Label it "Focus". Use color '#A855F7' (purple).
+        3.  **Monetization Idea (TextWidget):** Generate one novel, specific idea for a digital product or feature that applies the concepts from this learning task to the user's industry (creative events, branding). Use icon 'RocketIcon'.
+        4.  **Related Resources (TextWidget with links):** Find 1-2 real, high-quality online articles or tools related to the topic. Provide valid URLs. Use icon 'LinkIcon'.
+        `;
+    } else if (task.category === 'Workout') {
+        const workoutData = `
+        - **Workout Title:** "${task.title}"
+        - **Planned Duration:** ${task.plannedDuration} minutes.
+        - **User's Overall Health State:** Energy level is '${healthData.energyLevel}', Sleep quality is '${healthData.sleepQuality}'.
+        - **Recent Workout Mix:** ${Object.keys(healthData.workoutTypes).join(', ')}.
+        - **User Primary Goal:** "${primaryGoal}"
+        `;
+
+        mission = `
+        **MISSION: ACT AS AN ELITE PERFORMANCE & RECOVERY COACH**
+        The user, Pratt, is preparing for a workout. Analyze the following data to provide insights like Apple Health or Whoop. The goal here is peak physical and cognitive performance, not business monetization. Emphasize data visualization.
+        
+        **WORKOUT DATA:**
+        ${workoutData}
+
+        **YOUR DIRECTIVES (Generate 3-4 diverse widgets, prioritizing visual charts):**
+        1.  **Performance Metrics (KeyMetricWidget):** Generate 2-3 key performance indicators. For a run, this could be "Target Pace" or "Distance Goal". For boxing, "Intensity Focus" or "Est. Calories Burn". Be creative and realistic. Use icons like 'FireIcon', 'BoltIcon', 'RocketIcon'.
+        2.  **Readiness Score (RadialChartWidget):** Create a "Readiness Score" as a percentage. Base it on the provided energy/sleep data. A 'poor' sleep quality should result in a score below 60%. 'Good' sleep should be above 85%. Label it "Readiness". Use color '#06B6D4' (cyan).
+        3.  **Coaching Insight (TextWidget):** Provide a concise, actionable tip. Connect the workout to cognitive performance. Example: "This high-intensity session boosts BDNF, critical for creative thinking. Prioritize hydration to maintain focus for your afternoon 'Prototyping' task." Use icon 'BrainCircuitIcon'.
+        4.  **Recovery Nutrition (RecipeWidget):** Suggest a simple, healthy post-workout meal or snack. Provide a name, a short list of key ingredients (3-5), and a one-sentence instruction. For sourceUrl, use a placeholder like "https://example.com/health-recipes".
+        `;
+    } else {
+        mission = `
+        **MISSION BRIEFING FOR TASK: "${task.title}"**
+        - **User:** Pratt, founder of 'Surface Tension'.
+        - **Primary Goal:** "${primaryGoal}"
+        - **Task in Focus:** "${task.title}" (Category: ${task.category}, Status: ${task.status})
+        - **Linked Note Context (Sanitized):** ${linkedNoteContent || 'None'}
+        - **Today's Other Tasks:** ${todaysOtherTasks || 'None'}
+        
+        **YOUR DIRECTIVES (Generate 2-4 diverse widgets):**
+        1.  **Mission Context:** How does this task connect to his primary goal? Is there an industry gap this relates to? (Use TextWidget).
+        2.  **Operations Expert:** Provide practical tools, data, or efficiency tips. (Use KeyMetricWidget, AreaChartWidget, MapWidget, WeatherWidget).
+        3.  **Creative Muse:** Offer an unexpected, inspiring idea. If a note is linked, generate an inspiring image from its context (Use GeneratedImageWidget).
+        `;
+    }
     
     const schema = {
         type: Type.OBJECT,
@@ -357,26 +292,38 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
                 items: {
                     type: Type.OBJECT,
                     properties: {
-                        type: { type: Type.STRING, enum: ['area', 'radial', 'metric', 'text', 'map', 'generated_image', 'weather'] },
+                        type: { type: Type.STRING, enum: ['area', 'radial', 'metric', 'text', 'map', 'generated_image', 'weather', 'recipe'] },
                         title: { type: Type.STRING },
+                        // ChartWidget properties
                         data: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, value: { type: Type.NUMBER }, fill: { type: Type.STRING } } } },
                         commentary: { type: Type.STRING },
                         stroke: { type: Type.STRING },
-                        value: { type: Type.NUMBER }, // FIX: Changed to NUMBER to align with RadialChartWidget type.
+                        // RadialChartWidget properties
+                        value: { type: Type.NUMBER }, 
                         label: { type: Type.STRING },
+                        // KeyMetricWidget properties
                         unit: { type: Type.STRING },
                         icon: { type: Type.STRING },
                         color: { type: Type.STRING },
+                        // TextWidget properties
                         content: { type: Type.STRING },
                         links: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, url: { type: Type.STRING } } } },
+                        // MapWidget properties
                         locationQuery: { type: Type.STRING },
                         embedUrl: { type: Type.STRING },
+                        // GeneratedImageWidget properties
                         prompt: { type: Type.STRING },
                         imageUrl: { type: Type.STRING },
+                        // WeatherWidget properties
                         location: { type: Type.STRING },
                         currentTemp: { type: Type.NUMBER },
                         conditionIcon: { type: Type.STRING },
-                        hourlyForecast: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { time: {type: Type.STRING}, temp: {type: Type.NUMBER}, icon: {type: Type.STRING} } } }
+                        hourlyForecast: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { time: {type: Type.STRING}, temp: {type: Type.NUMBER}, icon: {type: Type.STRING} } } },
+                        // RecipeWidget properties
+                        name: { type: Type.STRING },
+                        sourceUrl: { type: Type.STRING },
+                        ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        quick_instructions: { type: Type.STRING }
                     }
                 }
             }
@@ -385,7 +332,14 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
     };
     
     try {
-        const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: mission, config: { responseMimeType: "application/json", responseSchema: schema, systemInstruction: systemInstruction } });
+        const config = { 
+            responseMimeType: "application/json", 
+            responseSchema: schema, 
+            systemInstruction: systemInstruction,
+            // Use no thinking budget for initial load for speed, allow more for quality on regeneration.
+            thinkingConfig: isRegeneration ? undefined : { thinkingBudget: 0 } 
+        };
+        const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: mission, config });
         const jsonString = extractJson(response.text);
         if (!jsonString) { throw new Error("Primary insight generation failed: No valid JSON found."); }
         
@@ -394,7 +348,7 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
         // Post-process to fill in generated content
         for (let i = 0; i < result.widgets.length; i++) {
             const widget = result.widgets[i];
-            if (widget.type === 'generated_image') {
+            if (widget.type === 'generated_image' && !widget.imageUrl) { // Only generate if URL is missing
                 const generatedImageWidget = await generateImageFromNoteContext(task, notes);
                 if (generatedImageWidget) result.widgets[i] = generatedImageWidget;
             }
@@ -405,43 +359,17 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
         }
         return result;
 
-    } catch (error) {
-        console.error("Primary insight generation failed:", error, "Initiating self-healing protocol.");
-
-        // SELF-HEALING: If the complex prompt fails, try a simpler one.
-        try {
-            const simplePrompt = `The user is working on a task: "${task.title}". Provide a single, helpful, and concise text-based insight or tip related to this task.`;
-            const simpleSchema = {
-                type: Type.OBJECT,
-                properties: {
-                    widgets: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                type: { type: Type.STRING, enum: ['text'] },
-                                title: { type: Type.STRING },
-                                icon: { type: Type.STRING },
-                                content: { type: Type.STRING },
-                            },
-                            required: ['type', 'title', 'icon', 'content'],
-                        }
-                    }
-                },
-                required: ['widgets'],
-            };
-            const fallbackResponse = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: simplePrompt, config: { responseMimeType: "application/json", responseSchema: simpleSchema } });
-            const jsonString = extractJson(fallbackResponse.text);
-            if (!jsonString) { throw new Error("Self-healing failed: No JSON found in fallback."); }
-            return JSON.parse(jsonString) as ActionableInsight;
-
-        } catch (fallbackError) {
-             console.error("Self-healing protocol failed:", fallbackError);
-             return { widgets: [{ type: 'text', title: 'Insight Error', icon: 'SparklesIcon', content: 'Could not generate AI insights at this time. Please try regenerating.' }] };
+    } catch (error: any) {
+        console.error("Primary insight generation failed with Gemini:", error);
+        // Fallback to GPT-4o on rate limit error
+        if (error.toString().includes("429") || error.toString().includes("RESOURCE_EXHAUSTED")) {
+            console.warn("Gemini rate limit hit. Falling back to GPT-4o for insights.");
+            return generateActionableInsightsWithGPT4o(task, healthData, goals);
         }
+
+        return { widgets: [{ type: 'text', title: 'Insight Error', icon: 'SparklesIcon', content: `Kiko had trouble generating insights. This might be due to the content of the task or linked note. Please try regenerating.\n\n*Error: ${error instanceof Error ? error.message : String(error)}*` }] };
     }
 };
-
 
 export const getChatFollowUp = async (task: Task, chatHistory: ChatMessage[]): Promise<string> => {
     if (!ai) return "This is a mocked response.";
@@ -515,31 +443,6 @@ export const generateTagsForNote = async (noteTitle: string, noteContent: string
     } catch (error) { console.error("Error generating tags:", error); return []; }
 };
 
-export const generateTextForNote = async (instruction: 'summarize' | 'expand' | 'findActionItems' | 'createTable' | 'generateProposal', text: string, noteContent?: string): Promise<string | ActionItem[]> => {
-    if (!ai) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        if (instruction === 'findActionItems') return [{ title: "Schedule follow-up meeting" }, { title: "Draft proposal based on notes" }];
-        return "Mock response.";
-    }
-    if (instruction === 'findActionItems') {
-        const prompt = `Analyze the following text and extract any clear, actionable tasks or to-do items. If no specific action items are found, return an empty array. Text:\n\n---\n${text}\n---`;
-        const schema = { type: Type.OBJECT, properties: { action_items: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING } }, required: ["title"] }}}, required: ["action_items"] };
-        try {
-            const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt, config: { responseMimeType: "application/json", responseSchema: schema } });
-            return (JSON.parse(response.text)).action_items || [];
-        } catch (e) { console.error(e); return []; }
-    }
-    let prompt = '';
-    if (instruction === 'summarize') prompt = `Summarize the following text concisely:\n\n---\n${text}\n---`;
-    if (instruction === 'expand') prompt = `Expand on the following point, adding more detail, context, or examples:\n\n---\n${text}\n---`;
-    if (instruction === 'createTable') prompt = `Based on the following text, create a simple HTML table. The text is: "${text}". Only return the <table>...</table> HTML.`;
-    if (instruction === 'generateProposal') prompt = `I am Pratt from Surface Tension. Draft a short, professional proposal introduction for a new project with "${text}" (the client's name). Use the following case study content from my notes as a reference: \n\n---\n${(noteContent || '').replace(/<[^>]*>?/gm, '')}\n---\n\nThe tone should be confident, luxurious, and underground.`;
-    try {
-        const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt });
-        return response.text || "Could not generate response.";
-    } catch (error) { return "Could not generate response."; }
-}
-
 export const generateNoteFromTemplate = async (templateType: 'daily_planner' | 'case_study'): Promise<any> => {
      if (templateType === 'case_study') {
         return {
@@ -557,68 +460,9 @@ export const generateNoteFromTemplate = async (templateType: 'daily_planner' | '
     } catch (error) { return { error: "Could not generate template content." }; }
 };
 
-
-export const generateDailyBriefing = async (tasks: Task[], notes: Note[], goals: Goal[]): Promise<StrategicBriefing> => {
-    const healthData = parseHealthDataFromTasks(tasks);
-
-    if (!ai) {
-        console.warn("Gemini API key not found. Returning mock data.");
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return {
-            goal_progress: { commentary: "Mock: You're making steady progress on your app prototype goal.", goals: [{ text: "Prototype an addictive app", progress_percentage: 25, aligned_tasks: ["App Monetization Strategy Prototype"] }] },
-            health_and_performance: { commentary: "Mock: Consistent workouts this week. Consider scheduling deep work away from intense sessions.", metrics: [{ metric: "Total Workouts", value: "2" }] },
-            learning_synthesis: { commentary: "Mock: Your notes on 'Prompt Engineering' and 'AI' are converging.", connections: [{ concept_A: "Chain of Thought", concept_B: "User Onboarding", novel_idea: "Use Chain of Thought prompting to generate a personalized, interactive onboarding flow for new app users." }] },
-            resource_radar: [{ title: "Lenny's Newsletter - How the most successful apps monetize", url: "https://example.com", relevance_summary: "Directly relevant to your app monetization task." }],
-            creative_sparks: [{ idea: "Gamify your app's onboarding using principles from your 'Advanced Prompting' notes.", rationale: "Creates an engaging, 'addictive' first impression." }]
-        };
-    }
-
-    const completedTasksSummary = tasks.filter(t => t.status === 'Completed').map(t => `${t.title} (${t.category})`).join(', ');
-    const recentNotesSummary = notes.slice(0, 5).map(n => `Title: ${n.title}\nContent: ${(n?.content || '').replace(/<[^>]*>?/gm, '').substring(0, 150)}...`).join('\n---\n');
-    const goalsSummary = goals.map(g => `(${g.term}-term) ${g.text}`).join('\n');
-    const healthSummary = `Recent workouts: ${healthData.totalWorkouts}. Total time: ${healthData.totalWorkoutMinutes} mins. Types: ${JSON.stringify(healthData.workoutTypes)}. Avg Sleep: ${healthData.avgSleepHours.toFixed(1)} hours.`;
-    
-    const prompt = `You are Kiko, a hyper-personalized AI advisor for Pratt, founder of 'Surface Tension'. His goal is to be at 100% in everything he does. Analyze his data to provide a strategic daily briefing. Be insightful, concise, and slightly edgy, like a trusted advisor.
-    
-    **CONTEXT:**
-    - **His Goals:**\n${goalsSummary}
-    - **Today's Tasks:** ${tasks.filter(t => t.startTime.toDateString() === new Date().toDateString()).map(t => t.title).join(', ')}
-    - **Recent Health Data:** ${healthSummary}
-    - **Recent Learning Notes:**\n${recentNotesSummary || 'None'}
-    
-    **BRIEFING STRUCTURE (generate JSON for each module):**
-    
-    1.  **Goal Progress:** Rate his recent activities against his goals. Provide commentary and a progress percentage for 1-2 key goals.
-    2.  **Health & Performance:** Analyze his health data. Offer a key insight on how his physical activity might impact his cognitive performance. If simulated recovery data seems low, gently suggest rescheduling a demanding cognitive task to prioritize rest and peak performance.
-    3.  **Learning Synthesis:** Connect concepts from DIFFERENT notes. Find a novel intersection relevant to his goals. Create a new, actionable idea from this synthesis.
-    4.  **Resource Radar:** Provide 1-2 curated articles, videos, or tools directly related to his immediate goals and recent learning. Summarize WHY each is relevant. Provide real, valid URLs.
-    5.  **Creative Sparks:** A fun, addictive section. Offer one unexpected, "out-of-the-box" idea. E.g., "Idea: Gamify your app's onboarding using principles from your 'Advanced Prompting' notes."`;
-
-    const schema = {
-        type: Type.OBJECT,
-        properties: {
-            goal_progress: { type: Type.OBJECT, properties: { commentary: { type: Type.STRING }, goals: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING }, progress_percentage: { type: Type.NUMBER }, aligned_tasks: { type: Type.ARRAY, items: { type: Type.STRING } } } } } } },
-            health_and_performance: { type: Type.OBJECT, properties: { commentary: { type: Type.STRING }, metrics: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { metric: { type: Type.STRING }, value: { type: Type.STRING } } } } } },
-            learning_synthesis: { type: Type.OBJECT, properties: { commentary: { type: Type.STRING }, connections: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { concept_A: { type: Type.STRING }, concept_B: { type: Type.STRING }, novel_idea: { type: Type.STRING } } } } } },
-            resource_radar: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, url: { type: Type.STRING }, relevance_summary: { type: Type.STRING } } } },
-            creative_sparks: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { idea: { type: Type.STRING }, rationale: { type: Type.STRING } } } }
-        },
-        required: ["goal_progress", "health_and_performance", "learning_synthesis", "resource_radar", "creative_sparks"]
-    };
-
-    try {
-        const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt, config: { responseMimeType: "application/json", responseSchema: schema } });
-        return JSON.parse(response.text) as StrategicBriefing;
-    } catch (error) {
-        console.error("Error generating daily briefing:", error);
-        throw new Error("Failed to generate briefing.");
-    }
-};
-
-
 export const setChatContext = (goals: Goal[]) => {
     const goalsSummary = goals.map(g => `(${g.term}-term) ${g.text}`).join('\n');
-    chatSystemInstruction = `You are Kiko, a helpful and insightful AI assistant. You are advising Pratt, the founder of a luxury brand called 'Surface Tension'. Be aware of his goals:\n${goalsSummary}`;
+    chatSystemInstruction = `You are Kiko, the smartest and most positive AI assistant. You are a hyper-intelligent, encouraging partner to Pratt, founder of the creative brand 'Surface Tension'. Your tone is confident, insightful, and slightly edgy. You are aware of his goals:\n${goalsSummary}`;
     chatInstance = null;
 }
 
@@ -642,6 +486,32 @@ export const continueChat = async (history: ChatMessage[]): Promise<string> => {
 };
 
 
+export const getChatContextualPrompts = (tab: 'mission_control' | 'goals_strategy' | 'insights'): string[] => {
+    switch(tab) {
+        case 'mission_control':
+            return [
+                "What's my biggest opportunity today?",
+                "Summarize my main focus areas.",
+                "How can I improve my energy levels?"
+            ];
+        case 'goals_strategy':
+            return [
+                "Break down my long-term goal into smaller steps.",
+                "Suggest a new short-term goal based on my notes.",
+                "How do my recent tasks align with my mid-term goal?"
+            ];
+        case 'insights':
+            return [
+                "Find more insights from my 'AI' related notes.",
+                "Turn my latest insight into a project plan.",
+                "Connect two different insights into a new idea."
+            ];
+        default:
+            return [];
+    }
+};
+
+
 export const performInternetSearch = async (query: string): Promise<SearchResult> => {
     if (!ai) {
         await new Promise(r => setTimeout(r, 1000));
@@ -661,98 +531,9 @@ export const performInternetSearch = async (query: string): Promise<SearchResult
 }
 
 export const analyzeImageWithPrompt = async (base64Image: string, mimeType: string, prompt: string): Promise<string> => {
-     if (!ai) {
-        await new Promise(r => setTimeout(r, 1000));
-        return `This is a mocked analysis of the uploaded image with the prompt: "${prompt}".`;
-    }
-    const imagePart = { inlineData: { mimeType: mimeType, data: base64Image } };
-    const textPart = { text: prompt };
-    try {
-        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [imagePart, textPart] } });
-        return response.text || "Sorry, I was unable to analyze the image.";
-    } catch (error) {
-        console.error("Error analyzing image:", error);
-        return "Sorry, I was unable to analyze the image.";
-    }
+    // Per the AI strategy, route all vision tasks to the specialized GPT-4o model via our service.
+    return await analyzeImageWithGPT4o(base64Image, mimeType, prompt);
 }
-
-export const generateImageForNote = async (title: string): Promise<string> => {
-    if (!ai) {
-        await new Promise(r => setTimeout(r, 1000));
-        return `https://source.unsplash.com/random/400x300?${encodeURIComponent(title)}`;
-    }
-    const prompt = `An abstract, visually stunning, artistic representation of the concept: "${title}". Use a minimalist, sophisticated style suitable for a luxury brand.`;
-    try {
-        const response = await ai.models.generateImages({
-            model: 'imagen-4.0-generate-001', prompt: prompt, config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio: '4:3' }
-        });
-        const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-        const watermarkedImage = await applyWatermark(`data:image/jpeg;base64,${base64ImageBytes}`);
-        return watermarkedImage;
-    } catch (error) {
-        console.error("Error generating image for note:", error);
-        return `https://source.unsplash.com/random/400x300?error`;
-    }
-}
-
-export const generateTitleForNote = async (noteContent: string): Promise<string> => {
-    if (!ai) {
-        await new Promise(r => setTimeout(r, 1000));
-        return "AI Suggested Title";
-    }
-    const prompt = `Analyze the following note content and generate a concise, descriptive title for it (5 words or less). Content:\n\n---\n${(noteContent || '').replace(/<[^>]*>?/gm, '').substring(0, 500)}...\n---`;
-    try {
-        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
-        return response.text?.replace(/["']/g, "") || "Untitled Note"; // Remove quotes from the response
-    } catch (error) {
-        console.error("Error generating title for note:", error);
-        return "Untitled Note";
-    }
-}
-
-export const generateMindMapData = async (goals: Goal[], tasks: Task[], notes: Note[]): Promise<{ nodes: MindMapNode[], edges: MindMapEdge[] }> => {
-    const mockMindMap: { nodes: MindMapNode[], edges: MindMapEdge[] } = {
-        nodes: [
-            { id: 'root', label: 'Pratt', type: 'root', x: 400, y: 300 },
-            { id: 'g1', label: 'Launch Product', type: 'goal', x: 250, y: 200 },
-            { id: 't1', label: 'Prototype App', type: 'task', x: 550, y: 200 },
-            { id: 'n1', label: 'AI Research', type: 'note', x: 400, y: 450 },
-        ],
-        edges: [{ from: 'root', to: 'g1' }, { from: 'root', to: 't1' }, { from: 'root', to: 'n1' }, {from: 'g1', to: 't1'}]
-    };
-    if (!ai) return mockMindMap;
-
-    const goalsSummary = goals.map(g => `- (Goal) ${g.text} [ID: goal-${g.id}]`).join('\n');
-    const tasksSummary = tasks.slice(0, 10).map(t => `- (Task) ${t.title} [ID: task-${t.id}]`).join('\n');
-    const notesSummary = notes.slice(0, 10).map(n => `- (Note) ${n.title} [ID: note-${n.id}]`).join('\n');
-    const prompt = `Analyze the following goals, tasks, and notes for Pratt. Create a mind map structure.
-    - Create a central 'root' node labeled 'Pratt'.
-    - Create nodes for each goal, task, and note provided.
-    - Create edges to link related items (goal to task, task to note, etc.).
-    - Focus on the strongest relationships.
-    Data:
-    ${goalsSummary}
-    ${tasksSummary}
-    ${notesSummary}`;
-    const schema = { type: Type.OBJECT, properties: { nodes: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { id: { type: Type.STRING }, label: { type: Type.STRING }, type: { type: Type.STRING } } } }, edges: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { from: { type: Type.STRING }, to: { type: Type.STRING } } } } }, required: ["nodes", "edges"] };
-    try {
-        const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt, config: { responseMimeType: "application/json", responseSchema: schema } });
-        const data = JSON.parse(response.text);
-        const positionedNodes: MindMapNode[] = data.nodes.map((node: any, index: number) => {
-            const angle = data.nodes.length > 1 ? (index / (data.nodes.length - 1)) * 2 * Math.PI : 0;
-            const nodeType = node.type as MindMapNode['type'];
-            const radius = nodeType === 'root' ? 0 : nodeType === 'goal' ? 150 : nodeType === 'task' ? 250 : 350;
-            return { id: node.id, label: node.label, type: nodeType, x: 400 + radius * Math.cos(angle), y: 300 + radius * Math.sin(angle) };
-        });
-        const rootNode = positionedNodes.find(n => n.id === 'root');
-        if (rootNode) { rootNode.x = 400; rootNode.y = 300; }
-        return { nodes: positionedNodes, edges: data.edges };
-    } catch (error) {
-        console.error("Error generating mind map:", error);
-        return mockMindMap;
-    }
-};
-
 
 export const generateProjectStatusReport = async (project: Project, tasks: Task[], notes: Note[]): Promise<ProjectStatusReport> => {
     if (!ai) {

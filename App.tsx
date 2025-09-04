@@ -6,7 +6,6 @@ import EventDetail from './components/EventDetail';
 import Notes from './components/Notes';
 import PraxisAI from './components/PraxisAI';
 import Profile from './components/Profile';
-import Projects from './components/Projects';
 import Rewards from './components/Rewards';
 import Navigation from './components/Navigation';
 import Auth from './components/auth/Auth';
@@ -15,7 +14,8 @@ import Toast from './components/Toast';
 import { MOCKED_TASKS, MOCKED_NOTES, MOCKED_NOTEBOOKS, MOCKED_INSIGHTS, MOCKED_GOALS, MOCKED_PROJECTS, REWARDS_CATALOG, DEFAULT_CATEGORIES } from './constants';
 import { Task, Note, Notebook, Insight, Category, TaskStatus, ChatMessage, SearchHistoryItem, VisionHistoryItem, Goal, PraxisPointLog, Theme, Screen, Project, HealthData, ActionableInsight } from './types';
 import { getActualDuration, calculateStreak, getTodaysTaskCompletion, inferHomeLocation } from './utils/taskUtils';
-import { continueChat, setChatContext, parseHealthDataFromTasks, getProactiveHealthSuggestion, generateCompletionImage, generateCompletionSummary, generateActionableInsights } from './services/geminiService';
+import { continueChat, setChatContext, parseHealthDataFromTasks, getProactiveHealthSuggestion, generateActionableInsights, generateMapsStaticImageUrl } from './services/geminiService';
+import { kikoRequest } from './services/kikoAIService';
 import { syncCalendar, addEventToCalendar, updateEventInCalendar } from './services/googleCalendarService';
 import { triggerHapticFeedback } from './utils/haptics';
 
@@ -43,7 +43,7 @@ const PraxisLogo = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
-const AppHeader: React.FC<{onProfileClick: () => void}> = ({ onProfileClick }) => (
+const AppHeader: React.FC = () => (
     <header className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
             <PraxisLogo className="w-9 h-9 text-light-text dark:text-dark-text" />
@@ -51,9 +51,6 @@ const AppHeader: React.FC<{onProfileClick: () => void}> = ({ onProfileClick }) =
                 <h1 className="text-xl font-bold font-display text-light-text dark:text-dark-text leading-tight tracking-wide">PRAXIS AI</h1>
             </div>
         </div>
-        <button onClick={onProfileClick} className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-dark-bg focus:ring-accent rounded-full">
-             <img src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format=fit=crop" alt="Pratt" className="w-10 h-10 rounded-full object-cover inline-block ring-2 ring-offset-2 ring-offset-light-bg dark:ring-offset-dark-bg ring-accent/50"/>
-        </button>
     </header>
 );
 
@@ -177,33 +174,37 @@ const App: React.FC = () => {
     }
   };
 
-  const triggerInsightGeneration = (task: Task) => {
+  const triggerInsightGeneration = useCallback((task: Task, isRegeneration = false) => {
     const healthData = parseHealthDataFromTasks(tasks);
     const homeLocation = inferHomeLocation(tasks);
 
-    // Fire-and-forget promise
-    generateActionableInsights(task, healthData, notes, homeLocation, goals, tasks).then(insightData => {
+    // This is the "fire-and-forget" part of the async architecture.
+    // The UI is already updated to show the loading state.
+    generateActionableInsights(task, healthData, notes, homeLocation, goals, tasks, isRegeneration).then(insightData => {
         const finalTaskWithInsight: Task = { ...task, insights: insightData, isGeneratingInsights: false };
         updateTask(finalTaskWithInsight);
         
-        setToast({
-            message: `✨ Insights ready for "${task.title}"`,
-            visible: true,
-            action: {
-                label: 'View',
-                onClick: () => {
-                    setViewingTask(finalTaskWithInsight);
-                    setToast({ message: '', visible: false });
+        // Don't show toast on initial load, only on regeneration.
+        if (isRegeneration) {
+            setToast({
+                message: `✨ New insights ready for "${task.title}"`,
+                visible: true,
+                action: {
+                    label: 'View',
+                    onClick: () => {
+                        setViewingTask(finalTaskWithInsight);
+                        setToast({ message: '', visible: false });
+                    }
                 }
-            }
-        });
+            });
+        }
     }).catch(error => {
         console.error("Async insight generation failed:", error);
-        const taskWithError: Task = { ...task, isGeneratingInsights: false };
+        const taskWithError: Task = { ...task, isGeneratingInsights: false, insights: { widgets: [{ type: 'text', title: 'Insight Error', icon: 'SparklesIcon', content: 'Kiko had trouble generating insights. Please try regenerating.' }] } };
         updateTask(taskWithError);
         setToast({ message: 'Could not generate insights.', visible: true });
     });
-  };
+  }, [tasks, notes, goals]);
 
   const handleCompleteTask = async (taskId: number) => {
     const taskToComplete = tasks.find(t => t.id === taskId);
@@ -220,17 +221,17 @@ const App: React.FC = () => {
     updateTask(tempCompletedTask);
     if (viewingTask?.id === taskId) setViewingTask(null);
 
-    // AI Generations in parallel
+    // AI Generations in parallel, now routed through the Kiko "Muse" Agent
     const [imageUrl, summary] = await Promise.all([
-        taskToComplete.attachmentUrls?.[0] ? Promise.resolve(taskToComplete.attachmentUrls[0]) : generateCompletionImage(taskToComplete),
-        generateCompletionSummary(taskToComplete)
+        (taskToComplete.location && !taskToComplete.isVirtual ? Promise.resolve(generateMapsStaticImageUrl(taskToComplete)) : kikoRequest('generate_completion_image', { task: taskToComplete })),
+        kikoRequest('generate_completion_summary', { task: taskToComplete })
     ]);
 
     // Final update with all AI content
     let finalCompletedTask: Task = { ...tempCompletedTask, completionImageUrl: imageUrl, completionSummary: summary, isGeneratingInsights: true };
     updateTask(finalCompletedTask);
     
-    // Trigger background insight generation
+    // Trigger background insight generation for the *completed* task
     triggerInsightGeneration(finalCompletedTask);
     
     // Award points
@@ -244,13 +245,15 @@ const App: React.FC = () => {
     setTasks(prevTasks =>
         prevTasks.map(task => {
             if (task.id === taskId && task.status === TaskStatus.Completed) {
+                // BUG FIX: Correctly revert state.
                 return {
                     ...task,
                     status: task.undoStatus || TaskStatus.Pending,
-                    undoStatus: undefined, // Clear undo status
+                    undoStatus: undefined,
                     actualDuration: undefined,
                     completionImageUrl: undefined,
                     completionSummary: undefined,
+                    insights: null, // Clear insights as they were for the completed state
                 };
             }
             return task;
@@ -327,13 +330,27 @@ const App: React.FC = () => {
     });
   };
 
-  const handleSendMessage = async (message: string) => {
-    if (!message.trim() || isAiReplying) return;
-    if (message.toLowerCase().startsWith('/save')) { /* ... */ return; }
-    const newMessages: ChatMessage[] = [...chatMessages, { role: 'user', text: message }];
+  const handleSendMessage = async (message: string, attachment?: ChatMessage['attachment']) => {
+    if ((!message.trim() && !attachment) || isAiReplying) return;
+
+    const userMessage: ChatMessage = { role: 'user', text: message, attachment };
+    const newMessages: ChatMessage[] = [...chatMessages, userMessage];
     setChatMessages(newMessages);
     setIsAiReplying(true);
-    const responseText = await continueChat(newMessages);
+
+    let responseText;
+    if (attachment) {
+        // Route image analysis to the Vision Agent via the orchestrator
+        responseText = await kikoRequest('analyze_image', {
+            base64: attachment.base64,
+            mimeType: attachment.mimeType,
+            prompt: message
+        });
+    } else {
+        // Standard text chat goes to the Gemini chat model
+        responseText = await continueChat(newMessages);
+    }
+    
     setChatMessages(prev => [...prev, { role: 'model', text: responseText }]);
     setIsAiReplying(false);
   }
@@ -377,9 +394,8 @@ const App: React.FC = () => {
     switch (screen) {
       case 'Dashboard': return <Dashboard tasks={tasks} notes={notes} goals={goals} praxisFlow={totalFlow} dailyStreak={dailyStreak} completionPercentage={completionPercentage} setScreen={setScreen} />;
       case 'Schedule': return <Schedule tasks={tasks} updateTask={updateTask} onViewTask={setViewingTask} addTask={addTask} projects={projects} notes={notes} onUndoTask={handleUndoCompleteTask} onCompleteTask={handleCompleteTask} categories={allCategories} onSyncCalendar={handleCalendarSync} />;
-      // FIX: Removed 'Projects' screen to simplify UI focus.
       case 'Notes': return <Notes notes={notes} setNotes={setNotes} notebooks={notebooks} setNotebooks={setNotebooks} addInsights={addInsights} updateNote={updateNote} addTask={(title, notebookId) => addTask({title, category: 'Prototyping', plannedDuration: 60, notebookId, startTime: new Date()})} startChatWithContext={startChatWithContext} />;
-      case 'KikoAI': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} addTask={(title) => addTask({title, category: 'Prototyping', plannedDuration: 60, startTime: new Date()})} startChatWithContext={startChatWithContext} searchHistory={searchHistory} setSearchHistory={setSearchHistory} visionHistory={visionHistory} setVisionHistory={setVisionHistory} addNote={addNote} goals={goals} setGoals={setGoals} applyInsight={applyInsight} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} projects={projects} />;
+      case 'KikoAI': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} addTask={(title) => addTask({title, category: 'Prototyping', plannedDuration: 60, startTime: new Date()})} startChatWithContext={startChatWithContext} searchHistory={searchHistory} setSearchHistory={setSearchHistory} visionHistory={visionHistory} setVisionHistory={setVisionHistory} addNote={addNote} goals={goals} setGoals={setGoals} applyInsight={applyInsight} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} projects={projects} healthData={parseHealthDataFromTasks(tasks)} />;
       case 'Profile': return <Profile isDarkMode={isDarkMode} toggleTheme={toggleTheme} onLogout={() => setIsAuthenticated(false)} praxisFlow={totalFlow} setScreen={setScreen} />;
       case 'Rewards': return <Rewards onBack={() => setScreen('Profile')} praxisFlow={totalFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={setActiveTheme} onPurchase={purchaseReward} />;
       default: return <Dashboard tasks={tasks} notes={notes} goals={goals} praxisFlow={totalFlow} dailyStreak={dailyStreak} completionPercentage={completionPercentage} setScreen={setScreen} />;
@@ -396,11 +412,11 @@ const App: React.FC = () => {
       </AnimatePresence>
 
       <AnimatePresence>
-        {viewingTask && <EventDetail task={viewingTask} allTasks={tasks} notes={notes} projects={projects} goals={goals} updateTask={updateTask} onClose={() => setViewingTask(null)} onComplete={() => handleCompleteTask(viewingTask.id)} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} categories={allCategories} />}
+        {viewingTask && <EventDetail task={viewingTask} allTasks={tasks} notes={notes} projects={projects} goals={goals} updateTask={updateTask} onClose={() => setViewingTask(null)} onComplete={() => handleCompleteTask(viewingTask.id)} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} categories={allCategories} triggerInsightGeneration={triggerInsightGeneration} />}
       </AnimatePresence>
 
       <div className="max-w-7xl mx-auto p-4 pb-28">
-         <AppHeader onProfileClick={() => setScreen('Profile')} />
+         <AppHeader />
         <main>
            <AnimatePresence mode="wait">
                 <motion.div

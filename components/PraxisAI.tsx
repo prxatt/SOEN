@@ -1,13 +1,18 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Insight, StrategicBriefing, Task, Note, SearchResult, SearchHistoryItem, VisionHistoryItem, Notebook, Goal, GoalTerm, MindMapNode, MindMapEdge, ChatMessage, Project, ProjectStatusReport } from '../types';
-import { generateDailyBriefing, performInternetSearch, analyzeImageWithPrompt, generateMindMapData, generateProjectStatusReport } from '../services/geminiService';
-import { LightBulbIcon, BookOpenIcon, LinkIcon, FlagIcon, PlusCircleIcon, CheckCircleIcon, SparklesIcon, ShareIcon, UserIcon, PaperAirplaneIcon, PaperClipIcon, HeartIcon, BrainCircuitIcon, RocketIcon, MagnifyingGlassIcon, KikoIcon, ChevronDownIcon, ChevronRightIcon, BriefcaseIcon } from './Icons';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, RadialBarChart, RadialBar, Legend, Cell, PieChart, Pie } from 'recharts';
+import { Insight, StrategicBriefing, Task, Note, SearchResult, SearchHistoryItem, VisionHistoryItem, Notebook, Goal, GoalTerm, MindMapNode, MindMapEdge, ChatMessage, Project, ProjectStatusReport, MissionBriefing, HealthRingMetric, HealthData } from '../types';
+// FIX: Removed unused import 'generateMindMapData' as it is not exported from geminiService.
+import { performInternetSearch, analyzeImageWithPrompt, generateProjectStatusReport, getChatContextualPrompts } from '../services/geminiService';
+import { kikoRequest } from '../services/kikoAIService';
+import { LightBulbIcon, BookOpenIcon, LinkIcon, FlagIcon, PlusCircleIcon, CheckCircleIcon, SparklesIcon, ShareIcon, UserIcon, PaperAirplaneIcon, PaperClipIcon, HeartIcon, BrainCircuitIcon, RocketIcon, MagnifyingGlassIcon, KikoIcon, ChevronDownIcon, ChevronRightIcon, BriefcaseIcon, ArrowPathIcon, XMarkIcon } from './Icons';
+import * as Icons from './Icons';
 import LoadingSpinner from './LoadingSpinner';
 
 interface PraxisAIProps {
   insights: Insight[]; setInsights: React.Dispatch<React.SetStateAction<Insight[]>>;
   tasks: Task[]; notes: Note[]; notebooks: Notebook[]; projects: Project[];
+  healthData: HealthData;
   goals: Goal[]; setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
   addTask: (title: string) => void;
   addNote: (title: string, content: string, notebookId: number) => void;
@@ -16,11 +21,11 @@ interface PraxisAIProps {
   visionHistory: VisionHistoryItem[]; setVisionHistory: React.Dispatch<React.SetStateAction<VisionHistoryItem[]>>;
   applyInsight: (insightId: number) => void;
   chatMessages: ChatMessage[]; setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, attachment?: ChatMessage['attachment']) => void;
   isAiReplying: boolean;
 }
 
-type AITab = 'briefing' | 'goals' | 'mindmap' | 'insights' | 'explore';
+type AITab = 'mission_control' | 'goals_strategy' | 'insights';
 
 const TabButton: React.FC<{label: string; isActive: boolean; onClick: () => void}> = ({label, isActive, onClick}) => (
     <button onClick={onClick} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${isActive ? 'bg-accent text-white' : 'text-light-text-secondary dark:text-dark-text-secondary hover:bg-black/5 dark:hover:bg-white/10'}`}>
@@ -60,140 +65,170 @@ const GoalsHub: React.FC<{goals: Goal[], setGoals: React.Dispatch<React.SetState
     );
 };
 
-const MindMap: React.FC<{ goals: Goal[], tasks: Task[], notes: Note[] }> = ({ goals, tasks, notes }) => {
-    const [mapData, setMapData] = useState<{ nodes: MindMapNode[], edges: MindMapEdge[] } | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-
-    const handleGenerate = async () => {
-        setIsLoading(true);
-        const data = await generateMindMapData(goals, tasks, notes);
-        setMapData(data);
-        setIsLoading(false);
-    }
-
-    if (!mapData && !isLoading) {
-        return <div className="text-center"><button onClick={handleGenerate} className="bg-accent text-white font-bold py-3 px-5 rounded-lg hover:bg-accent-hover">Generate Mind Map</button></div>
-    }
-    if (isLoading) return <div className="text-center animate-pulse">Generating connections...</div>;
-    
-    if (mapData) {
-        return (
-            <div className="relative w-full h-[60vh] rounded-lg bg-light-bg dark:bg-dark-bg overflow-hidden border border-light-border dark:border-dark-border">
-                <svg className="absolute top-0 left-0 w-full h-full" style={{ overflow: 'visible' }}>
-                    <defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" className="fill-light-text-secondary/50 dark:fill-dark-text-secondary/50" /></marker></defs>
-                    {mapData.edges.map((edge, i) => {
-                        const fromNode = mapData.nodes.find(n => n.id === edge.from);
-                        const toNode = mapData.nodes.find(n => n.id === edge.to);
-                        if (!fromNode || !toNode) return null;
-                        return <line key={i} x1={fromNode.x} y1={fromNode.y} x2={toNode.x} y2={toNode.y} stroke="#9ca3af" strokeWidth="1" markerEnd="url(#arrowhead)" />;
-                    })}
-                </svg>
-                {mapData.nodes.map(node => (
-                    <div key={node.id} className={`absolute p-2 rounded-lg shadow-lg flex items-center gap-2 text-xs font-semibold text-white`} style={{ left: node.x - 50, top: node.y - 20, width: 100, height: 40, backgroundColor: { root: '#A855F7', goal: '#f59e0b', task: '#3b82f6', note: '#22c55e' }[node.type] }}>
-                        {node.type === 'goal' && <FlagIcon className="w-4 h-4" />}
-                        {node.type === 'task' && <CheckCircleIcon className="w-4 h-4" />}
-                        {node.type === 'note' && <BookOpenIcon className="w-4 h-4" />}
-                        {node.type === 'root' && <SparklesIcon className="w-4 h-4" />}
-                        <span className="truncate">{node.label}</span>
-                    </div>
-                ))}
+const GoalsAndStrategyTab: React.FC<PraxisAIProps> = ({ goals, setGoals }) => {
+    return (
+        <div className="space-y-6 h-full flex flex-col">
+            <div className="flex-shrink-0">
+                 <GoalsHub goals={goals} setGoals={setGoals} />
             </div>
-        )
-    }
-    return null;
-}
+            <div className="flex-grow min-h-[300px] card rounded-xl flex items-center justify-center text-light-text-secondary dark:text-dark-text-secondary">
+                <p>Mind Map generation coming soon.</p>
+            </div>
+        </div>
+    );
+};
 
-const ExploreTab: React.FC<{searchHistory: SearchHistoryItem[], setSearchHistory: React.Dispatch<React.SetStateAction<SearchHistoryItem[]>>, visionHistory: VisionHistoryItem[], setVisionHistory: React.Dispatch<React.SetStateAction<VisionHistoryItem[]>>}> = (props) => {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
-    const [isSearching, setIsSearching] = useState(false);
-    const [visionImage, setVisionImage] = useState<{b64: string, mime: string, url: string} | null>(null);
-    const [visionPrompt, setVisionPrompt] = useState('');
-    const [visionResult, setVisionResult] = useState<string | null>(null);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+const MissionControl: React.FC<{tasks: Task[], notes: Note[], healthData: HealthData}> = ({ tasks, notes, healthData }) => {
+    type Timeframe = 'day' | 'week' | 'month';
+    const [timeframe, setTimeframe] = useState<Timeframe>('day');
+    const [briefing, setBriefing] = useState<MissionBriefing | null>(null);
+    const [briefingCache, setBriefingCache] = useState<Record<Timeframe, MissionBriefing | null>>({ day: null, week: null, month: null });
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadingText, setLoadingText] = useState("Generating daily intelligence...");
+    const [activeFocus, setActiveFocus] = useState<string | null>(null);
 
-    const handleSearch = async (query: string) => {
-        if (!query.trim() || isSearching) return;
-        setIsSearching(true); setSearchResult(null);
-        const result = await performInternetSearch(query);
-        setSearchResult(result); setIsSearching(false);
-        props.setSearchHistory(prev => [{ id: Date.now(), query: query, result }, ...prev]);
+
+    const fetchBriefing = useCallback(async (tf: Timeframe, forceRegenerate = false) => {
+        if (briefingCache[tf] && !forceRegenerate) {
+            setBriefing(briefingCache[tf]);
+            setIsLoading(false);
+            return;
+        }
+
+        setIsLoading(true);
+        setLoadingText(`Generating ${tf === 'day' ? 'daily' : tf + 'ly'} intelligence...`);
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let filteredTasks: Task[], filteredNotes: Note[];
+
+        switch (tf) {
+            case 'week':
+                const startOfWeek = new Date(startOfDay);
+                startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+                filteredTasks = tasks.filter(t => t.startTime >= startOfWeek);
+                filteredNotes = notes.filter(n => n.createdAt >= startOfWeek);
+                break;
+            case 'month':
+                 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                 filteredTasks = tasks.filter(t => t.startTime >= startOfMonth);
+                 filteredNotes = notes.filter(n => n.createdAt >= startOfMonth);
+                break;
+            case 'day':
+            default:
+                filteredTasks = tasks.filter(t => t.startTime >= startOfDay && t.startTime < new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000));
+                filteredNotes = notes.filter(n => n.createdAt >= startOfDay);
+                break;
+        }
+        const data = await kikoRequest('generate_briefing', { timeframe: tf, tasks: filteredTasks, notes: filteredNotes, healthData });
+        setBriefing(data);
+        setBriefingCache(prev => ({...prev, [tf]: data}));
+        setIsLoading(false);
+    }, [tasks, notes, healthData, briefingCache]);
+
+    useEffect(() => {
+        fetchBriefing(timeframe);
+    }, [timeframe, fetchBriefing]);
+
+    const handleRegenerate = () => fetchBriefing(timeframe, true);
+    
+    const MetricCard: React.FC<{metric: MissionBriefing['metrics'][0]}> = ({ metric }) => {
+        const Icon = (Icons as any)[metric.icon] || SparklesIcon;
+        return (
+             <div className="bg-light-bg/50 dark:bg-dark-bg/50 p-3 rounded-xl">
+                <div className="flex items-center gap-2 text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary"><Icon className="w-5 h-5"/> {metric.label}</div>
+                <p className="text-3xl font-bold font-display mt-1">{metric.value}</p>
+                {metric.change && (
+                    <p className={`text-xs font-semibold ${metric.changeType === 'positive' ? 'text-green-400' : 'text-red-400'}`}>
+                        {metric.change}
+                    </p>
+                )}
+            </div>
+        );
     };
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if(!e.target.files || e.target.files.length === 0) return;
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = (reader.result as string).split(',')[1];
-          setVisionImage({ b64: base64String, mime: file.type, url: URL.createObjectURL(file) });
-        };
-        reader.readAsDataURL(file);
-    }
-  
-    const handleAnalyzeImage = async (prompt: string) => {
-      if (!visionImage || !prompt.trim() || isAnalyzing) return;
-      setIsAnalyzing(true); setVisionResult(null);
-      const result = await analyzeImageWithPrompt(visionImage.b64, visionImage.mime, prompt);
-      setVisionResult(result); setIsAnalyzing(false);
-      props.setVisionHistory(prev => [{ id: Date.now(), prompt: prompt, imageUrl: visionImage.url, result}, ...prev]);
-    }
+    if (isLoading) return <LoadingSpinner message={loadingText} />;
+    if (!briefing) return <p>Could not load Mission Briefing.</p>;
 
-    const handleFormSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if(visionImage) {
-            handleAnalyzeImage(visionPrompt);
-        } else {
-            handleSearch(searchQuery);
-        }
-    }
-
+    const onPieEnter = (_: any, index: number) => setActiveFocus(briefing.focusBreakdown[index].name);
+    
     return (
-        <div className="flex flex-col h-full gap-4">
-            <div className="flex-grow p-4 border-2 border-dashed border-light-border dark:border-dark-border rounded-xl flex items-center justify-center text-center bg-light-bg dark:bg-dark-bg relative">
-                <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden"/>
-                {(isSearching || isAnalyzing) && <LoadingSpinner />}
-                {!isSearching && !isAnalyzing && (
-                    <>
-                    {searchResult && <div className="text-left space-y-4 overflow-y-auto"><p>{searchResult.text}</p><div><h5 className="font-semibold">Sources:</h5><ul className="list-disc list-inside space-y-1">{searchResult.sources.map((s,i) => <li key={i}><a href={s.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{s.title}</a></li>)}</ul></div></div>}
-                    {visionResult && <div className="text-left space-y-4 overflow-y-auto"><p>{visionResult}</p></div>}
-                    {!searchResult && !visionResult && (
-                        visionImage ? <img src={visionImage.url} alt="upload preview" className="max-h-60 object-contain rounded-lg" /> :
-                        <div className="text-light-text-secondary dark:text-dark-text-secondary">
-                            <MagnifyingGlassIcon className="w-12 h-12 mx-auto mb-2"/>
-                            <p>Search the web or upload an image to analyze.</p>
-                        </div>
-                    )}
-                    </>
-                )}
-                 {visionImage && <button onClick={() => setVisionImage(null)} className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full">&times;</button>}
-            </div>
-             <form onSubmit={handleFormSubmit} className="flex gap-2">
-                <div className="relative flex-grow">
-                   <input type="text" value={visionImage ? visionPrompt : searchQuery} onChange={e => visionImage ? setVisionPrompt(e.target.value) : setSearchQuery(e.target.value)} placeholder={visionImage ? "What do you want to know about this image?" : "Search the web with Google..."} className="w-full bg-light-bg dark:bg-dark-bg p-3 pl-10 pr-12 rounded-lg border border-light-border dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-accent"/>
-                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-light-text-secondary dark:text-dark-text-secondary">
-                       {visionImage ? <SparklesIcon className="w-5 h-5"/> : <MagnifyingGlassIcon className="w-5 h-5"/>}
-                   </div>
+        <div className="space-y-4">
+             <div className="flex justify-between items-center">
+                <div>
+                    <h3 className="text-2xl font-bold font-display">{briefing.title}</h3>
+                    <p className="text-light-text-secondary dark:text-dark-text-secondary text-sm">{briefing.summary}</p>
                 </div>
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 rounded-lg bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border hover:bg-light-border dark:hover:bg-dark-border transition-colors"><PaperClipIcon className="w-5 h-5"/></button>
-                <button type="submit" disabled={isSearching || isAnalyzing} className="p-3 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-50">
-                    {visionImage ? 'Analyze' : 'Search'}
-                </button>
-            </form>
+                <div className="flex items-center gap-2">
+                    <button onClick={handleRegenerate} className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10"><ArrowPathIcon className="w-5 h-5"/></button>
+                    <div className="flex items-center gap-1 p-1 bg-light-bg dark:bg-dark-bg rounded-lg">
+                        {(['day', 'week', 'month'] as Timeframe[]).map(tf => (
+                            <button key={tf} onClick={() => setTimeframe(tf)} className={`px-3 py-1 text-sm font-semibold rounded-md capitalize ${timeframe === tf ? 'bg-accent text-white' : ''}`}>
+                                {tf}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {briefing.metrics.map((metric, i) => <MetricCard key={i} metric={metric} />)}
+            </div>
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-1 bg-light-bg/50 dark:bg-dark-bg/50 p-4 rounded-xl flex flex-col items-center justify-center">
+                    <ResponsiveContainer width="100%" height={200}>
+                        <RadialBarChart innerRadius="40%" outerRadius="100%" data={briefing.healthRings} startAngle={90} endAngle={-270}>
+                            <RadialBar background dataKey="value" cornerRadius={10} />
+                            <Legend iconSize={10} layout="vertical" verticalAlign="middle" align="right" />
+                        </RadialBarChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="lg:col-span-2 bg-light-bg/50 dark:bg-dark-bg/50 p-4 rounded-xl">
+                     <h4 className="font-semibold mb-2">Focus Breakdown</h4>
+                     <div className="grid grid-cols-2 gap-4 h-[200px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie data={briefing.focusBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius="80%" onMouseEnter={onPieEnter} onMouseLeave={() => setActiveFocus(null)}>
+                                     {briefing.focusBreakdown.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} className="focus:outline-none" />)}
+                                </Pie>
+                                <Tooltip contentStyle={{backgroundColor: '#1C1C1E', border: '1px solid #2D2D2F', borderRadius: '0.75rem'}}/>
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <AnimatePresence mode="wait">
+                            <motion.div key={activeFocus || 'default'} initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}} className="flex flex-col justify-center">
+                                {activeFocus ? (
+                                    <>
+                                        <h5 className="font-bold text-lg">{activeFocus}</h5>
+                                        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary break-word">
+                                            {briefing.categoryAnalysis.find(a => a.category === activeFocus)?.analysis || "No analysis available."}
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h5 className="font-bold text-lg">Hover for Analysis</h5>
+                                        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Explore your main areas of focus for this period.</p>
+                                    </>
+                                )}
+                            </motion.div>
+                        </AnimatePresence>
+                     </div>
+                </div>
+            </div>
+             <div className="bg-light-bg/50 dark:bg-dark-bg/50 p-4 rounded-xl">
+                <h4 className="font-semibold mb-2">Kiko's Mission Objective</h4>
+                <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary italic">{briefing.commentary}</p>
+             </div>
         </div>
-    )
-}
+    );
+};
+
 
 const PraxisAI: React.FC<PraxisAIProps> = (props) => {
-  const { insights, tasks, notes, notebooks, projects, goals, setGoals, searchHistory, setSearchHistory, visionHistory, setVisionHistory, applyInsight, chatMessages, onSendMessage, isAiReplying } = props;
-  const [activeTab, setActiveTab] = useState<AITab>('briefing');
-  const [briefing, setBriefing] = useState<StrategicBriefing | null>(null);
-  const [isBriefingLoading, setIsBriefingLoading] = useState(true);
+  const { insights, tasks, notes, healthData, goals, setGoals, applyInsight, chatMessages, onSendMessage, isAiReplying } = props;
+  const [activeTab, setActiveTab] = useState<AITab>('mission_control');
   const [chatInput, setChatInput] = useState('');
+  const [chatAttachment, setChatAttachment] = useState<ChatMessage['attachment'] & { url: string } | null>(null);
   const [isChatExpanded, setIsChatExpanded] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages, isChatExpanded]);
 
@@ -204,37 +239,33 @@ const PraxisAI: React.FC<PraxisAIProps> = (props) => {
     }, {} as Record<string, Insight[]>);
   }, [insights]);
   
-  useEffect(() => {
-    if (activeTab === 'briefing' && !briefing) { 
-        setIsBriefingLoading(true); 
-        generateDailyBriefing(tasks, notes, goals).then(b => {
-            setBriefing(b);
-            setIsBriefingLoading(false); 
-        }).catch(() => setIsBriefingLoading(false));
-    }
-  }, [activeTab, tasks, notes, goals, briefing]);
+  const handleChatSubmit = (e: React.FormEvent) => { 
+    e.preventDefault(); 
+    onSendMessage(chatInput, chatAttachment ? { base64: chatAttachment.base64, mimeType: chatAttachment.mimeType } : undefined); 
+    setChatInput(''); 
+    setChatAttachment(null);
+  };
+  
+  const handleContextualPromptClick = (prompt: string) => {
+    onSendMessage(prompt);
+  };
 
-  const handleChatSubmit = (e: React.FormEvent) => { e.preventDefault(); onSendMessage(chatInput); setChatInput(''); };
-  
-  const BriefingModule: React.FC<{icon: React.ReactNode, title: string, children: React.ReactNode}> = ({icon, title, children}) => (
-      <div className="bg-light-bg dark:bg-dark-bg p-4 rounded-xl h-full border border-light-border dark:border-dark-border">
-          <h4 className="font-semibold font-display flex items-center gap-2 mb-3">{icon}{title}</h4>
-          <div className="space-y-3">{children}</div>
-      </div>
-  );
-  
+  const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if(!e.target.files || e.target.files.length === 0) return;
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        setChatAttachment({ base64: base64String, mimeType: file.type, url: URL.createObjectURL(file) });
+        setIsChatExpanded(true); // Expand chat to show attachment
+      };
+      reader.readAsDataURL(file);
+  };
+
   const renderContent = () => {
     switch(activeTab) {
-        case 'briefing': return isBriefingLoading ? <LoadingSpinner /> : briefing ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <BriefingModule icon={<RocketIcon className="w-5 h-5 text-accent"/>} title="Goal Progress"><p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">{briefing.goal_progress.commentary}</p>{briefing.goal_progress.goals.map((g, i) => (<div key={i}><p className="font-semibold text-sm">{g.text}</p><div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-2.5 mt-1"><div className="bg-accent h-2.5 rounded-full" style={{width: `${g.progress_percentage}%`}}></div></div></div>))}</BriefingModule>
-                <BriefingModule icon={<HeartIcon className="w-5 h-5 text-red-500"/>} title="Health & Performance"><p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">{briefing.health_and_performance.commentary}</p><div className="flex gap-4">{briefing.health_and_performance.metrics.map((m, i) => (<div key={i}><p className="text-sm font-semibold">{m.metric}</p><p className="text-xl font-bold font-display">{m.value}</p></div>))}</div></BriefingModule>
-                <BriefingModule icon={<BrainCircuitIcon className="w-5 h-5 text-blue-400"/>} title="Learning Synthesis"><p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">{briefing.learning_synthesis.commentary}</p>{briefing.learning_synthesis.connections.map((c, i) => (<div key={i} className="p-2 bg-black/5 dark:bg-black/30 rounded-lg text-sm">💡 <strong>New Idea:</strong> {c.novel_idea}</div>))}</BriefingModule>
-                <BriefingModule icon={<SparklesIcon className="w-5 h-5 text-yellow-400"/>} title="Creative Sparks">{briefing.creative_sparks.map((s, i) => (<div key={i}><p className="font-semibold text-sm">{s.idea}</p><p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">{s.rationale}</p></div>))}</BriefingModule>
-                <div className="lg:col-span-2"><BriefingModule icon={<LinkIcon className="w-5 h-5 text-green-500"/>} title="Resource Radar"><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{briefing.resource_radar.map((r, i) => (<a key={i} href={r.url} target="_blank" rel="noopener noreferrer" className="block p-3 bg-black/5 dark:bg-black/30 rounded-lg hover:bg-black/10 dark:hover:bg-white/10"><p className="font-semibold text-sm truncate">{r.title}</p><p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-1">{r.relevance_summary}</p></a>))}</div></BriefingModule></div>
-            </div>) : <p>Could not load briefing.</p>;
-        case 'goals': return <GoalsHub goals={goals} setGoals={setGoals} />;
-        case 'mindmap': return <MindMap goals={goals} tasks={tasks} notes={notes} />;
+        case 'mission_control': return <MissionControl tasks={tasks} notes={notes} healthData={healthData} />;
+        case 'goals_strategy': return <GoalsAndStrategyTab {...props} />;
         case 'insights': return (
             Object.keys(groupedInsights).length > 0 ? (
                 <div className="space-y-6">
@@ -260,7 +291,6 @@ const PraxisAI: React.FC<PraxisAIProps> = (props) => {
                 </div>
             )
         );
-        case 'explore': return <ExploreTab searchHistory={searchHistory} setSearchHistory={setSearchHistory} visionHistory={visionHistory} setVisionHistory={setVisionHistory} />;
     }
   }
 
@@ -269,15 +299,13 @@ const PraxisAI: React.FC<PraxisAIProps> = (props) => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold font-display flex items-center gap-2"><KikoIcon className="w-8 h-8 text-accent" /> Kiko AI Hub</h2>
          <div className="flex items-center gap-2 p-1 card rounded-xl flex-wrap">
-            <TabButton label="Briefing" isActive={activeTab === 'briefing'} onClick={() => setActiveTab('briefing')} />
-            <TabButton label="Goals" isActive={activeTab === 'goals'} onClick={() => setActiveTab('goals')} />
-            <TabButton label="Mind Map" isActive={activeTab === 'mindmap'} onClick={() => setActiveTab('mindmap')} />
+            <TabButton label="Mission Control" isActive={activeTab === 'mission_control'} onClick={() => setActiveTab('mission_control')} />
+            <TabButton label="Goals & Strategy" isActive={activeTab === 'goals_strategy'} onClick={() => setActiveTab('goals_strategy')} />
             <TabButton label="Insights" isActive={activeTab === 'insights'} onClick={() => setActiveTab('insights')} />
-            <TabButton label="Explore" isActive={activeTab === 'explore'} onClick={() => setActiveTab('explore')} />
         </div>
       </div>
      
-      <div className="card rounded-2xl shadow-sm flex flex-col h-[70vh] overflow-hidden">
+      <div className="card rounded-2xl shadow-sm flex flex-col h-[78vh] overflow-hidden">
         <div className="p-4 sm:p-6 flex-grow overflow-y-auto">{renderContent()}</div>
         
         {/* CHAT INTERFACE */}
@@ -295,26 +323,62 @@ const PraxisAI: React.FC<PraxisAIProps> = (props) => {
                   <div key={index} className={`flex items-start gap-3 text-sm ${msg.role === 'user' ? 'justify-end' : ''}`}>
                       {msg.role === 'model' && <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center flex-shrink-0"><KikoIcon className="w-4 h-4 text-white"/></div>}
                       <div className={`p-2 rounded-lg max-w-xs sm:max-w-md ${msg.role === 'model' ? 'bg-light-bg dark:bg-dark-bg' : 'bg-accent text-white'}`}>
-                          <p className="whitespace-pre-wrap break-word" dangerouslySetInnerHTML={{ __html: msg.text.replace(/\n/g, '<br />') }} />
+                           {msg.attachment && <img src={`data:${msg.attachment.mimeType};base64,${msg.attachment.base64}`} alt="attachment" className="rounded-md max-w-full mb-2" />}
+                           <p className="whitespace-pre-wrap break-words">{msg.text}</p>
                       </div>
+                      {msg.role === 'user' && <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center flex-shrink-0"><UserIcon className="w-4 h-4"/></div>}
                   </div>
                 ))}
-                {isAiReplying && <div className="flex items-start gap-3 text-sm"><div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center flex-shrink-0"><KikoIcon className="w-4 h-4 text-white animate-pulse"/></div><div className="p-2 rounded-lg bg-light-bg dark:bg-dark-bg"><p className="animate-pulse">Thinking...</p></div></div>}
+                {isAiReplying && (
+                    <div className="flex items-start gap-3 text-sm">
+                        <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center flex-shrink-0"><KikoIcon className="w-4 h-4 text-white animate-pulse"/></div>
+                        <div className="p-2 rounded-lg bg-light-bg dark:bg-dark-bg">
+                            <div className="flex gap-1 items-center">
+                                <span className="h-2 w-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                <span className="h-2 w-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                <span className="h-2 w-2 bg-gray-400 rounded-full animate-bounce"></span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <div ref={chatEndRef} />
               </motion.div>
             )}
           </AnimatePresence>
-          
-          <div className="p-3">
-             <button onClick={() => setIsChatExpanded(!isChatExpanded)} className="w-full text-xs text-light-text-secondary dark:text-dark-text-secondary flex items-center justify-center gap-1 mb-2">
-                <span>{isChatExpanded ? 'Collapse' : 'Expand'} Chat</span>
-                <ChevronDownIcon className={`w-4 h-4 transition-transform ${isChatExpanded ? 'rotate-180' : ''}`} />
-             </button>
-            <form onSubmit={handleChatSubmit}>
-                <div className="relative">
-                   <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ask Kiko, or type '/save'..." className="w-full bg-light-bg dark:bg-dark-bg p-3 pl-4 pr-12 rounded-lg border border-light-border dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-accent"/>
-                    <button type="submit" disabled={isAiReplying || !chatInput.trim()} aria-label="Send message" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-50"><PaperAirplaneIcon className="w-5 h-5"/></button>
-                </div>
+          <div className="p-2">
+            {!isChatExpanded && chatMessages.length === 0 && (
+                 <div className="flex items-center gap-2 px-2 overflow-x-auto pb-1">
+                    <p className="text-xs font-semibold text-light-text-secondary dark:text-dark-text-secondary flex-shrink-0">Try:</p>
+                    {getChatContextualPrompts(activeTab).map(prompt => (
+                        <button key={prompt} onClick={() => handleContextualPromptClick(prompt)} className="text-xs px-2 py-1 bg-light-bg dark:bg-dark-bg rounded-md hover:bg-accent/10 flex-shrink-0">{prompt}</button>
+                    ))}
+                 </div>
+            )}
+            <AnimatePresence>
+            {chatAttachment && (
+                 <motion.div initial={{opacity:0, height: 0}} animate={{opacity:1, height: 'auto'}} exit={{opacity:0, height: 0}} className="px-2 pt-2">
+                    <div className="relative inline-block">
+                        <img src={chatAttachment.url} alt="attachment preview" className="h-16 w-16 object-cover rounded-lg"/>
+                        {isAiReplying && (
+                            <div className="absolute inset-0 bg-accent/30 rounded-lg animate-pulse flex items-center justify-center">
+                                <SparklesIcon className="w-6 h-6 text-white" />
+                            </div>
+                        )}
+                        {!isAiReplying && (
+                           <button onClick={() => setChatAttachment(null)} className="absolute -top-1 -right-1 bg-gray-700 text-white rounded-full p-0.5"><XMarkIcon className="w-3 h-3"/></button>
+                        )}
+                    </div>
+                 </motion.div>
+            )}
+            </AnimatePresence>
+            <form onSubmit={handleChatSubmit} className="flex items-center gap-2 p-2">
+              <button type="button" onClick={() => setIsChatExpanded(prev => !prev)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full text-light-text-secondary dark:text-dark-text-secondary">
+                {isChatExpanded ? <ChevronDownIcon className="w-5 h-5"/> : <KikoIcon className="w-5 h-5"/>}
+              </button>
+              <input type="file" ref={fileInputRef} onChange={handleFileAttach} className="hidden" accept="image/*" />
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full text-light-text-secondary dark:text-dark-text-secondary"><PaperClipIcon className="w-5 h-5"/></button>
+              <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ask Kiko anything..." className="flex-grow bg-light-bg dark:bg-dark-bg border-none focus:ring-0 rounded-lg py-2 px-3 text-sm"/>
+              <button type="submit" disabled={isAiReplying || (!chatInput.trim() && !chatAttachment)} className="p-2 rounded-full bg-accent text-white disabled:bg-gray-400 dark:disabled:bg-gray-600"><PaperAirplaneIcon className="w-5 h-5"/></button>
             </form>
           </div>
         </div>

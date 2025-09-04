@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { HomeIcon, CalendarIcon, DocumentTextIcon, BriefcaseIcon, KikoIcon } from './Icons';
+import { HomeIcon, CalendarIcon, DocumentTextIcon, UserCircleIcon, KikoIcon } from './Icons';
 import type { Screen } from '../types';
 
 interface NavigationProps {
@@ -8,7 +8,7 @@ interface NavigationProps {
   setScreen: (screen: Screen) => void;
 }
 
-const NavIcon: React.FC<{ Icon: React.FC<React.SVGProps<SVGSVGElement>>; label: Screen; isActive: boolean; onClick: () => void; }> = ({ Icon, label, isActive, onClick }) => (
+const NavIcon: React.FC<{ Icon: React.FC<React.SVGProps<SVGSVGElement>>; label: Screen; isActive: boolean; onClick: () => void; imageUrl?: string; }> = ({ Icon, label, isActive, onClick, imageUrl }) => (
   <motion.button
     onClick={onClick}
     whileTap={{ scale: 0.9 }}
@@ -17,15 +17,20 @@ const NavIcon: React.FC<{ Icon: React.FC<React.SVGProps<SVGSVGElement>>; label: 
     }`}
     aria-label={label}
   >
-    <Icon className="h-6 w-6" />
+    {imageUrl ? (
+      <img src={imageUrl} alt="Profile" className={`h-6 w-6 rounded-full object-cover ring-2 ${isActive ? 'ring-accent' : 'ring-transparent'}`} />
+    ) : (
+      <Icon className="h-6 w-6" />
+    )}
     <span className={`text-xs mt-1 ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
   </motion.button>
 );
 
-const NAV_ITEMS: { label: Screen; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
+const NAV_ITEMS: { label: Screen; icon: React.FC<React.SVGProps<SVGSVGElement>>; imageUrl?: string }[] = [
   { label: 'Dashboard', icon: HomeIcon },
   { label: 'Schedule', icon: CalendarIcon },
   { label: 'Notes', icon: DocumentTextIcon },
+  { label: 'Profile', icon: UserCircleIcon, imageUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop' },
 ];
 
 const Navigation: React.FC<NavigationProps> = ({ activeScreen, setScreen }) => {
@@ -59,13 +64,14 @@ const Navigation: React.FC<NavigationProps> = ({ activeScreen, setScreen }) => {
         </div>
 
         <div className="flex justify-around w-2/5">
-            {navItemsRight.map(({ label, icon }) => (
+            {navItemsRight.map(({ label, icon, imageUrl }) => (
             <NavIcon
                 key={label}
                 Icon={icon}
                 label={label}
                 isActive={activeScreen === label}
                 onClick={() => setScreen(label)}
+                imageUrl={imageUrl}
             />
             ))}
         </div>

@@ -2,9 +2,9 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Category, TaskStatus, Project, Note } from '../types';
 import { getCategoryColor } from '../constants';
-import { PlusCircleIcon, ChevronLeftIcon, ChevronRightIcon, SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, PaperClipIcon, PlayIcon, CheckCircleIcon, ArrowUturnLeftIcon, CalendarIcon, GoogleCalendarIcon } from './Icons';
+import { PlusCircleIcon, ChevronLeftIcon, ChevronRightIcon, SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, PaperClipIcon, PlayIcon, CheckCircleIcon, ArrowUturnLeftIcon, CalendarIcon, GoogleCalendarIcon, ArrowDownTrayIcon, LinkIcon } from './Icons';
 import { triggerHapticFeedback } from '../utils/haptics';
-import { parseTaskFromString, generateMapsEmbedUrl } from '../services/geminiService';
+import { parseTaskFromString, getAutocompleteSuggestions } from '../services/geminiService';
 
 // --- PROPS ---
 interface ScheduleProps {
@@ -41,15 +41,34 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
         return now.toTimeString().substring(0,5);
     });
     const [isParsing, setIsParsing] = useState(false);
+    const [highlightedFields, setHighlightedFields] = useState<string[]>([]);
+    const [aiSummary, setAiSummary] = useState<string | null>(null);
     const titleInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => { titleInputRef.current?.focus(); }, []);
     
     const parseTitle = async (title: string) => {
-        if (!title.startsWith('/')) return;
+        if (!title.startsWith('/')) {
+            setAiSummary(null);
+            return;
+        };
         setIsParsing(true);
         const parsedDetails = await parseTaskFromString(title);
         setTaskDetails(prev => ({ ...prev, ...parsedDetails, title }));
+
+        const parsedKeys = Object.keys(parsedDetails);
+        if (parsedKeys.length > 1) { // Check if more than just title was parsed
+            setHighlightedFields(parsedKeys);
+            setTimeout(() => setHighlightedFields([]), 1500);
+
+            const time = parsedDetails.startTime instanceof Date ? parsedDetails.startTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : 'a default time';
+            const duration = parsedDetails.plannedDuration ? ` for ${parsedDetails.plannedDuration} min` : '';
+            const category = parsedDetails.category ? ` as a ${parsedDetails.category} task` : '';
+            setAiSummary(`✨ Okay, scheduling "${(parsedDetails.title || title).substring(1).trim()}"${category} at ${time}${duration}.`);
+        } else {
+            setAiSummary(null);
+        }
+        
         if (parsedDetails.startTime instanceof Date) {
             const newStartTime = new Date(selectedDate);
             newStartTime.setHours(parsedDetails.startTime.getHours(), parsedDetails.startTime.getMinutes());
@@ -73,14 +92,9 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
         const taskStartTime = new Date(selectedDate);
         taskStartTime.setHours(parseInt(hours), parseInt(minutes));
         
-        let finalTaskDetails = { ...taskDetails };
-        if (finalTaskDetails.location) {
-            finalTaskDetails.locationEmbedUrl = generateMapsEmbedUrl(finalTaskDetails.location);
-        }
-
         addTask({
-            ...finalTaskDetails,
-            title: finalTaskDetails.title.startsWith('/') ? finalTaskDetails.title.substring(1).trim() : finalTaskDetails.title,
+            ...taskDetails,
+            title: taskDetails.title.startsWith('/') ? taskDetails.title.substring(1).trim() : taskDetails.title,
             startTime: taskStartTime,
         });
         onClose();
@@ -105,21 +119,35 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
                         {isParsing && <SparklesIcon className="w-4 h-4 text-accent absolute right-3 top-1/2 -translate-y-1/2 animate-pulse" />}
                     </div>
                 </div>
+
+                <AnimatePresence>
+                {aiSummary && (
+                    <motion.p 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="text-sm text-center text-light-text-secondary dark:text-dark-text-secondary p-2 bg-light-bg dark:bg-dark-bg rounded-lg border border-light-border dark:border-dark-border"
+                    >
+                        {aiSummary}
+                    </motion.p>
+                )}
+                </AnimatePresence>
+
                  <div className="grid grid-cols-3 gap-4">
                     <div>
                         <label htmlFor="task-category" className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">Category</label>
-                        <input list="category-list" id="task-category" value={taskDetails.category} onChange={e => setTaskDetails({...taskDetails, category: e.target.value as Category})} className="block w-full px-3 py-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg" />
+                        <input list="category-list" id="task-category" value={taskDetails.category} onChange={e => setTaskDetails({...taskDetails, category: e.target.value as Category})} className={`block w-full px-3 py-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg ${highlightedFields.includes('category') ? 'animate-highlight' : ''}`} />
                         <datalist id="category-list">
                             {categories.map(cat => <option key={cat} value={cat} />)}
                         </datalist>
                     </div>
                      <div>
                         <label htmlFor="task-time" className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">Start Time</label>
-                        <input type="time" id="task-time" value={startTime} onChange={e => setStartTime(e.target.value)} required className="block w-full px-3 py-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg" />
+                        <input type="time" id="task-time" value={startTime} onChange={e => setStartTime(e.target.value)} required className={`block w-full px-3 py-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg ${highlightedFields.includes('startTime') ? 'animate-highlight' : ''}`} />
                     </div>
                      <div>
                         <label htmlFor="task-duration" className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1">Duration (min)</label>
-                        <input type="number" id="task-duration" value={taskDetails.plannedDuration} onChange={e => setTaskDetails({...taskDetails, plannedDuration: parseInt(e.target.value)})} required className="block w-full px-3 py-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg" />
+                        <input type="number" id="task-duration" value={taskDetails.plannedDuration} onChange={e => setTaskDetails({...taskDetails, plannedDuration: parseInt(e.target.value)})} required className={`block w-full px-3 py-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg ${highlightedFields.includes('plannedDuration') ? 'animate-highlight' : ''}`} />
                     </div>
                  </div>
                  
@@ -131,10 +159,28 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
                     </div>
 
                     <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-light-text-secondary dark:text-dark-text-secondary"><LinkIcon className="w-5 h-5"/></span>
+                        <input type="text" value={taskDetails.referenceUrl} onChange={e => setTaskDetails({...taskDetails, referenceUrl: e.target.value})} placeholder="Reference URL (for insights)..." className="block w-full px-3 py-2 pl-10 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"/>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input 
+                            type="checkbox" 
+                            id="is-virtual-toggle"
+                            checked={taskDetails.isVirtual} 
+                            onChange={e => setTaskDetails({...taskDetails, isVirtual: e.target.checked, location: '', linkedUrl: ''})}
+                            className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+                        />
+                        <label htmlFor="is-virtual-toggle" className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">
+                            Virtual Event
+                        </label>
+                    </div>
+
+                    <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-light-text-secondary dark:text-dark-text-secondary">
                             {taskDetails.isVirtual ? <VideoCameraIcon className="w-5 h-5"/> : <MapPinIcon className="w-5 h-5"/>}
                         </span>
-                        <input type="text" value={taskDetails.isVirtual ? taskDetails.linkedUrl : taskDetails.location} onChange={e => taskDetails.isVirtual ? setTaskDetails({...taskDetails, linkedUrl: e.target.value}) : setTaskDetails({...taskDetails, location: e.target.value}) } placeholder={taskDetails.isVirtual ? "Virtual meeting link..." : "Location..."} className="block w-full px-3 py-2 pl-10 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg" />
+                        <input type="text" value={taskDetails.isVirtual ? taskDetails.linkedUrl : taskDetails.location} onChange={e => taskDetails.isVirtual ? setTaskDetails({...taskDetails, linkedUrl: e.target.value}) : setTaskDetails({...taskDetails, location: e.target.value}) } placeholder={taskDetails.isVirtual ? "Virtual meeting link..." : "Location..."} className={`block w-full px-3 py-2 pl-10 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg ${highlightedFields.includes('location') || highlightedFields.includes('linkedUrl') || highlightedFields.includes('isVirtual') ? 'animate-highlight' : ''}`} />
                     </div>
                     </motion.div>
                 </AnimatePresence>
@@ -145,27 +191,50 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
     )
 }
 
-const CompletedTaskCard: React.FC<{task: Task; onUndo: (taskId: number) => void; onViewTask: (task: Task) => void;}> = ({ task, onUndo, onViewTask }) => (
-    <motion.div layout key={task.id} onClick={() => onViewTask(task)} className="group relative rounded-2xl overflow-hidden aspect-[16/9] shadow-lg my-4 cursor-pointer">
-        {task.completionImageUrl === 'loading' ? (
-            <div className="w-full h-full bg-light-card dark:bg-dark-card animate-pulse flex items-center justify-center">
-                <SparklesIcon className="w-8 h-8 text-accent animate-pulse"/>
+const CompletedTaskCard: React.FC<{task: Task; onUndo: (taskId: number) => void; onViewTask: (task: Task) => void;}> = ({ task, onUndo, onViewTask }) => {
+    const handleDownload = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!task.completionImageUrl) return;
+        const link = document.createElement('a');
+        link.href = task.completionImageUrl;
+        link.download = `Praxis_${task.title.replace(/\s/g, '_')}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    return (
+        <motion.div layout key={task.id} onClick={() => onViewTask(task)} className="group relative rounded-2xl overflow-hidden aspect-[16/9] shadow-lg my-4 cursor-pointer">
+            {task.completionImageUrl === 'loading' ? (
+                <div className="w-full h-full bg-light-card dark:bg-dark-card animate-pulse flex flex-col items-center justify-center p-4 text-center">
+                    <SparklesIcon className="w-8 h-8 text-accent animate-pulse"/>
+                    <p className="text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mt-2">The Muse is creating your victory image...</p>
+                </div>
+            ) : (
+                 <img src={task.completionImageUrl} alt={`Completed: ${task.title}`} className="w-full h-full object-cover"/>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 flex flex-col justify-end">
+                 <h4 className="font-bold text-white text-xl shadow-black [text-shadow:_0_2px_4px_var(--tw-shadow-color)] flex items-center gap-2"><CheckCircleIcon className="w-6 h-6 text-green-400"/> {task.completionSummary?.newTitle || task.title}</h4>
+                 {task.completionSummary?.shortInsight && <p className="text-white/80 text-sm mt-1 [text-shadow:_0_1px_3px_var(--tw-shadow-color)]">{task.completionSummary.shortInsight}</p>}
             </div>
-        ) : (
-             <img src={task.completionImageUrl} alt={`Completed: ${task.title}`} className="w-full h-full object-cover"/>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 flex flex-col justify-end">
-             <h4 className="font-bold text-white text-xl shadow-black [text-shadow:_0_2px_4px_var(--tw-shadow-color)] flex items-center gap-2"><CheckCircleIcon className="w-6 h-6 text-green-400"/> {task.completionSummary?.newTitle || task.title}</h4>
-             {task.completionSummary?.shortInsight && <p className="text-white/80 text-sm mt-1 [text-shadow:_0_1px_3px_var(--tw-shadow-color)]">{task.completionSummary.shortInsight}</p>}
-        </div>
-        <button onClick={(e) => { e.stopPropagation(); onUndo(task.id); }} className="absolute top-2 right-2 p-2 rounded-full bg-black/40 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
-            <ArrowUturnLeftIcon className="w-5 h-5"/>
-        </button>
-    </motion.div>
-);
+            <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={handleDownload} className="p-2 rounded-full bg-black/40 text-white backdrop-blur-sm" aria-label="Download image">
+                    <ArrowDownTrayIcon className="w-5 h-5"/>
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); onUndo(task.id); }} className="p-2 rounded-full bg-black/40 text-white backdrop-blur-sm" aria-label="Undo completion">
+                    <ArrowUturnLeftIcon className="w-5 h-5"/>
+                </button>
+            </div>
+        </motion.div>
+    );
+};
 
 
 const DayView: React.FC<Pick<ScheduleProps, 'tasks' | 'onViewTask' | 'updateTask' | 'onUndoTask' | 'onCompleteTask'> & { date: Date }> = ({ tasks, onViewTask, date, updateTask, onUndoTask, onCompleteTask }) => {
+    const dayViewRef = useRef<HTMLDivElement>(null);
+    const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+    const [dropIndicator, setDropIndicator] = useState<{ top: number; time: string } | null>(null);
+
     const tasksForDay = useMemo(() => tasks.filter(t => isSameDay(t.startTime, date)).sort((a,b) => a.startTime.getTime() - b.startTime.getTime()), [tasks, date]);
     
     const handleStatusChange = (task: Task, newStatus: TaskStatus) => {
@@ -177,13 +246,74 @@ const DayView: React.FC<Pick<ScheduleProps, 'tasks' | 'onViewTask' | 'updateTask
         }
     };
 
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, task: Task) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', task.id.toString());
+        const img = new Image();
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        e.dataTransfer.setDragImage(img, 0, 0);
+        setTimeout(() => setDraggedTask(task), 0);
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        if (!dayViewRef.current || !draggedTask) return;
+
+        const rect = dayViewRef.current.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const totalMinutes = 24 * 60;
+        const rawMinute = (y / rect.height) * totalMinutes;
+        const snappedMinute = Math.round(rawMinute / 15) * 15;
+        const hours = Math.floor(snappedMinute / 60);
+        const minutes = snappedMinute % 60;
+
+        const newTime = new Date(date);
+        newTime.setHours(hours, minutes);
+
+        setDropIndicator({ top: y, time: newTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        const taskId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        const taskToUpdate = tasks.find(t => t.id === taskId);
+
+        if (!dayViewRef.current || !taskToUpdate) return;
+        
+        const rect = dayViewRef.current.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const totalMinutes = 24 * 60;
+        const rawMinute = (y / rect.height) * totalMinutes;
+        const snappedMinute = Math.round(rawMinute / 15) * 15;
+        const hours = Math.floor(snappedMinute / 60);
+        const minutes = snappedMinute % 60;
+        
+        const newStartTime = new Date(taskToUpdate.startTime);
+        newStartTime.setHours(hours, minutes);
+
+        updateTask({ ...taskToUpdate, startTime: newStartTime });
+        setDraggedTask(null);
+        setDropIndicator(null);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedTask(null);
+        setDropIndicator(null);
+    };
+
     return (
         <div className="flex min-h-full py-4">
             <div className="w-24 text-center flex-shrink-0 pt-4 self-start sticky top-0">
                 <p className="text-sm font-bold uppercase text-light-text-secondary dark:text-dark-text-secondary">{date.toLocaleDateString(undefined, { weekday: 'short' })}</p>
                 <p className={`text-4xl font-display font-bold ${isSameDay(date, new Date()) ? 'text-accent' : ''}`}>{date.getDate()}</p>
             </div>
-            <div className="w-full pl-2 pr-4 relative flex-grow">
+            <div className="w-full pl-2 pr-4 relative flex-grow" ref={dayViewRef} onDragOver={handleDragOver} onDrop={handleDrop} onDragLeave={handleDragEnd}>
+                 {dropIndicator && (
+                    <div className="absolute left-0 right-0 z-10 flex items-center gap-2 pointer-events-none" style={{ top: `${dropIndicator.top}px` }}>
+                        <div className="text-xs font-mono text-accent bg-light-card dark:bg-dark-card px-1 rounded">{dropIndicator.time}</div>
+                        <div className="h-px flex-grow bg-accent border-dashed border-t-2 border-accent"></div>
+                    </div>
+                )}
                  {tasksForDay.length > 0 ? (
                     <motion.div layout>
                         <AnimatePresence>
@@ -191,23 +321,33 @@ const DayView: React.FC<Pick<ScheduleProps, 'tasks' | 'onViewTask' | 'updateTask
                                 task.status === TaskStatus.Completed ? (
                                     <CompletedTaskCard key={task.id} task={task} onUndo={onUndoTask} onViewTask={onViewTask} />
                                 ) : (
+                                // FIX: Wrapped draggable element in a motion.div to resolve type conflicts between framer-motion props and native D&D handlers.
                                 <motion.div
-                                    key={task.id} layout
-                                    className="group relative flex gap-3 items-center"
+                                    key={task.id}
+                                    layout
+                                    className={`transition-opacity ${draggedTask?.id === task.id ? 'opacity-30' : ''}`}
                                 >
-                                    <div className="w-1.5 h-16 rounded-full" style={{ backgroundColor: getCategoryColor(task.category) }} />
-                                    <div onClick={() => onViewTask(task)} className="flex-grow py-3 border-b border-light-border dark:border-dark-border cursor-pointer">
-                                         <p className="font-semibold text-lg flex items-center gap-2">
-                                            {task.googleCalendarEventId && <GoogleCalendarIcon className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />}
-                                            {task.title}
-                                        </p>
-                                         <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">{task.startTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</p>
+                                    <div
+                                        draggable={true}
+                                        onClick={() => onViewTask(task)}
+                                        onDragStart={(e) => handleDragStart(e, task)}
+                                        onDragEnd={handleDragEnd}
+                                        className="group relative flex gap-3 items-center cursor-pointer"
+                                    >
+                                        <div className="w-1.5 h-16 rounded-full" style={{ backgroundColor: getCategoryColor(task.category) }} />
+                                        <div className="flex-grow py-3 border-b border-light-border dark:border-dark-border">
+                                            <p className="font-semibold text-lg flex items-center gap-2">
+                                                {task.googleCalendarEventId && <GoogleCalendarIcon className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />}
+                                                {task.title}
+                                            </p>
+                                            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">{task.startTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</p>
+                                        </div>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {task.status !== TaskStatus.InProgress && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task, TaskStatus.InProgress); }} className="p-2 rounded-full bg-blue-500/20 text-blue-500"><PlayIcon className="w-5 h-5"/></button>}
+                                            <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task, TaskStatus.Completed); }} className="p-2 rounded-full bg-green-500/20 text-green-500"><CheckCircleIcon className="w-5 h-5"/></button>
+                                        </div>
+                                        {task.status === TaskStatus.InProgress && <div className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-1 bg-accent rounded-full shadow-[0_0_8px] shadow-accent animate-pulse"></div>}
                                     </div>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        {task.status !== TaskStatus.InProgress && <button onClick={() => handleStatusChange(task, TaskStatus.InProgress)} className="p-2 rounded-full bg-blue-500/20 text-blue-500"><PlayIcon className="w-5 h-5"/></button>}
-                                        <button onClick={() => handleStatusChange(task, TaskStatus.Completed)} className="p-2 rounded-full bg-green-500/20 text-green-500"><CheckCircleIcon className="w-5 h-5"/></button>
-                                    </div>
-                                    {task.status === TaskStatus.InProgress && <div className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-1 bg-accent rounded-full shadow-[0_0_8px] shadow-accent animate-pulse"></div>}
                                 </motion.div>
                             ))}
                         </AnimatePresence>
@@ -289,7 +429,7 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
     const [renderedDays, setRenderedDays] = useState([startOfDay(new Date())]);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const sentinelRef = useRef<HTMLDivElement>(null);
-
+    
      useEffect(() => {
         if (view === 'Month') return; // Disable observer for month view
 
@@ -333,7 +473,7 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
             return newDate;
         });
     };
-
+    
     return (
         <div className="card rounded-2xl h-[78vh] flex flex-col overflow-hidden">
              <AnimatePresence>{isAddingTask && <NewTaskModal onClose={() => setIsAddingTask(false)} addTask={props.addTask} selectedDate={displayDate} projects={props.projects} notes={props.notes} categories={props.categories} />}</AnimatePresence>
@@ -358,6 +498,7 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
                     </div>
                 </div>
             </header>
+            
             <main ref={scrollContainerRef} className="flex-grow overflow-y-auto relative">
                 {view === 'Day' && (
                     <div>

@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, RadialBarChart, RadialBar, AreaChart, Area } from 'recharts';
 import { Task, Note, Project, ActionableInsight, Goal, ChatMessage, TaskStatus, HealthData, InsightWidgetData, ChartWidget, KeyMetricWidget, TextWidget, RecipeWidget, Category, AreaChartWidget, RadialChartWidget, MapWidget, GeneratedImageWidget, WeatherWidget } from '../types';
-import { generateActionableInsights, getChatFollowUp, parseHealthDataFromTasks, generateMapsEmbedUrl, getAutocompleteSuggestions } from '../services/geminiService';
+import { getChatFollowUp, getAutocompleteSuggestions, generateMapsEmbedUrl } from '../services/geminiService';
 import { inferHomeLocation } from '../utils/taskUtils';
-import { CheckCircleIcon, XMarkIcon, SparklesIcon, DocumentTextIcon, LinkIcon, ArrowPathIcon, PaperAirplaneIcon, PaperClipIcon, PlusIcon, VideoCameraIcon, LightBulbIcon, ChevronLeftIcon, ChevronRightIcon, PhotoIcon, MapPinIcon, ArrowDownTrayIcon } from './Icons';
+import { CheckCircleIcon, XMarkIcon, SparklesIcon, DocumentTextIcon, LinkIcon, ArrowPathIcon, PaperAirplaneIcon, PaperClipIcon, PlusIcon, VideoCameraIcon, LightBulbIcon, ChevronLeftIcon, ChevronRightIcon, PhotoIcon, MapPinIcon, ArrowDownTrayIcon, ChatBubbleLeftEllipsisIcon } from './Icons';
 import * as Icons from './Icons';
 import { DEFAULT_CATEGORIES } from '../constants';
 
@@ -20,6 +20,7 @@ interface EventDetailProps {
     redirectToKikoAIWithChat: (history: ChatMessage[]) => void;
     addNote: (title: string, content: string, notebookId: number) => void;
     categories: Category[];
+    triggerInsightGeneration: (task: Task, isRegeneration: boolean) => void;
 }
 
 const modalVariants = { hidden: { opacity: 0, scale: 0.95 }, visible: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.95 }};
@@ -27,20 +28,23 @@ const itemVariants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 }}};
 
 // --- WIDGET SUBCOMPONENTS ---
-const InsightWidgetContainer: React.FC<{title: string, icon: React.ReactNode, onAddToNotes?: () => void, children: React.ReactNode}> = ({ title, icon, onAddToNotes, children }) => (
+const InsightWidgetContainer: React.FC<{title: string, icon: React.ReactNode, onAddToNotes?: () => void, onChat?: () => void, children: React.ReactNode}> = ({ title, icon, onAddToNotes, onChat, children }) => (
     <motion.div variants={itemVariants} className="relative bg-light-bg/50 dark:bg-dark-bg/50 p-3 rounded-xl border border-light-border dark:border-dark-border">
          <div className="flex justify-between items-center mb-2">
             <h5 className="font-semibold text-xs flex items-center gap-2 text-light-text-secondary dark:text-dark-text-secondary uppercase tracking-wider">{icon}{title}</h5>
-            {onAddToNotes && <button onClick={onAddToNotes} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" aria-label="Add to Notes"><PlusIcon className="w-4 h-4"/></button>}
+            <div className="flex items-center">
+                {onChat && <button onClick={onChat} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" aria-label="Chat about this"><ChatBubbleLeftEllipsisIcon className="w-4 h-4"/></button>}
+                {onAddToNotes && <button onClick={onAddToNotes} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" aria-label="Add to Notes"><PlusIcon className="w-4 h-4"/></button>}
+            </div>
         </div>
         {children}
     </motion.div>
 );
 
-const KeyMetricWidgetComponent: React.FC<{widget: KeyMetricWidget, onAddToNotes: () => void}> = ({widget, onAddToNotes}) => {
+const KeyMetricWidgetComponent: React.FC<{widget: KeyMetricWidget, onAddToNotes: () => void, onChat: () => void}> = ({widget, onAddToNotes, onChat}) => {
     const Icon = (Icons as any)[widget.icon] || SparklesIcon;
     return (
-    <InsightWidgetContainer title={widget.title} icon={<Icon className={`w-4 h-4 ${widget.color}`}/>} onAddToNotes={onAddToNotes}>
+    <InsightWidgetContainer title={widget.title} icon={<Icon className={`w-4 h-4 ${widget.color}`}/>} onAddToNotes={onAddToNotes} onChat={onChat}>
         <div className="flex items-baseline gap-2">
             <p className={`text-4xl lg:text-5xl font-bold font-display ${widget.color}`}>{widget.value}</p>
             <p className="font-semibold text-light-text-secondary dark:text-dark-text-secondary">{widget.unit}</p>
@@ -48,14 +52,14 @@ const KeyMetricWidgetComponent: React.FC<{widget: KeyMetricWidget, onAddToNotes:
     </InsightWidgetContainer>
 )};
 
-const TextWidgetComponent: React.FC<{widget: TextWidget, onAddToNotes: () => void}> = ({widget, onAddToNotes}) => {
+const TextWidgetComponent: React.FC<{widget: TextWidget, onAddToNotes: () => void, onChat: () => void}> = ({widget, onAddToNotes, onChat}) => {
      const Icon = (Icons as any)[widget.icon] || LightBulbIcon;
      const formatContent = (content: string) => {
         return (content || '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>');
      }
      return (
-        <InsightWidgetContainer title={widget.title} icon={<Icon className="w-4 h-4"/>} onAddToNotes={onAddToNotes}>
-            <div className="text-sm prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: formatContent(widget.content) }}></div>
+        <InsightWidgetContainer title={widget.title} icon={<Icon className="w-4 h-4"/>} onAddToNotes={onAddToNotes} onChat={onChat}>
+            <div className="text-sm prose prose-sm dark:prose-invert max-w-none break-word" dangerouslySetInnerHTML={{ __html: formatContent(widget.content) }}></div>
             {widget.links && widget.links.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-light-border/50 dark:border-dark-border/50 space-y-1">
                     {widget.links.map((link, index) => (
@@ -70,8 +74,8 @@ const TextWidgetComponent: React.FC<{widget: TextWidget, onAddToNotes: () => voi
      )
 };
 
-const AreaChartWidgetComponent: React.FC<{widget: AreaChartWidget, onAddToNotes: () => void}> = ({widget, onAddToNotes}) => (
-    <InsightWidgetContainer title={widget.title} icon={<Icons.ChartBarIcon className="w-4 h-4"/>} onAddToNotes={onAddToNotes}>
+const AreaChartWidgetComponent: React.FC<{widget: AreaChartWidget, onAddToNotes: () => void, onChat: () => void}> = ({widget, onAddToNotes, onChat}) => (
+    <InsightWidgetContainer title={widget.title} icon={<Icons.ChartBarIcon className="w-4 h-4"/>} onAddToNotes={onAddToNotes} onChat={onChat}>
         <div className="h-40 w-full">
             <ResponsiveContainer width="100%" height="100%">
                  <AreaChart data={widget.data} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
@@ -92,8 +96,8 @@ const AreaChartWidgetComponent: React.FC<{widget: AreaChartWidget, onAddToNotes:
     </InsightWidgetContainer>
 );
 
-const RadialChartWidgetComponent: React.FC<{widget: RadialChartWidget, onAddToNotes: () => void}> = ({widget, onAddToNotes}) => (
-     <InsightWidgetContainer title={widget.title} icon={<Icons.BoltIcon className="w-4 h-4"/>} onAddToNotes={onAddToNotes}>
+const RadialChartWidgetComponent: React.FC<{widget: RadialChartWidget, onAddToNotes: () => void, onChat: () => void}> = ({widget, onAddToNotes, onChat}) => (
+     <InsightWidgetContainer title={widget.title} icon={<Icons.BoltIcon className="w-4 h-4"/>} onAddToNotes={onAddToNotes} onChat={onChat}>
         <div className="h-40 w-full relative">
              <ResponsiveContainer width="100%" height="100%">
                 <RadialBarChart innerRadius="70%" outerRadius="100%" data={[{value: widget.value}]} startAngle={90} endAngle={450} barSize={15}>
@@ -109,8 +113,8 @@ const RadialChartWidgetComponent: React.FC<{widget: RadialChartWidget, onAddToNo
 )
 
 
-const RecipeWidgetComponent: React.FC<{ widget: RecipeWidget; onAddToNotes: () => void }> = ({ widget, onAddToNotes }) => (
-    <InsightWidgetContainer icon={<DocumentTextIcon className="w-4 h-4 text-blue-400"/>} title="Recipe Intel" onAddToNotes={onAddToNotes}>
+const RecipeWidgetComponent: React.FC<{ widget: RecipeWidget; onAddToNotes: () => void, onChat: () => void }> = ({ widget, onAddToNotes, onChat }) => (
+    <InsightWidgetContainer icon={<DocumentTextIcon className="w-4 h-4 text-blue-400"/>} title="Recipe Intel" onAddToNotes={onAddToNotes} onChat={onChat}>
         <h4 className="font-bold">{widget.name}</h4>
         {widget.imageUrl && <img src={widget.imageUrl} alt={widget.name} className="rounded-lg h-32 w-full object-cover"/>}
         <div className="text-xs"><strong className="text-blue-400">Ingredients:</strong><ul className="list-disc list-inside columns-2">{widget.ingredients.map(i=><li key={i}>{i}</li>)}</ul></div>
@@ -119,8 +123,8 @@ const RecipeWidgetComponent: React.FC<{ widget: RecipeWidget; onAddToNotes: () =
     </InsightWidgetContainer>
 );
 
-const MapWidgetComponent: React.FC<{widget: MapWidget, onAddToNotes: () => void}> = ({widget, onAddToNotes}) => (
-    <InsightWidgetContainer title={widget.title} icon={<MapPinIcon className="w-4 h-4 text-red-400"/>} onAddToNotes={onAddToNotes}>
+const MapWidgetComponent: React.FC<{widget: MapWidget, onAddToNotes: () => void, onChat: () => void}> = ({widget, onAddToNotes, onChat}) => (
+    <InsightWidgetContainer title={widget.title} icon={<MapPinIcon className="w-4 h-4 text-red-400"/>} onAddToNotes={onAddToNotes} onChat={onChat}>
         <iframe
             className="w-full h-48 rounded-lg border-none"
             loading="lazy"
@@ -130,10 +134,10 @@ const MapWidgetComponent: React.FC<{widget: MapWidget, onAddToNotes: () => void}
     </InsightWidgetContainer>
 );
 
-const WeatherWidgetComponent: React.FC<{widget: WeatherWidget, onAddToNotes: () => void}> = ({widget, onAddToNotes}) => {
+const WeatherWidgetComponent: React.FC<{widget: WeatherWidget, onAddToNotes: () => void, onChat: () => void}> = ({widget, onAddToNotes, onChat}) => {
     const Icon = (Icons as any)[`${widget.conditionIcon}Icon`] || Icons.SparklesIcon;
     return (
-        <InsightWidgetContainer title={widget.title} icon={<Icon className="w-4 h-4 text-blue-400"/>} onAddToNotes={onAddToNotes}>
+        <InsightWidgetContainer title={widget.title} icon={<Icon className="w-4 h-4 text-blue-400"/>} onAddToNotes={onAddToNotes} onChat={onChat}>
             <div className="flex justify-between items-center">
                 <div>
                     <p className="text-4xl font-bold font-display">{widget.currentTemp}°</p>
@@ -157,18 +161,17 @@ const WeatherWidgetComponent: React.FC<{widget: WeatherWidget, onAddToNotes: () 
 };
 
 
-const GeneratedImageWidgetComponent: React.FC<{widget: GeneratedImageWidget, onAddToNotes: () => void}> = ({widget, onAddToNotes}) => {
+const GeneratedImageWidgetComponent: React.FC<{widget: GeneratedImageWidget, onAddToNotes: () => void, onChat: () => void}> = ({widget, onAddToNotes, onChat}) => {
     const handleDownload = () => {
         const link = document.createElement('a');
         link.href = widget.imageUrl;
-        // FIX: Added optional chaining to prevent crash if title is undefined.
         link.download = `${(widget?.title || 'PraxisAI_Image').replace(/\s/g, '_')}.jpg`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     };
     return (
-        <InsightWidgetContainer title={widget.title} icon={<SparklesIcon className="w-4 h-4 text-accent"/>} onAddToNotes={onAddToNotes}>
+        <InsightWidgetContainer title={widget.title} icon={<SparklesIcon className="w-4 h-4 text-accent"/>} onAddToNotes={onAddToNotes} onChat={onChat}>
             <div className="relative group">
                 <img src={widget.imageUrl} alt={widget.prompt} className="rounded-lg w-full aspect-square object-cover"/>
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -248,15 +251,13 @@ const ImageViewer: React.FC<{ attachments: string[], onImageClick: (index: numbe
 };
 
 
-const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, projects, goals, updateTask, onComplete, onClose, redirectToKikoAIWithChat, addNote, categories }) => {
-    const [isLoadingInsight, setIsLoadingInsight] = useState(false);
+const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, projects, goals, updateTask, onComplete, onClose, redirectToKikoAIWithChat, addNote, categories, triggerInsightGeneration }) => {
     const [editableTask, setEditableTask] = useState(task);
     const [isFullScreenViewerOpen, setIsFullScreenViewerOpen] = useState(false);
     const [fullScreenInitialIndex, setFullScreenInitialIndex] = useState(0);
     const [locationSuggestions, setLocationSuggestions] = useState<{place_name: string; address: string}[]>([]);
     const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const insight = task.insights; // Directly use insight from the task prop for reactivity
 
     useEffect(() => {
@@ -264,85 +265,76 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, projec
     }, [task]);
     
     useEffect(() => {
-        if (!task.insights && !task.isGeneratingInsights) {
+        if (!task.insights && !task.isGeneratingInsights && task.status !== TaskStatus.Completed) {
             updateTask({ ...task, isGeneratingInsights: true });
-            const healthData = parseHealthDataFromTasks(allTasks);
-            const homeLocation = inferHomeLocation(allTasks);
-            generateActionableInsights(task, healthData, notes, homeLocation, goals, allTasks).then(insightData => {
-                updateTask({ ...task, insights: insightData, isGeneratingInsights: false });
-            }).catch(error => {
-                console.error("Async insight generation failed on detail view:", error);
-                const taskWithError: Task = { ...task, isGeneratingInsights: false, insights: { widgets: [{ type: 'text', title: 'Insight Error', icon: 'SparklesIcon', content: 'Could not generate insights.' }] } };
-                updateTask(taskWithError);
-            });
+            triggerInsightGeneration(task, false); // Initial generation is not a "regeneration"
         }
-    }, [task.id, task.insights, task.isGeneratingInsights, allTasks, notes, updateTask, goals]);
+    }, [task, triggerInsightGeneration, updateTask]);
+
 
     const handleRegenerateInsights = () => {
-        const taskWithoutInsights = { ...editableTask, insights: null, isGeneratingInsights: true };
-        updateTask(taskWithoutInsights);
-        
-        const healthData = parseHealthDataFromTasks(allTasks);
-        const homeLocation = inferHomeLocation(allTasks);
-        generateActionableInsights(taskWithoutInsights, healthData, notes, homeLocation, goals, allTasks)
-            .then(insightData => {
-                updateTask({ ...taskWithoutInsights, insights: insightData, isGeneratingInsights: false });
-            })
-            .catch(error => {
-                console.error(error);
-                updateTask({ ...taskWithoutInsights, insights: { widgets: [{ type: 'text', title: 'Error', icon: 'XCircleIcon', content: 'Failed to load insights. Please try again.' }] }, isGeneratingInsights: false });
-            });
+        const taskForRegen = { ...editableTask, insights: null, isGeneratingInsights: true };
+        updateTask(taskForRegen);
+        triggerInsightGeneration(taskForRegen, true); // Pass true for regeneration
     };
 
     const handleSaveAndClose = () => { updateTask(editableTask); onClose(); };
     
-    const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const files = Array.from(e.target.files);
-            
-            Promise.all(files.map(file => new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            }))).then(dataUrls => {
-                // FIX: Only update local state to prevent modal from closing.
-                // Changes will be saved when the modal is closed via handleSaveAndClose.
-                setEditableTask(currentTask => {
-                    const updatedAttachments = [...(currentTask.attachmentUrls || []), ...dataUrls].slice(0, 10);
-                    return { ...currentTask, attachmentUrls: updatedAttachments };
-                });
-            }).catch(error => {
-                console.error("Error reading files:", error);
-            });
-        }
-    };
-
     const handleAddInsightToNotes = (widget: InsightWidgetData) => {
-        const title = widget.type === 'recipe' ? widget.name : widget.title;
-        let content = `<h2>${title}</h2>`;
+        let title: string;
+        let contentBody: string;
+
         switch(widget.type) {
-            case 'metric': content += `<p><strong>${widget.value} ${widget.unit}</strong></p>`; break;
+            case 'metric': 
+                title = widget.title;
+                contentBody = `<p><strong>${widget.value} ${widget.unit}</strong></p>`; 
+                break;
             case 'text': 
-                content += `<p>${widget.content}</p>`; 
+                title = widget.title;
+                contentBody = `<p>${widget.content}</p>`; 
                 if (widget.links) {
-                    content += '<h3>Related Links:</h3><ul>';
-                    content += widget.links.map(l => `<li><a href="${l.url}" target="_blank">${l.title}</a></li>`).join('');
-                    content += '</ul>';
+                    contentBody += '<h3>Related Links:</h3><ul>';
+                    contentBody += widget.links.map(l => `<li><a href="${l.url}" target="_blank">${l.title}</a></li>`).join('');
+                    contentBody += '</ul>';
                 }
                 break;
-            case 'area': case 'bar': case 'line': content += `<ul>${widget.data.map(d => `<li>${d.name}: ${d.value}</li>`).join('')}</ul><p><em>${widget.commentary}</em></p>`; break;
-            case 'radial': content += `<p><strong>${widget.value}%</strong> - ${widget.label}</p>`; break;
-            case 'recipe': content += `<ul>${widget.ingredients.map(i => `<li>${i}</li>`).join('')}</ul><p>${widget.quick_instructions}</p>`; break;
-            case 'map': content += `<p>Location: ${widget.locationQuery}</p>`; break;
-            case 'generated_image': content += `<p><em>${widget.prompt}</em></p>`; break;
-            case 'weather': content += `<p>Current: ${widget.currentTemp}°, Location: ${widget.location}</p>`; break;
+            case 'area':
+            case 'bar':
+            case 'line': 
+                title = widget.title;
+                contentBody = `<ul>${widget.data.map(d => `<li>${d.name}: ${d.value}</li>`).join('')}</ul><p><em>${widget.commentary}</em></p>`;
+                break;
+            case 'radial': 
+                title = widget.title;
+                contentBody = `<p><strong>${widget.value}%</strong> - ${widget.label}</p>`; 
+                break;
+            case 'recipe': 
+                title = widget.name;
+                contentBody = `<ul>${widget.ingredients.map(i => `<li>${i}</li>`).join('')}</ul><p>${widget.quick_instructions}</p>`; 
+                break;
+            case 'map': 
+                title = widget.title;
+                contentBody = `<p>Location: ${widget.locationQuery}</p><iframe src="${widget.embedUrl}"></iframe>`; 
+                break;
+            case 'generated_image': 
+                title = widget.title;
+                contentBody = `<img src="${widget.imageUrl}" alt="${widget.prompt}"/><p><em>${widget.prompt}</em></p>`; 
+                break;
+            case 'weather': 
+                title = widget.title;
+                contentBody = `<p>Current: ${widget.currentTemp}°, Location: ${widget.location}</p>`;
+                break;
+            default:
+                const _exhaustiveCheck: never = widget;
+                return;
         }
+        
+        const content = `<h2>${title}</h2>` + contentBody;
         addNote(`Insight for ${task.title}: ${title}`, content, editableTask.notebookId || notes[0]?.notebookId || 1);
     };
 
     const handleLocationInputChange = async (value: string) => {
-        setEditableTask(prev => ({...prev, location: value, locationEmbedUrl: undefined }));
+        setEditableTask(prev => ({...prev, location: value}));
         if (value.length > 2) {
             setIsFetchingSuggestions(true);
             const suggestions = await getAutocompleteSuggestions(value);
@@ -354,24 +346,45 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, projec
     };
 
     const handleLocationSuggestionClick = (suggestion: {place_name: string; address: string}) => {
-        const newEmbedUrl = generateMapsEmbedUrl(suggestion.address);
-        setEditableTask(prev => ({...prev, location: suggestion.address, locationEmbedUrl: newEmbedUrl}));
+        setEditableTask(prev => ({...prev, location: suggestion.address}));
         setLocationSuggestions([]);
     };
     
     const isCompletedView = task.status === TaskStatus.Completed;
 
+    const renderInsights = (insightData: ActionableInsight) => (
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {insightData.widgets.map((widget, i) => {
+                const widgetTitle = 'title' in widget ? widget.title : 'name' in widget ? widget.name : 'Insight';
+                const widgetContent = widget.type === 'text' ? widget.content : widget.type === 'recipe' ? widget.ingredients.join(', ') : '';
+                const chatContext = `Let's talk about this insight for my task "${task.title}": ${widgetTitle}. ${widgetContent}`;
+                const onChat = () => redirectToKikoAIWithChat([{ role: 'user', text: chatContext }, { role: 'model', text: `Of course. What are your thoughts on "${widgetTitle}"?` }]);
+                const props = { key: i, widget: widget as any, onAddToNotes: () => handleAddInsightToNotes(widget), onChat };
+                switch (widget.type) {
+                    case 'metric': return <KeyMetricWidgetComponent {...props}/>;
+                    case 'text': return <div className="sm:col-span-2"><TextWidgetComponent {...props}/></div>;
+                    case 'area': return <div className="sm:col-span-2"><AreaChartWidgetComponent {...props}/></div>;
+                    case 'radial': return <RadialChartWidgetComponent {...props} />;
+                    case 'recipe': return <div className="sm:col-span-2"><RecipeWidgetComponent {...props}/></div>;
+                    case 'map': if (widget.embedUrl) return <div className="sm:col-span-2"><MapWidgetComponent {...props}/></div>; else return null;
+                    case 'generated_image': return <GeneratedImageWidgetComponent {...props}/>;
+                    case 'weather': return <div className="sm:col-span-2"><WeatherWidgetComponent {...props}/></div>;
+                    default: return null;
+                }
+            })}
+        </motion.div>
+    );
+
     return (
     <>
         <AnimatePresence>
-        {isFullScreenViewerOpen && editableTask.attachmentUrls && (
-            <FullScreenImageViewer images={editableTask.attachmentUrls.filter(Boolean) as string[]} initialIndex={fullScreenInitialIndex} onClose={() => setIsFullScreenViewerOpen(false)} />
+        {isFullScreenViewerOpen && (
+            <FullScreenImageViewer images={(isCompletedView ? [editableTask.completionImageUrl] : []).filter(Boolean) as string[]} initialIndex={fullScreenInitialIndex} onClose={() => setIsFullScreenViewerOpen(false)} />
         )}
         </AnimatePresence>
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast" onClick={handleSaveAndClose}>
-             <input type="file" ref={fileInputRef} onChange={handleAttachmentChange} accept="image/*" className="hidden" multiple/>
             <motion.div variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="card rounded-2xl shadow-xl w-full max-w-4xl flex flex-col overflow-hidden max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                <ImageViewer attachments={(editableTask.attachmentUrls || (isCompletedView ? [editableTask.completionImageUrl] : [])).filter(Boolean) as string[]} onImageClick={(index) => { setFullScreenInitialIndex(index); setIsFullScreenViewerOpen(true); }}/>
+                <ImageViewer attachments={(isCompletedView ? [editableTask.completionImageUrl] : []).filter(Boolean) as string[]} onImageClick={(index) => { setFullScreenInitialIndex(index); setIsFullScreenViewerOpen(true); }}/>
                 <header className="p-4 sm:p-6 border-b border-light-border dark:border-dark-border flex-shrink-0">
                     <div className="flex justify-between items-start">
                          <div>
@@ -387,79 +400,72 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, projec
                         <button onClick={handleSaveAndClose} aria-label="Close modal" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 ml-4"><XMarkIcon className="w-6 h-6"/></button>
                     </div>
                 </header>
-                <main className="p-4 sm:p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-6 bg-light-bg dark:bg-dark-bg">
-                    <div className="space-y-4">
-                         <div className="flex justify-between items-center"><h4 className="font-semibold flex items-center gap-2 text-accent"><SparklesIcon className="w-5 h-5"/> Strategic Insights</h4><button onClick={handleRegenerateInsights} disabled={task.isGeneratingInsights} className="p-1.5 rounded-md hover:bg-accent/20 disabled:opacity-50"><ArrowPathIcon className={`w-4 h-4 ${task.isGeneratingInsights ? 'animate-spin' : ''}`} /></button></div>
-                        {task.isGeneratingInsights ? <p className="animate-pulse text-sm">✨ Kiko AI is generating new insights...</p> : insight && insight.widgets.length > 0 ? (
-                            <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                               {insight.widgets.map((widget, i) => {
-                                   const props = { key: i, widget: widget as any, onAddToNotes: () => handleAddInsightToNotes(widget) };
-                                   switch(widget.type) {
-                                       case 'metric': return <KeyMetricWidgetComponent {...props}/>;
-                                       case 'text': return <div className="sm:col-span-2"><TextWidgetComponent {...props}/></div>;
-                                       case 'area': return <div className="sm:col-span-2"><AreaChartWidgetComponent {...props}/></div>;
-                                       case 'radial': return <RadialChartWidgetComponent {...props} />;
-                                       case 'recipe': return <div className="sm:col-span-2"><RecipeWidgetComponent {...props}/></div>;
-                                       case 'map': return <div className="sm:col-span-2"><MapWidgetComponent {...props}/></div>;
-                                       case 'generated_image': return <GeneratedImageWidgetComponent {...props}/>;
-                                       case 'weather': return <div className="sm:col-span-2"><WeatherWidgetComponent {...props}/></div>;
-                                       default: return null;
-                                   }
-                               })}
-                            </motion.div>
-                        ) : <p className="text-sm text-light-text-secondary">No AI insight available for this task.</p> }
-                    </div>
+                <main className="p-4 sm:p-6 overflow-y-auto bg-light-bg dark:bg-dark-bg">
                     {isCompletedView ? (
-                        <div className="space-y-4">
-                             <h4 className="font-semibold">Details</h4>
-                             <p><strong>Time:</strong> {task.startTime.toLocaleString()}</p>
-                             <p><strong>Duration:</strong> {task.actualDuration || task.plannedDuration} minutes</p>
-                             {task.location && <p><strong>Location:</strong> {task.location}</p>}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-1 space-y-4 prose prose-sm dark:prose-invert max-w-none">
+                                <h4 className="font-semibold !mb-2">Details</h4>
+                                <p><strong>Time:</strong> {new Date(task.startTime).toLocaleString()}</p>
+                                <p><strong>Duration:</strong> {task.actualDuration || task.plannedDuration} minutes</p>
+                                {task.location && <p><strong>Location:</strong> {task.location}</p>}
+                                {task.linkedUrl && <p><strong>Link:</strong> <a href={task.linkedUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">{task.linkedUrl}</a></p>}
+                                {task.completionSummary?.shortInsight && <p><strong>Summary:</strong> {task.completionSummary.shortInsight}</p>}
+                            </div>
+                            <div className="lg:col-span-2 space-y-4">
+                                <h4 className="font-semibold flex items-center gap-2 text-accent"><SparklesIcon className="w-5 h-5"/> Strategic Insights</h4>
+                                {task.isGeneratingInsights ? <p className="animate-pulse text-sm">✨ Kiko AI is generating new insights...</p> : insight && insight.widgets.length > 0 ? (
+                                    renderInsights(insight)
+                                ) : <p className="text-sm text-light-text-secondary">No AI insight available for this completed task.</p>}
+                            </div>
                         </div>
                     ) : (
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-semibold text-light-text-secondary">Start Time</label><input type="time" value={editableTask.startTime.toTimeString().substring(0,5)} onChange={e => { const [h, m] = e.target.value.split(':'); const d = new Date(editableTask.startTime); d.setHours(parseInt(h), parseInt(m)); setEditableTask({...editableTask, startTime: d}); }} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg mt-1" /></div><div><label className="text-xs font-semibold text-light-text-secondary">Duration (min)</label><input type="number" value={editableTask.plannedDuration} onChange={e => setEditableTask({...editableTask, plannedDuration: parseInt(e.target.value) || 0})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg mt-1" /></div></div>
-                        <div className="space-y-3">
-                             <div><label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1"><Icons.BriefcaseIcon className="w-4 h-4"/> Project</label><select value={editableTask.projectId || ""} onChange={(e) => setEditableTask({...editableTask, projectId: parseInt(e.target.value) || undefined})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"><option value="">None</option>{projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select></div>
-                             <div><label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1"><DocumentTextIcon className="w-4 h-4"/> Linked Note</label><select value={editableTask.notebookId || ""} onChange={(e) => setEditableTask({...editableTask, notebookId: parseInt(e.target.value) || undefined})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"><option value="">None</option>{notes.map(note => <option key={note.id} value={note.id}>{note.title}</option>)}</select></div>
-                             <div className="relative">
-                                <label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1">
-                                    <input type="checkbox" checked={editableTask.isVirtual} onChange={e => setEditableTask({...editableTask, isVirtual: e.target.checked, location: '', locationEmbedUrl: ''})} className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent" />
-                                    <span>Virtual Event</span>
-                                </label>
-                                <div className="relative">
-                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-light-text-secondary dark:text-dark-text-secondary">{editableTask.isVirtual ? <LinkIcon className="w-4 h-4"/> : <MapPinIcon className="w-4 h-4"/>}</span>
-                                     <input type="text" placeholder={editableTask.isVirtual ? "Zoom Link..." : "China Beach..."} value={editableTask.isVirtual ? editableTask.linkedUrl || '' : editableTask.location || ''} onChange={(e) => editableTask.isVirtual ? setEditableTask({...editableTask, linkedUrl: e.target.value}) : handleLocationInputChange(e.target.value)} className="w-full p-2 pl-9 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg" />
-                                </div>
-                                {locationSuggestions.length > 0 && (
-                                    <div className="absolute z-10 w-full mt-1 bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border rounded-lg shadow-lg">
-                                        {locationSuggestions.map(s => <div key={s.address} onClick={() => handleLocationSuggestionClick(s)} className="p-2 hover:bg-accent/10 cursor-pointer text-sm"><strong>{s.place_name}</strong><br/><span className="text-xs text-light-text-secondary dark:text-dark-text-secondary">{s.address}</span></div>)}
-                                    </div>
-                                )}
-                                {editableTask.locationEmbedUrl && !editableTask.isVirtual && (
-                                    <div className="mt-2 space-y-1">
-                                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(editableTask.location || '')}`} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline">{editableTask.location}</a>
-                                        <iframe className="w-full h-24 rounded-lg border-none" loading="lazy" allowFullScreen src={editableTask.locationEmbedUrl}></iframe>
-                                    </div>
-                                )}
+                        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                            <div className="lg:col-span-3 space-y-4">
+                                <div className="flex justify-between items-center"><h4 className="font-semibold flex items-center gap-2 text-accent"><SparklesIcon className="w-5 h-5"/> Strategic Insights</h4><button onClick={handleRegenerateInsights} disabled={task.isGeneratingInsights} className="p-1.5 rounded-md hover:bg-accent/20 disabled:opacity-50"><ArrowPathIcon className={`w-4 h-4 ${task.isGeneratingInsights ? 'animate-spin' : ''}`} /></button></div>
+                                {task.isGeneratingInsights ? <p className="animate-pulse text-sm">✨ Kiko AI is generating new insights...</p> : insight && insight.widgets.length > 0 ? (
+                                    renderInsights(insight)
+                                ) : <p className="text-sm text-light-text-secondary">No AI insight available for this task.</p>}
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} className="w-full text-sm p-2 flex items-center justify-center gap-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg hover:bg-light-border dark:hover:bg-dark-border disabled:opacity-50" disabled={(editableTask.attachmentUrls?.length || 0) >= 10}>
-                                <PhotoIcon className="w-4 h-4"/> Attach Images ({(editableTask.attachmentUrls?.length || 0)}/10)
-                            </button>
+                            <div className="lg:col-span-2 space-y-4">
+                                <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-semibold text-light-text-secondary">Start Time</label><input type="time" value={editableTask.startTime.toTimeString().substring(0,5)} onChange={e => { const [h, m] = e.target.value.split(':'); const d = new Date(editableTask.startTime); d.setHours(parseInt(h), parseInt(m)); setEditableTask({...editableTask, startTime: d}); }} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg mt-1" /></div><div><label className="text-xs font-semibold text-light-text-secondary">Duration (min)</label><input type="number" value={editableTask.plannedDuration} onChange={e => setEditableTask({...editableTask, plannedDuration: parseInt(e.target.value) || 0})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg mt-1" /></div></div>
+                                <div className="space-y-3">
+                                     <div><label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1"><Icons.BriefcaseIcon className="w-4 h-4"/> Project</label><select value={editableTask.projectId || ""} onChange={(e) => setEditableTask({...editableTask, projectId: parseInt(e.target.value) || undefined})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"><option value="">None</option>{projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select></div>
+                                     <div><label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1"><DocumentTextIcon className="w-4 h-4"/> Linked Note</label><select value={editableTask.notebookId || ""} onChange={(e) => setEditableTask({...editableTask, notebookId: parseInt(e.target.value) || undefined})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"><option value="">None</option>{notes.map(note => <option key={note.id} value={note.id}>{note.title}</option>)}</select></div>
+                                     <div>
+                                        <label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1"><LinkIcon className="w-4 h-4"/> Reference URL</label>
+                                        <input type="text" placeholder="https://coursera.org/..." value={editableTask.referenceUrl || ''} onChange={(e) => setEditableTask({...editableTask, referenceUrl: e.target.value})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"/>
+                                    </div>
+                                     <div className="relative">
+                                        <label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1">
+                                            <input type="checkbox" checked={editableTask.isVirtual} onChange={e => setEditableTask({...editableTask, isVirtual: e.target.checked, location: ''})} className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent" />
+                                            <span>Virtual Event</span>
+                                        </label>
+                                        <div className="relative">
+                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-light-text-secondary dark:text-dark-text-secondary">{editableTask.isVirtual ? <VideoCameraIcon className="w-4 h-4"/> : <MapPinIcon className="w-4 h-4"/>}</span>
+                                             <input type="text" placeholder={editableTask.isVirtual ? "Zoom Link..." : "123 Main St, San Francisco, CA"} value={editableTask.isVirtual ? editableTask.linkedUrl || '' : editableTask.location || ''} onChange={(e) => editableTask.isVirtual ? setEditableTask({...editableTask, linkedUrl: e.target.value}) : handleLocationInputChange(e.target.value)} className="w-full p-2 pl-9 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg" />
+                                        </div>
+                                        {locationSuggestions.length > 0 && !editableTask.isVirtual && (
+                                            <div className="absolute z-10 w-full mt-1 bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border rounded-lg shadow-lg">
+                                                {locationSuggestions.map(s => <div key={s.address} onClick={() => handleLocationSuggestionClick(s)} className="p-2 hover:bg-accent/10 cursor-pointer text-sm"><strong>{s.place_name}</strong><br/><span className="text-xs text-light-text-secondary dark:text-dark-text-secondary">{s.address}</span></div>)}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
                     )}
                 </main>
-                {!isCompletedView && (
-                <footer className="p-4 bg-light-card/50 dark:bg-dark-card/50 border-t border-light-border dark:border-dark-border flex-shrink-0 grid grid-cols-2 gap-4">
-                     <button onClick={handleSaveAndClose} className="w-full py-3 px-4 bg-light-bg dark:bg-dark-bg hover:bg-light-border dark:hover:bg-dark-border font-semibold rounded-lg shadow-sm">Save Changes</button>
-                     <button onClick={onComplete} className="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg shadow-md flex items-center justify-center gap-2"><CheckCircleIcon className="w-6 h-6"/> Mark Complete</button>
+                <footer className="flex-shrink-0 p-4 sm:p-6 border-t border-light-border dark:border-dark-border flex justify-end items-center bg-light-card/80 dark:bg-dark-card/80">
+                    {!isCompletedView && (
+                        <button onClick={onComplete} className="flex items-center gap-2 text-sm font-semibold py-2 px-4 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors">
+                            <CheckCircleIcon className="w-5 h-5"/> Mark as Complete
+                        </button>
+                    )}
                 </footer>
-                )}
             </motion.div>
         </div>
-        </>
+    </>
     );
-};
+}
 
 export default EventDetail;

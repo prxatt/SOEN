@@ -9,9 +9,8 @@ if (!rootElement) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // FIX: Using a relative path is more robust for sandboxed environments (e.g., usercontent.goog)
-    // as it ensures the script's origin always matches the document's origin.
-    navigator.serviceWorker.register('sw.js').then(registration => {
+    // FIX: Using an explicitly relative path is more robust for sandboxed environments.
+    navigator.serviceWorker.register('./sw.js').then(registration => {
       console.log('SW registered: ', registration);
     }).catch(registrationError => {
       console.log('SW registration failed: ', registrationError);

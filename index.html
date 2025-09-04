@@ -30,15 +30,14 @@
               'dark-text': '#F3F4F6',
               'dark-text-secondary': '#9CA3AF',
 
-              // Widget colors from image
-              'widget-bg': '#1A1A1A',
-              'widget-dark-teal': '#2D4A4F',
-              'widget-teal': '#42949D',
-              'widget-beige': '#D8C9B8',
-              'widget-beige-text': '#4F4A45',
-              'widget-purple': '#6D5A92',
-              'widget-pink': '#D8A6C9',
-              'widget-pink-text': '#6D4A5F',
+              // Chart colors for new Mission Control
+              'chart-pink': '#EC4899',
+              'chart-purple': '#A855F7',
+              'chart-blue': '#3B82F6',
+              'chart-cyan': '#06B6D4',
+              'chart-green': '#22C55E',
+              'chart-yellow': '#F59E0B',
+              'chart-orange': '#F97316',
             },
             borderRadius: {
               'xl': '1rem',
@@ -63,12 +62,17 @@
               'fade-in-fast': {
                 '0%': { opacity: '0' },
                 '100%': { opacity: '1' },
+              },
+              'highlight': {
+                '0%, 100%': { 'background-color': 'transparent' },
+                '50%': { 'background-color': 'rgba(168, 85, 247, 0.15)' },
               }
             },
             animation: {
               'subtle-pulse': 'subtle-pulse 3s ease-in-out infinite',
               'fade-in': 'fade-in 0.5s ease-out forwards',
               'fade-in-fast': 'fade-in-fast 0.2s ease-out forwards',
+              'highlight': 'highlight 1.5s ease-in-out',
             },
           }
         }

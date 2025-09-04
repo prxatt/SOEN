@@ -110,7 +110,6 @@ const PerformanceWidget: React.FC<{praxisFlow: number, dailyStreak: number, comp
 const PrimaryGoalWidget: React.FC<{goals: Goal[], setScreen: (s: Screen) => void}> = ({goals, setScreen}) => {
     const primaryGoal = goals.find(g => g.term === 'mid' && g.status === 'active');
     return (
-// FIX: Changed 'PraxisAI' to 'KikoAI' to match the Screen type definition.
         <Widget className="lg:col-span-2" onClick={() => setScreen('KikoAI')}>
             <div className="flex justify-between items-center mb-2">
                  <h3 className="font-semibold text-lg flex items-center gap-2"><FlagIcon className="w-5 h-5"/> Primary Goal</h3>

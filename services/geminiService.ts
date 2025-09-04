@@ -181,37 +181,35 @@ const generateImageFromNoteContext = async (task: Task, notes: Note[]): Promise<
 }
 
 
-export const parseTaskFromString = async (input: string): Promise<Partial<Task>> => {
-    // This function now acts as an orchestrator, routing this specific task to the "Architect Agent" via kikoRequest.
+export const parseTaskFromString = async (input: string): Promise<{ data: Partial<Task>, fallbackUsed: boolean }> => {
     if (!input.startsWith('/')) {
-        return { title: input };
+        return { data: { title: input }, fallbackUsed: false };
     }
 
     try {
         const result = await kikoRequest('parse_command', { command: input });
+        const taskData = result.data as Partial<Task>;
 
-        // Post-processing to ensure startTime is a Date object, as the rest of the app expects.
-        if (result.startTime && typeof result.startTime === 'string') {
-            const date = new Date(result.startTime);
-            // If the parsed date is invalid, handle it gracefully.
+        // Post-processing to ensure startTime is a Date object
+        if (taskData.startTime && typeof taskData.startTime === 'string') {
+            const date = new Date(taskData.startTime);
             if (!isNaN(date.getTime())) {
-                result.startTime = date;
+                taskData.startTime = date;
             } else {
-                delete result.startTime; // Remove invalid date
+                delete taskData.startTime; 
             }
         }
         
-        // If no valid startTime was parsed, default to one hour from now.
-        if (!result.startTime) {
+        if (!taskData.startTime) {
              const date = new Date();
              date.setHours(date.getHours() + 1, 0, 0, 0);
-             result.startTime = date;
+             taskData.startTime = date;
         }
 
-        return result;
+        return { data: taskData, fallbackUsed: result.fallbackUsed };
     } catch (error) {
-        console.error("Error parsing task string via Architect Agent:", error);
-        return { title: input.substring(1).trim() }; // Fallback on error
+        console.error("Fatal error in parseTaskFromString:", error);
+        return { data: { title: input.substring(1).trim() }, fallbackUsed: true }; // Fallback on total error
     }
 }
 
@@ -592,5 +590,84 @@ export const generateProjectStatusReport = async (project: Project, tasks: Task[
     } catch (error) {
         console.error("Error generating project status report:", error);
         throw new Error("Failed to generate project status report.");
+    }
+};
+
+/**
+ * Fallback function to parse a command using Gemini.
+ */
+export const parseCommandWithGemini = async (command: string): Promise<Partial<Task>> => {
+    if (!ai) {
+        throw new Error("Gemini AI not available for command parsing fallback.");
+    }
+
+    const prompt = `
+    You are a fallback command parsing agent. Analyze the user's natural language input and convert it into a structured JSON object representing a task.
+    - Current date is: ${new Date().toString()}.
+    - The "title" is the main subject. Extract it from the input.
+    - Respond ONLY with the JSON object.
+
+    **User Input:** "${command.substring(1).trim()}"
+    `;
+    
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            title: { type: Type.STRING },
+            category: { type: Type.STRING, enum: DEFAULT_CATEGORIES },
+            isVirtual: { type: Type.BOOLEAN },
+            location: { type: Type.STRING },
+            linkedUrl: { type: Type.STRING },
+            startTime: { type: Type.STRING },
+            plannedDuration: { type: Type.NUMBER }
+        }
+    };
+
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: { responseMimeType: "application/json", responseSchema: schema, thinkingConfig: { thinkingBudget: 0 } },
+        });
+        const jsonString = extractJson(response.text);
+        if (!jsonString) throw new Error("No valid JSON from Gemini fallback");
+        return JSON.parse(jsonString) as Partial<Task>;
+    } catch (error) {
+        console.error("Error in Gemini command parsing fallback:", error);
+        throw error;
+    }
+};
+
+/**
+ * Fallback function to generate a completion summary using Gemini.
+ */
+export const generateCompletionSummaryWithGemini = async (task: Task): Promise<CompletionSummary> => {
+    if (!ai) {
+        throw new Error("Gemini AI not available for summary fallback.");
+    }
+
+    const prompt = `The user completed the task: "${task.title}". Generate a short, triumphant new title and a one-sentence insightful summary. Respond ONLY with the JSON.`;
+    
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            newTitle: { type: Type.STRING },
+            shortInsight: { type: Type.STRING }
+        },
+        required: ['newTitle', 'shortInsight']
+    };
+
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: { responseMimeType: "application/json", responseSchema: schema },
+        });
+        const jsonString = extractJson(response.text);
+        if (!jsonString) throw new Error("No valid JSON from Gemini summary fallback");
+        return JSON.parse(jsonString) as CompletionSummary;
+    } catch (error) {
+        console.error("Error in Gemini completion summary fallback:", error);
+        throw error;
     }
 };

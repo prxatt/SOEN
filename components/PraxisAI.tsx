@@ -23,6 +23,7 @@ interface PraxisAIProps {
   chatMessages: ChatMessage[]; setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   onSendMessage: (message: string, attachment?: ChatMessage['attachment']) => void;
   isAiReplying: boolean;
+  showToast: (message: string) => void;
 }
 
 type AITab = 'mission_control' | 'goals_strategy' | 'insights';
@@ -78,7 +79,7 @@ const GoalsAndStrategyTab: React.FC<PraxisAIProps> = ({ goals, setGoals }) => {
     );
 };
 
-const MissionControl: React.FC<{tasks: Task[], notes: Note[], healthData: HealthData}> = ({ tasks, notes, healthData }) => {
+const MissionControl: React.FC<{tasks: Task[], notes: Note[], healthData: HealthData, showToast: (message: string) => void}> = ({ tasks, notes, healthData, showToast }) => {
     type Timeframe = 'day' | 'week' | 'month';
     const [timeframe, setTimeframe] = useState<Timeframe>('day');
     const [briefing, setBriefing] = useState<MissionBriefing | null>(null);
@@ -119,11 +120,16 @@ const MissionControl: React.FC<{tasks: Task[], notes: Note[], healthData: Health
                 filteredNotes = notes.filter(n => n.createdAt >= startOfDay);
                 break;
         }
-        const data = await kikoRequest('generate_briefing', { timeframe: tf, tasks: filteredTasks, notes: filteredNotes, healthData });
-        setBriefing(data);
-        setBriefingCache(prev => ({...prev, [tf]: data}));
+        const result = await kikoRequest('generate_briefing', { timeframe: tf, tasks: filteredTasks, notes: filteredNotes, healthData });
+        
+        if (result.fallbackUsed) {
+            showToast("Kiko is using a backup model for this briefing.");
+        }
+        
+        setBriefing(result.data);
+        setBriefingCache(prev => ({...prev, [tf]: result.data}));
         setIsLoading(false);
-    }, [tasks, notes, healthData, briefingCache]);
+    }, [tasks, notes, healthData, briefingCache, showToast]);
 
     useEffect(() => {
         fetchBriefing(timeframe);
@@ -222,7 +228,7 @@ const MissionControl: React.FC<{tasks: Task[], notes: Note[], healthData: Health
 
 
 const PraxisAI: React.FC<PraxisAIProps> = (props) => {
-  const { insights, tasks, notes, healthData, goals, setGoals, applyInsight, chatMessages, onSendMessage, isAiReplying } = props;
+  const { insights, tasks, notes, healthData, goals, setGoals, applyInsight, chatMessages, onSendMessage, isAiReplying, showToast } = props;
   const [activeTab, setActiveTab] = useState<AITab>('mission_control');
   const [chatInput, setChatInput] = useState('');
   const [chatAttachment, setChatAttachment] = useState<ChatMessage['attachment'] & { url: string } | null>(null);
@@ -264,7 +270,7 @@ const PraxisAI: React.FC<PraxisAIProps> = (props) => {
 
   const renderContent = () => {
     switch(activeTab) {
-        case 'mission_control': return <MissionControl tasks={tasks} notes={notes} healthData={healthData} />;
+        case 'mission_control': return <MissionControl tasks={tasks} notes={notes} healthData={healthData} showToast={showToast} />;
         case 'goals_strategy': return <GoalsAndStrategyTab {...props} />;
         case 'insights': return (
             Object.keys(groupedInsights).length > 0 ? (

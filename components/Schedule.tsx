@@ -18,6 +18,7 @@ interface ScheduleProps {
   onCompleteTask: (taskId: number) => void;
   categories: Category[];
   onSyncCalendar: () => void;
+  showToast: (message: string) => void;
 }
 
 // --- DATE HELPERS ---
@@ -29,7 +30,7 @@ const isSameDay = (d1: Date, d2: Date): boolean => d1.getFullYear() === d2.getFu
 
 type ViewLevel = 'Day' | 'Month';
 
-const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addTask']; selectedDate: Date; projects: Project[]; notes: Note[]; categories: Category[]; }> = ({ onClose, addTask, selectedDate, projects, notes, categories }) => {
+const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addTask']; selectedDate: Date; projects: Project[]; notes: Note[]; categories: Category[]; showToast: (message: string) => void; }> = ({ onClose, addTask, selectedDate, projects, notes, categories, showToast }) => {
     const [taskDetails, setTaskDetails] = useState<Partial<Task>>({
         title: '',
         category: 'Prototyping',
@@ -53,7 +54,12 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
             return;
         };
         setIsParsing(true);
-        const parsedDetails = await parseTaskFromString(title);
+        const { data: parsedDetails, fallbackUsed } = await parseTaskFromString(title);
+
+        if (fallbackUsed) {
+            showToast("Kiko is using a backup model for command parsing.");
+        }
+
         setTaskDetails(prev => ({ ...prev, ...parsedDetails, title }));
 
         const parsedKeys = Object.keys(parsedDetails);
@@ -476,7 +482,7 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
     
     return (
         <div className="card rounded-2xl h-[78vh] flex flex-col overflow-hidden">
-             <AnimatePresence>{isAddingTask && <NewTaskModal onClose={() => setIsAddingTask(false)} addTask={props.addTask} selectedDate={displayDate} projects={props.projects} notes={props.notes} categories={props.categories} />}</AnimatePresence>
+             <AnimatePresence>{isAddingTask && <NewTaskModal onClose={() => setIsAddingTask(false)} addTask={props.addTask} selectedDate={displayDate} projects={props.projects} notes={props.notes} categories={props.categories} showToast={props.showToast} />}</AnimatePresence>
             <header className="flex-shrink-0 p-3 z-20 border-b border-light-border dark:border-dark-border">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">

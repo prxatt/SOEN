@@ -1,54 +1,13 @@
 // services/kikoAIService.ts
 import { GoogleGenAI, Type } from "@google/genai";
 import { parseCommandWithLlama3 } from './groqService';
-import { analyzeImageWithGPT4o, generateTextWithGPT4o } from './openAIService';
-import { generateImageWithImagen } from './geminiService';
+import { analyzeImageWithGPT4o, generateTextWithGPT4o, generateBriefingWithGPT4o } from './openAIService';
+import { generateImageWithImagen, parseCommandWithGemini, generateCompletionSummaryWithGemini } from './geminiService';
 import { Task, Note, HealthData, MissionBriefing, CompletionSummary, ActionItem } from '../types';
 import { extractJson } from "../utils/jsonUtils";
 
 const API_KEY = process.env.API_KEY;
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
-
-
-const generateMissionBriefingWithGPT4o = async (
-    timeframe: 'day' | 'week' | 'month',
-    tasks: Task[],
-    notes: Note[],
-    healthData: HealthData
-): Promise<MissionBriefing | null> => {
-     console.warn("Executing fallback for Mission Briefing with GPT-4o.");
-     const prompt = `You are Kiko, an AI Systems Architect, acting as a fallback model. Generate a mission briefing JSON based on the provided data. The output must be a valid JSON object matching the specified structure precisely.
-
-    **Data for Analysis:**
-    - Timeframe: ${timeframe}
-    - Tasks: ${tasks.length} tasks, including titles like "${tasks.slice(0, 2).map(t => t.title).join(', ')}..."
-    - Health Data: Energy is '${healthData.energyLevel}', Sleep is '${healthData.sleepQuality}'.
-
-    **JSON Structure to follow:**
-    {
-      "title": "string",
-      "summary": "string",
-      "metrics": [{ "label": "string", "value": "string", "icon": "string" }],
-      "healthRings": [{ "name": "'Activity' | 'Energy' | 'Sleep'", "value": "number (0-100)", "fill": "string (hex)" }],
-      "focusBreakdown": [{ "name": "string (category)", "value": "number (minutes)", "fill": "string (hex)" }],
-      "activityTrend": [{ "name": "string (day/date)", "value": "number (tasks completed)", "fill": "string (hex)" }],
-      "commentary": "string",
-      "categoryAnalysis": [{ "category": "string", "analysis": "string" }]
-    }
-
-    Generate a complete, valid JSON object with plausible data based on the inputs. Respond ONLY with the JSON.`;
-
-    const schema = { title: "string", summary: "string", metrics: [], healthRings: [], focusBreakdown: [], activityTrend: [], commentary: "string", categoryAnalysis: [] };
-    
-    try {
-        const result = await generateTextWithGPT4o(prompt, schema);
-        return result as MissionBriefing;
-    } catch(e) {
-        console.error("Error in GPT-4o briefing fallback:", e);
-        return null;
-    }
-}
-
 
 // This function is moved here from geminiService to be part of the "Analyst Agent"
 const generateMissionBriefingWithGemini = async (
@@ -56,8 +15,8 @@ const generateMissionBriefingWithGemini = async (
     tasks: Task[],
     notes: Note[],
     healthData: HealthData
-): Promise<MissionBriefing | null> => {
-    if (!ai) return null;
+): Promise<MissionBriefing> => {
+    if (!ai) throw new Error("Gemini AI not available.");
 
     const tasksSummary = tasks.map(t => `- ${t.title} (${t.category}, Status: ${t.status})`).slice(0, 20).join('\n');
     const notesSummary = notes.map(n => `- ${n.title}`).slice(0, 10).join('\n');
@@ -125,12 +84,21 @@ const generateMissionBriefingWithGemini = async (
         return JSON.parse(jsonString) as MissionBriefing;
     } catch (e: any) {
         console.error("Error generating mission briefing with Gemini:", e);
-        if (e.toString().includes("429") || e.toString().includes("RESOURCE_EXHAUSTED")) {
-            return generateMissionBriefingWithGPT4o(timeframe, tasks, notes, healthData);
-        }
-        return null;
+        // Throw error to be caught by orchestrator for failover
+        throw e;
     }
 }
+
+const getErrorFallbackData = (taskType: KikoTaskType, payload: any): any => {
+    switch (taskType) {
+        case 'parse_command':
+            return { title: payload.command.startsWith('/') ? payload.command.substring(1).trim() : payload.command };
+        case 'generate_completion_summary':
+            return { newTitle: payload.task.title, shortInsight: "Task completed successfully!" };
+        default:
+            return null;
+    }
+};
 
 
 export type KikoTaskType = 
@@ -146,64 +114,46 @@ export type KikoTaskType =
 export const kikoRequest = async (
     taskType: KikoTaskType,
     payload: any
-): Promise<any> => {
+): Promise<{ data: any; fallbackUsed: boolean; }> => {
     console.log('Kiko AI orchestrator received request:', taskType);
+    let primaryAgent: Function, fallbackAgent: Function | null = null;
+    let finalPayload = payload;
 
-    switch (taskType) {
+    switch(taskType) {
         // --- ANALYST AGENT ---
         case 'generate_briefing': {
-            const { timeframe, tasks, notes, healthData } = payload as { timeframe: 'day' | 'week' | 'month', tasks: Task[], notes: Note[], healthData: HealthData };
-            return generateMissionBriefingWithGemini(timeframe, tasks, notes, healthData);
+            const { timeframe, tasks, notes, healthData } = payload;
+            primaryAgent = () => generateMissionBriefingWithGemini(timeframe, tasks, notes, healthData);
+            fallbackAgent = () => generateBriefingWithGPT4o(timeframe, tasks, notes, healthData);
+            break;
         }
-
-        // --- VISION AGENT ---
-        case 'analyze_image': {
-            const { base64, mimeType, prompt } = payload as { base64: string; mimeType: string; prompt: string };
-            return analyzeImageWithGPT4o(base64, mimeType, prompt);
-        }
-
         // --- ARCHITECT AGENT ---
         case 'parse_command': {
-            const { command } = payload as { command: string };
-            return parseCommandWithLlama3(command);
+            primaryAgent = () => parseCommandWithLlama3(payload.command);
+            fallbackAgent = () => parseCommandWithGemini(payload.command);
+            break;
         }
-        
-        // --- MUSE AGENT (Creative Text) ---
+         // --- MUSE AGENT (Creative Text) ---
         case 'generate_completion_summary': {
-            const { task } = payload as { task: Task };
+            const { task } = payload;
+            // Primary for creative text is GPT-4o as per strategy
             const prompt = `The user just completed the task: "${task.title}". Generate a short, triumphant, and slightly edgy new title for this completed task (e.g., "5k Run" becomes "5k Conquered"). Also, provide a one-sentence, insightful, and encouraging summary of the accomplishment. Ensure the response is grammatically correct and spelled perfectly.`;
             const schema = { newTitle: 'string', shortInsight: 'string' };
-            const result = await generateTextWithGPT4o(prompt, schema);
-            return result as CompletionSummary;
+            primaryAgent = () => generateTextWithGPT4o(prompt, schema);
+            fallbackAgent = () => generateCompletionSummaryWithGemini(task);
+            break;
         }
-        
-        case 'generate_note_title': {
-            const { noteContent } = payload as { noteContent: string };
-            const prompt = `Analyze the following note content and generate a concise, descriptive title for it (5 words or less). Content:\n\n---\n${(noteContent || '').replace(/<[^>]*>?/gm, '').substring(0, 500)}...\n---`;
-            const result = await generateTextWithGPT4o(prompt);
-            return (result as string)?.replace(/["']/g, "") || "Untitled Note";
+        // --- VISION AGENT ---
+        case 'analyze_image': {
+            const { base64, mimeType, prompt } = payload;
+            primaryAgent = () => analyzeImageWithGPT4o(base64, mimeType, prompt);
+            // No fallback for vision, as GPT-4o is the specialized model
+            break;
         }
-        
-        case 'generate_note_text': {
-            const { instruction, text, noteContent } = payload as { instruction: 'summarize' | 'expand' | 'findActionItems' | 'createTable' | 'generateProposal', text: string, noteContent?: string };
-            if (instruction === 'findActionItems') {
-                const prompt = `Analyze the following text and extract any clear, actionable tasks or to-do items. If no specific action items are found, return an empty array. Text:\n\n---\n${text}\n---`;
-                const schema = { action_items: [{ title: 'string' }] };
-                const result = await generateTextWithGPT4o(prompt, schema);
-                return (result as { action_items: ActionItem[] }).action_items || [];
-            }
-             let prompt = '';
-            if (instruction === 'summarize') prompt = `Summarize the following text concisely:\n\n---\n${text}\n---`;
-            if (instruction === 'expand') prompt = `Expand on the following point, adding more detail, context, or examples:\n\n---\n${text}\n---`;
-            if (instruction === 'createTable') prompt = `Based on the following text, create a simple HTML table. The text is: "${text}". Only return the <table>...</table> HTML.`;
-            if (instruction === 'generateProposal') prompt = `I am Pratt from Surface Tension. Draft a short, professional proposal introduction for a new project with "${text}" (the client's name). Use the following case study content from my notes as a reference: \n\n---\n${(noteContent || '').replace(/<[^>]*>?/gm, '')}\n---\n\nThe tone should be confident, luxurious, and underground.`;
-            return generateTextWithGPT4o(prompt);
-        }
-
         // --- MUSE AGENT (Image Generation) ---
         case 'generate_completion_image': {
             const { task } = payload as { task: Task };
-            let prompt: string;
+             let prompt: string;
             const workoutKeywords = ['run', 'jog', 'cardio', 'tempo run', '5k', '10k', 'marathon', 'boxing', 'workout'];
             const isWorkout = task.category === 'Workout' || workoutKeywords.some(kw => task.title.toLowerCase().includes(kw));
 
@@ -216,18 +166,54 @@ export const kikoRequest = async (
             } else {
                  prompt = `4k cinematic, stunning, high-resolution. A visually stunning, triumphant, abstract, artistic representation of successfully completing the task: "${task.title}". Use a sophisticated, minimalist style with a motivational feel. No text, no words, no watermarks.`;
             }
-            return generateImageWithImagen(prompt, '16:9');
+            primaryAgent = () => generateImageWithImagen(prompt, '16:9');
+            // No LLM fallback for image generation
+            break;
+        }
+        // --- Other agents without specific failovers defined yet ---
+        case 'generate_note_text':
+             const { instruction, text, noteContent } = payload as { instruction: 'summarize' | 'expand' | 'findActionItems' | 'createTable' | 'generateProposal', text: string, noteContent?: string };
+            if (instruction === 'findActionItems') {
+                const prompt = `Analyze the following text and extract any clear, actionable tasks or to-do items. If no specific action items are found, return an empty array. Text:\n\n---\n${text}\n---`;
+                const schema = { action_items: [{ title: 'string' }] };
+                primaryAgent = async () => {
+                    const result = await generateTextWithGPT4o(prompt, schema);
+                    return (result as { action_items: ActionItem[] }).action_items || [];
+                }
+            } else {
+                let prompt = '';
+                if (instruction === 'summarize') prompt = `Summarize the following text concisely:\n\n---\n${text}\n---`;
+                if (instruction === 'expand') prompt = `Expand on the following point, adding more detail, context, or examples:\n\n---\n${text}\n---`;
+                if (instruction === 'createTable') prompt = `Based on the following text, create a simple HTML table. The text is: "${text}". Only return the <table>...</table> HTML.`;
+                if (instruction === 'generateProposal') prompt = `I am Pratt from Surface Tension. Draft a short, professional proposal introduction for a new project with "${text}" (the client's name). Use the following case study content from my notes as a reference: \n\n---\n${(noteContent || '').replace(/<[^>]*>?/gm, '')}\n---\n\nThe tone should be confident, luxurious, and underground.`;
+                primaryAgent = () => generateTextWithGPT4o(prompt);
+            }
+            break;
+        
+        default:
+             console.error(`Unknown Kiko task type or no primary agent defined: ${taskType}`);
+             return { data: null, fallbackUsed: false };
+
+    }
+
+    try {
+        const data = await primaryAgent();
+        return { data, fallbackUsed: false };
+    } catch (primaryError) {
+        console.warn(`Primary AI agent for ${taskType} failed. Reason:`, primaryError);
+        
+        if (fallbackAgent) {
+            console.log(`Executing fallback for ${taskType}.`);
+            try {
+                const data = await fallbackAgent();
+                return { data, fallbackUsed: true };
+            } catch (fallbackError) {
+                console.error(`Fallback AI agent for ${taskType} also failed. Reason:`, fallbackError);
+                return { data: getErrorFallbackData(taskType, payload), fallbackUsed: true };
+            }
         }
         
-        case 'generate_note_thumbnail': {
-             const { title } = payload as { title: string };
-             const prompt = `An abstract, visually stunning, artistic representation of the concept: "${title}". Use a minimalist, sophisticated style suitable for a luxury brand.`;
-             return generateImageWithImagen(prompt, '4:3');
-        }
-
-        default:
-            console.error(`Unknown Kiko task type: ${taskType}`);
-            const _exhaustiveCheck: never = taskType;
-            return null;
+        // If no fallback agent, return default error data
+        return { data: getErrorFallbackData(taskType, payload), fallbackUsed: true };
     }
 };

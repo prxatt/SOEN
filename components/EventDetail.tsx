@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, RadialBarChart, RadialBar, AreaChart, Area } from 'recharts';
-import { Task, Note, Project, ActionableInsight, Goal, ChatMessage, TaskStatus, HealthData, InsightWidgetData, ChartWidget, KeyMetricWidget, TextWidget, RecipeWidget, Category, AreaChartWidget, RadialChartWidget, MapWidget, GeneratedImageWidget, WeatherWidget } from '../types';
+import { Task, Note, Project, ActionableInsight, Goal, ChatMessage, TaskStatus, HealthData, InsightWidgetData, ChartWidget, KeyMetricWidget, TextWidget, RecipeWidget, Category, AreaChartWidget, RadialChartWidget, MapWidget, GeneratedImageWidget, WeatherWidget, Notebook } from '../types';
 import { getChatFollowUp, getAutocompleteSuggestions, generateMapsEmbedUrl } from '../services/geminiService';
 import { inferHomeLocation } from '../utils/taskUtils';
 import { CheckCircleIcon, XMarkIcon, SparklesIcon, DocumentTextIcon, LinkIcon, ArrowPathIcon, PaperAirplaneIcon, PaperClipIcon, PlusIcon, VideoCameraIcon, LightBulbIcon, ChevronLeftIcon, ChevronRightIcon, PhotoIcon, MapPinIcon, ArrowDownTrayIcon, ChatBubbleLeftEllipsisIcon } from './Icons';
@@ -12,6 +12,7 @@ interface EventDetailProps {
     task: Task;
     allTasks: Task[]; // Pass all tasks for context
     notes: Note[];
+    notebooks: Notebook[];
     projects: Project[];
     goals: Goal[];
     updateTask: (task: Task) => void;
@@ -251,7 +252,7 @@ const ImageViewer: React.FC<{ attachments: string[], onImageClick: (index: numbe
 };
 
 
-const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, projects, goals, updateTask, onComplete, onClose, redirectToKikoAIWithChat, addNote, categories, triggerInsightGeneration }) => {
+const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebooks, projects, goals, updateTask, onComplete, onClose, redirectToKikoAIWithChat, addNote, categories, triggerInsightGeneration }) => {
     const [editableTask, setEditableTask] = useState(task);
     const [isFullScreenViewerOpen, setIsFullScreenViewerOpen] = useState(false);
     const [fullScreenInitialIndex, setFullScreenInitialIndex] = useState(0);
@@ -291,10 +292,10 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, projec
                 break;
             case 'text': 
                 title = widget.title;
-                contentBody = `<p>${widget.content}</p>`; 
-                if (widget.links) {
+                contentBody = `<p>${widget.content.replace(/\n/g, '<br/>')}</p>`; 
+                if (widget.links && widget.links.length > 0) {
                     contentBody += '<h3>Related Links:</h3><ul>';
-                    contentBody += widget.links.map(l => `<li><a href="${l.url}" target="_blank">${l.title}</a></li>`).join('');
+                    contentBody += widget.links.map(l => `<li><a href="${l.url}" target="_blank" rel="noopener noreferrer">${l.title}</a></li>`).join('');
                     contentBody += '</ul>';
                 }
                 break;
@@ -310,19 +311,19 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, projec
                 break;
             case 'recipe': 
                 title = widget.name;
-                contentBody = `<ul>${widget.ingredients.map(i => `<li>${i}</li>`).join('')}</ul><p>${widget.quick_instructions}</p>`; 
+                contentBody = `<h3>Ingredients:</h3><ul>${widget.ingredients.map(i => `<li>${i}</li>`).join('')}</ul><h3>Instructions:</h3><p>${widget.quick_instructions}</p><p><a href="${widget.sourceUrl}" target="_blank">View full recipe</a></p>`; 
                 break;
             case 'map': 
                 title = widget.title;
-                contentBody = `<p>Location: ${widget.locationQuery}</p><iframe src="${widget.embedUrl}"></iframe>`; 
+                contentBody = `<p>Location: ${widget.locationQuery}</p><p><a href="${widget.embedUrl.replace('embed', 'place')}" target="_blank">View on Google Maps</a></p><iframe src="${widget.embedUrl}" width="100%" height="300" style="border:0;" allowfullscreen="" loading="lazy"></iframe>`; 
                 break;
             case 'generated_image': 
                 title = widget.title;
-                contentBody = `<img src="${widget.imageUrl}" alt="${widget.prompt}"/><p><em>${widget.prompt}</em></p>`; 
+                contentBody = `<img src="${widget.imageUrl}" alt="${widget.prompt}" style="max-width: 100%; border-radius: 8px;"/><p><em>Prompt: ${widget.prompt}</em></p>`; 
                 break;
             case 'weather': 
                 title = widget.title;
-                contentBody = `<p>Current: ${widget.currentTemp}°, Location: ${widget.location}</p>`;
+                contentBody = `<p>Current: ${widget.currentTemp}°, Location: ${widget.location}</p><h4>Forecast:</h4><ul>${widget.hourlyForecast.map(h => `<li>${h.time}: ${h.temp}°</li>`).join('')}</ul>`;
                 break;
             default:
                 const _exhaustiveCheck: never = widget;
@@ -330,7 +331,9 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, projec
         }
         
         const content = `<h2>${title}</h2>` + contentBody;
-        addNote(`Insight for ${task.title}: ${title}`, content, editableTask.notebookId || notes[0]?.notebookId || 1);
+        const generalNotebook = notebooks.find(nb => nb.title.toLowerCase() === 'general');
+        const defaultNotebookId = editableTask.notebookId || generalNotebook?.id || notebooks[0]?.id || 1;
+        addNote(`Insight for "${task.title}": ${title}`, content, defaultNotebookId);
     };
 
     const handleLocationInputChange = async (value: string) => {

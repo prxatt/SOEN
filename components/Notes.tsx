@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-// FIX: Add missing imports for framer-motion.
 import { motion, AnimatePresence } from 'framer-motion';
 import { Note, Notebook, Insight, ActionItem } from '../types';
 import { generateNoteFromTemplate } from '../services/geminiService';

@@ -50,11 +50,15 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
     const parseTitle = async (title: string) => {
         if (!title.startsWith('/')) return;
         setIsParsing(true);
-        const parsedDetails = await parseTaskFromString(title);
-        setTaskDetails(prev => ({ ...prev, ...parsedDetails, title }));
-        if (parsedDetails.startTime instanceof Date) {
+        // FIX: Destructure the 'data' property from the response, as `parseTaskFromString` returns an object { data: Partial<Task>, fallbackUsed: boolean }.
+        const { data: parsedData } = await parseTaskFromString(title);
+        // FIX: Use the destructured 'parsedData' to update the state.
+        setTaskDetails(prev => ({ ...prev, ...parsedData, title }));
+        // FIX: Access `startTime` from the `parsedData` object.
+        if (parsedData.startTime instanceof Date) {
             const newStartTime = new Date(selectedDate);
-            newStartTime.setHours(parsedDetails.startTime.getHours(), parsedDetails.startTime.getMinutes());
+            // FIX: Access `startTime` from the `parsedData` object.
+            newStartTime.setHours(parsedData.startTime.getHours(), parsedData.startTime.getMinutes());
             setStartTime(newStartTime.toTimeString().substring(0,5));
         }
         setIsParsing(false);

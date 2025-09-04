@@ -1,5 +1,5 @@
-// FIX: Added 'Note' to the import to resolve type error.
-import { ActionableInsight, Goal, HealthData, MissionBriefing, Task, Note } from "../types";
+// services/openAIService.ts
+import { ActionableInsight, Goal, HealthData, MissionBriefing, Task, Note, CompletionSummary } from "../types";
 
 // NOTE: This service requires the OPENAI_API_KEY environment variable to be set.
 // If it is not provided, the service will fall back to mocked responses.
@@ -32,14 +32,13 @@ export const analyzeImageWithGPT4o = async (base64Image: string, mimeType: strin
                     {
                         type: "image_url",
                         image_url: {
-                            // The API expects a data URL for the image content.
                             url: `data:${mimeType};base64,${base64Image}`
                         }
                     }
                 ]
             }
         ],
-        max_tokens: 400 // Limit the response length for performance
+        max_tokens: 400
     };
 
     try {
@@ -63,7 +62,6 @@ export const analyzeImageWithGPT4o = async (base64Image: string, mimeType: strin
 
     } catch (error) {
         console.error("Error calling OpenAI API:", error);
-        // Re-throw for the orchestrator to handle failover
         throw error;
     }
 };
@@ -75,18 +73,43 @@ export const analyzeImageWithGPT4o = async (base64Image: string, mimeType: strin
  * @param schema An optional object describing the desired JSON structure.
  * @returns A promise that resolves to the generated text or a parsed JSON object.
  */
-export const generateTextWithGPT4o = async (prompt: string, schema?: object): Promise<string | object> => {
+export const generateTextWithGPT4o = async (prompt: string, schema?: object): Promise<any> => {
     if (!OPENAI_API_KEY) {
         console.warn("OpenAI API key not found. Returning mocked text response.");
         await new Promise(resolve => setTimeout(resolve, 1000));
-        if (schema) return { mock: true, ...schema };
+        if (schema) {
+            if (prompt.includes("completion_summary")) return { newTitle: "Task Complete (Mock)", shortInsight: "This is a mocked insight." };
+            if (prompt.includes("mission briefing")) {
+                const mockBriefing: MissionBriefing = {
+                    title: "Mocked Daily Briefing",
+                    summary: "This is a fallback briefing as the primary AI service is unavailable.",
+                    metrics: [
+                        { label: "Flow Earned", value: "N/A", icon: "SparklesIcon" },
+                        { label: "Tasks Done", value: "N/A", icon: "CheckCircleIcon" },
+                        { label: "Focus", value: "N/A", icon: "BrainCircuitIcon" },
+                        { label: "Streak", value: "N/A", icon: "FireIcon" },
+                    ],
+                    healthRings: [
+                        { name: 'Activity', value: 50, fill: '#EC4899' },
+                        { name: 'Energy', value: 50, fill: '#F59E0B' },
+                        { name: 'Sleep', value: 50, fill: '#3B82F6' },
+                    ],
+                    focusBreakdown: [],
+                    activityTrend: [],
+                    commentary: "Unable to generate AI commentary at this time. Please check your API key configuration.",
+                    categoryAnalysis: [],
+                };
+                return mockBriefing;
+            }
+            return { mock: true };
+        }
         return "This is a mocked response because the OpenAI API key is not configured.";
     }
 
     const body: any = {
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 500,
+        max_tokens: 1024,
         temperature: 0.7,
     };
 
@@ -94,7 +117,7 @@ export const generateTextWithGPT4o = async (prompt: string, schema?: object): Pr
         body.response_format = { type: "json_object" };
         body.messages.push({
             role: "system",
-            content: `Please respond with a valid JSON object that adheres to the following structure: ${JSON.stringify(schema)}`
+            content: `Please respond with a valid JSON object. Do not include any other text or markdown.`
         });
     }
 
@@ -128,7 +151,6 @@ export const generateTextWithGPT4o = async (prompt: string, schema?: object): Pr
 
     } catch (error) {
         console.error("Error calling OpenAI text generation:", error);
-        // Re-throw for the orchestrator to handle failover
         throw error;
     }
 };
@@ -137,6 +159,17 @@ export const generateTextWithGPT4o = async (prompt: string, schema?: object): Pr
  * Fallback function to generate actionable insights using GPT-4o if Gemini fails.
  */
 export const generateActionableInsightsWithGPT4o = async (task: Task, healthData: HealthData, goals: Goal[]): Promise<ActionableInsight> => {
+    if (!OPENAI_API_KEY) {
+        console.warn("OpenAI API key missing for insights fallback. Returning mock insight.");
+        return {
+            widgets: [{
+                type: 'text',
+                title: 'AI Insight Unavailable',
+                icon: 'SparklesIcon',
+                content: "Insights from our secondary AI model are unavailable. Please check your OpenAI API key configuration to enable this feature."
+            }]
+        };
+    }
     const primaryGoal = goals.find(g => g.term === 'mid' && g.status === 'active')?.text || "achieve peak performance and build a successful business";
     
     const prompt = `
@@ -156,44 +189,9 @@ export const generateActionableInsightsWithGPT4o = async (task: Task, healthData
     - For other tasks, provide a mix of strategic context and creative ideas.
     - The output MUST be a valid JSON object with a single key "widgets", which is an array of widget objects.
     - Adhere strictly to the widget types and their properties.
-
-    **JSON Schema for your response:**
-    {
-      "widgets": [
-        {
-          "type": "'metric' | 'text' | 'radial'", // Choose from these
-          "title": "string",
-          // --- For 'metric' type ---
-          "value": "string",
-          "unit": "string",
-          "icon": "string // e.g., 'LightBulbIcon', 'RocketIcon', 'BoltIcon'",
-          "color": "string // e.g., 'text-green-400'",
-          // --- For 'text' type ---
-          "icon": "string",
-          "content": "string // Concise and insightful content",
-          // --- For 'radial' type ---
-          "value": "number // 0-100",
-          "label": "string",
-          "color": "string // hex color e.g., '#A855F7'"
-        }
-      ]
-    }
     `;
     
-    const schema = {
-        widgets: [
-            {
-                type: 'string',
-                title: 'string',
-                value: 'string',
-                unit: 'string',
-                icon: 'string',
-                color: 'string',
-                content: 'string',
-                label: 'string'
-            }
-        ]
-    };
+    const schema = { widgets: [] };
     
     try {
         const result = await generateTextWithGPT4o(prompt, schema) as ActionableInsight;
@@ -220,19 +218,7 @@ export const generateBriefingWithGPT4o = async (
     - Tasks: ${tasks.length} tasks, including titles like "${tasks.slice(0, 2).map(t => t.title).join(', ')}..."
     - Health Data: Energy is '${healthData.energyLevel}', Sleep is '${healthData.sleepQuality}'.
 
-    **JSON Structure to follow:**
-    {
-      "title": "string",
-      "summary": "string",
-      "metrics": [{ "label": "string", "value": "string", "icon": "string" }],
-      "healthRings": [{ "name": "'Activity' | 'Energy' | 'Sleep'", "value": "number (0-100)", "fill": "string (hex)" }],
-      "focusBreakdown": [{ "name": "string (category)", "value": "number (minutes)", "fill": "string (hex)" }],
-      "activityTrend": [{ "name": "string (day/date)", "value": "number (tasks completed)", "fill": "string (hex)" }],
-      "commentary": "string",
-      "categoryAnalysis": [{ "category": "string", "analysis": "string" }]
-    }
-
-    Generate a complete, valid JSON object with plausible data based on the inputs. Respond ONLY with the JSON.`;
+    Respond ONLY with the valid JSON object.`;
 
     const schema = { title: "string", summary: "string", metrics: [], healthRings: [], focusBreakdown: [], activityTrend: [], commentary: "string", categoryAnalysis: [] };
     

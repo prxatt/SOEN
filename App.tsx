@@ -14,7 +14,7 @@ import Toast from './components/Toast';
 import { MOCKED_TASKS, MOCKED_NOTES, MOCKED_NOTEBOOKS, MOCKED_INSIGHTS, MOCKED_GOALS, MOCKED_PROJECTS, REWARDS_CATALOG, DEFAULT_CATEGORIES } from './constants';
 import { Task, Note, Notebook, Insight, Category, TaskStatus, ChatMessage, SearchHistoryItem, VisionHistoryItem, Goal, PraxisPointLog, Theme, Screen, Project, HealthData, ActionableInsight } from './types';
 import { getActualDuration, calculateStreak, getTodaysTaskCompletion, inferHomeLocation } from './utils/taskUtils';
-import { continueChat, setChatContext, parseHealthDataFromTasks, getProactiveHealthSuggestion, generateActionableInsights, generateMapsStaticImageUrl } from './services/geminiService';
+import { continueChat, setChatContext, parseHealthDataFromTasks, getProactiveHealthSuggestion, generateActionableInsights, generateMapsStaticImageUrl, analyzeImageWithPrompt } from './services/geminiService';
 import { kikoRequest } from './services/kikoAIService';
 import { syncCalendar, addEventToCalendar, updateEventInCalendar } from './services/googleCalendarService';
 import { triggerHapticFeedback } from './utils/haptics';
@@ -347,13 +347,13 @@ const App: React.FC = () => {
 
     let responseText;
     if (attachment) {
-        // Route image analysis to the Vision Agent via the orchestrator
-        const result = await kikoRequest('analyze_image', {
-            base64: attachment.base64,
-            mimeType: attachment.mimeType,
-            prompt: message
-        });
-        responseText = result.data;
+        const visionPrompt = message.trim() || 'Analyze this image...';
+        // Per user request, directly use the analyzeImageWithPrompt function for vision tasks.
+        responseText = await analyzeImageWithPrompt(
+            attachment.base64,
+            attachment.mimeType,
+            visionPrompt
+        );
     } else {
         // Standard text chat goes to the Gemini chat model
         responseText = await continueChat(newMessages);

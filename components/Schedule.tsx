@@ -487,7 +487,7 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
     };
     
     return (
-        <div className="card rounded-2xl h-[78vh] flex flex-col overflow-hidden">
+        <div className="card rounded-2xl h-full flex flex-col overflow-hidden">
              <AnimatePresence>{isAddingTask && <NewTaskModal onClose={() => setIsAddingTask(false)} addTask={props.addTask} selectedDate={displayDate} projects={props.projects} notes={props.notes} categories={props.categories} showToast={props.showToast} />}</AnimatePresence>
             <header className="flex-shrink-0 p-3 z-20 border-b border-light-border dark:border-dark-border">
                 <div className="flex justify-between items-center">

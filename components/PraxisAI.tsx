@@ -301,8 +301,8 @@ const PraxisAI: React.FC<PraxisAIProps> = (props) => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="h-full flex flex-col">
+      <div className="flex justify-between items-center flex-shrink-0 mb-4">
         <h2 className="text-2xl font-bold font-display flex items-center gap-2"><KikoIcon className="w-8 h-8 text-accent" /> Kiko AI Hub</h2>
          <div className="flex items-center gap-2 p-1 card rounded-xl flex-wrap">
             <TabButton label="Mission Control" isActive={activeTab === 'mission_control'} onClick={() => setActiveTab('mission_control')} />
@@ -311,7 +311,7 @@ const PraxisAI: React.FC<PraxisAIProps> = (props) => {
         </div>
       </div>
      
-      <div className="card rounded-2xl shadow-sm flex flex-col h-[78vh] overflow-hidden">
+      <div className="card rounded-2xl shadow-sm flex flex-col flex-grow min-h-0 overflow-hidden">
         <div className="p-4 sm:p-6 flex-grow overflow-y-auto">{renderContent()}</div>
         
         {/* CHAT INTERFACE */}

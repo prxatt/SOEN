@@ -42,7 +42,7 @@ const Rewards: React.FC<RewardsProps> = ({ onBack, praxisFlow, purchasedRewards,
     const themes = REWARDS_CATALOG.filter(r => r.type === 'theme');
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="h-full overflow-y-auto pb-4">
             <div className="flex items-center gap-4 mb-6">
                 <button onClick={onBack} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"><ChevronLeftIcon className="w-6 h-6"/></button>
                 <div>

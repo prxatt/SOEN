@@ -48,6 +48,7 @@ export interface Note {
   flagged: boolean;
   tags: string[];
   thumbnailUrl?: string; // For AI-generated thumbnail
+  imageUrl?: string; // For user-uploaded image analysis
 }
 
 export interface Notebook {

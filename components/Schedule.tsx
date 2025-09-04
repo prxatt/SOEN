@@ -60,8 +60,18 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
             showToast("Kiko is using a backup model for command parsing.");
         }
 
+        // Apply all parsed details to the main task state object
         setTaskDetails(prev => ({ ...prev, ...parsedDetails, title }));
 
+        // Specifically update the separate time state if a valid date was parsed,
+        // ensuring the modal's time input reflects the AI's understanding.
+        if (parsedDetails.startTime instanceof Date) {
+            const newStartTime = new Date(selectedDate);
+            newStartTime.setHours(parsedDetails.startTime.getHours(), parsedDetails.startTime.getMinutes());
+            setStartTime(newStartTime.toTimeString().substring(0,5));
+        }
+
+        // Update UI feedback based on what was parsed
         const parsedKeys = Object.keys(parsedDetails);
         if (parsedKeys.length > 1) { // Check if more than just title was parsed
             setHighlightedFields(parsedKeys);
@@ -75,13 +85,9 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
             setAiSummary(null);
         }
         
-        if (parsedDetails.startTime instanceof Date) {
-            const newStartTime = new Date(selectedDate);
-            newStartTime.setHours(parsedDetails.startTime.getHours(), parsedDetails.startTime.getMinutes());
-            setStartTime(newStartTime.toTimeString().substring(0,5));
-        }
         setIsParsing(false);
     };
+
 
     const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && taskDetails.title?.startsWith('/')) {

@@ -351,7 +351,7 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
                         </div>
                         <EditorToolbar onCommand={handleEditorCommand} onAiCommand={handleAICommand} onChat={handleChatFromSelection} />
                         <div className="relative flex-grow overflow-hidden">
-                           <LightweightEditor content={selectedNote.content} onChange={handleNoteContentChange} />
+                           <LightweightEditor key={selectedNote.id} content={selectedNote.content} onChange={handleNoteContentChange} />
                         </div>
                     </>
                  ) : (

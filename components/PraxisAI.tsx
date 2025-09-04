@@ -352,7 +352,7 @@ const PraxisAI: React.FC<PraxisAIProps> = (props) => {
             )}
           </AnimatePresence>
           <div className="p-2">
-            {!isChatExpanded && chatMessages.length === 0 && (
+            {!isChatExpanded && (
                  <div className="flex items-center gap-2 px-2 overflow-x-auto pb-1">
                     <p className="text-xs font-semibold text-light-text-secondary dark:text-dark-text-secondary flex-shrink-0">Try:</p>
                     {getChatContextualPrompts(activeTab).map(prompt => (

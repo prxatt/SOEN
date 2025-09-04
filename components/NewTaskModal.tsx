@@ -4,7 +4,7 @@ import { Task, Category, TaskStatus, Project, Note } from '../types';
 import { getCategoryColor } from '../constants';
 import { PlusCircleIcon, ChevronLeftIcon, ChevronRightIcon, SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, PaperClipIcon, PlayIcon, CheckCircleIcon, ArrowUturnLeftIcon, CalendarIcon, LinkIcon } from './Icons';
 import { triggerHapticFeedback } from '../utils/haptics';
-import { parseTaskFromString, generateMapsEmbedUrl, getAutocompleteSuggestions } from '../services/geminiService';
+import { parseTaskFromString, getAutocompleteSuggestions } from '../services/geminiService';
 
 // --- PROPS ---
 interface ScheduleProps {
@@ -68,7 +68,7 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
     };
     
     const handleLocationInputChange = async (value: string) => {
-        setTaskDetails(prev => ({...prev, location: value, locationEmbedUrl: undefined }));
+        setTaskDetails(prev => ({...prev, location: value }));
         if (value.length > 2) {
             setIsFetchingSuggestions(true);
             const suggestions = await getAutocompleteSuggestions(value);
@@ -80,8 +80,7 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
     };
 
     const handleLocationSuggestionClick = (suggestion: {place_name: string; address: string}) => {
-        const newEmbedUrl = generateMapsEmbedUrl(suggestion.address);
-        setTaskDetails(prev => ({...prev, location: suggestion.address, locationEmbedUrl: newEmbedUrl}));
+        setTaskDetails(prev => ({...prev, location: suggestion.address}));
         setLocationSuggestions([]);
     };
 
@@ -158,13 +157,9 @@ const NewTaskModal: React.FC<{ onClose: () => void; addTask: ScheduleProps['addT
                             </div>
                         )}
                     </div>
-                     {taskDetails.locationEmbedUrl && !taskDetails.isVirtual && (
-                        <motion.div layout initial={{opacity: 0, height: 0}} animate={{opacity: 1, height: 'auto'}} className="mt-2 space-y-1">
-                            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(taskDetails.location || '')}`} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline">{taskDetails.location}</a>
-                            <iframe className="w-full h-24 rounded-lg border-none" loading="lazy" allowFullScreen src={taskDetails.locationEmbedUrl}></iframe>
-                        </motion.div>
+                     {taskDetails.location && !taskDetails.isVirtual && (
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(taskDetails.location)}`} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline mt-1 inline-block">{taskDetails.location}</a>
                     )}
-
                     </motion.div>
                 </AnimatePresence>
 

@@ -13,7 +13,7 @@ const NavIcon: React.FC<{ Icon: React.FC<React.SVGProps<SVGSVGElement>>; label: 
     onClick={onClick}
     whileTap={{ scale: 0.9 }}
     className={`flex flex-col items-center justify-center w-full pt-2 pb-1 transition-colors duration-200 ease-in-out ${
-      isActive ? 'text-accent' : 'text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text dark:hover:text-dark-text'
+      isActive ? 'text-accent' : 'text-text-secondary hover:text-text'
     }`}
     aria-label={label}
   >
@@ -38,7 +38,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeScreen, setScreen }) => {
   const navItemsRight = NAV_ITEMS.slice(2);
   
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-20 bg-light-card/80 dark:bg-dark-card/80 backdrop-blur-xl border-t border-light-border dark:border-dark-border z-50">
+    <nav className="card fixed bottom-0 left-0 right-0 h-20 border-t z-50 !rounded-none">
       <div className="max-w-6xl mx-auto flex justify-between items-center h-full px-2">
         <div className="flex justify-around w-2/5">
             {navItemsLeft.map(({ label, icon }) => (
@@ -54,10 +54,10 @@ const Navigation: React.FC<NavigationProps> = ({ activeScreen, setScreen }) => {
 
         <div className="w-1/5 flex justify-center">
             <motion.button
-                onClick={() => setScreen('KikoAI')}
+                onClick={() => setScreen('Kiko')}
                 whileTap={{ scale: 0.9 }}
-                className={`relative -top-6 flex items-center justify-center h-16 w-16 rounded-full bg-accent shadow-lg shadow-accent/30 transform transition-transform duration-200 ${activeScreen === 'KikoAI' ? 'scale-110' : 'hover:scale-105'}`}
-                aria-label="Kiko AI"
+                className={`relative -top-6 flex items-center justify-center h-16 w-16 rounded-full bg-accent shadow-lg shadow-accent/30 transform transition-transform duration-200 ${activeScreen === 'Kiko' ? 'scale-110' : 'hover:scale-105'}`}
+                aria-label="Kiko"
             >
                 <KikoIcon className="h-8 w-8 text-white" />
             </motion.button>

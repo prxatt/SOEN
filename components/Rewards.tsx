@@ -9,15 +9,15 @@ interface RewardsProps {
     praxisFlow: number;
     purchasedRewards: string[];
     activeTheme: string;
-    setActiveTheme: (theme: string) => void;
-    onPurchase: (rewardId: string) => void;
+    setActiveTheme: (themeValue: string) => void;
+    onPurchase: (reward: RewardItem) => void;
 }
 
 const RewardCard: React.FC<{item: RewardItem, isPurchased: boolean, isActive: boolean, canAfford: boolean, onPurchase: () => void, onApply: () => void}> = ({ item, isPurchased, isActive, canAfford, onPurchase, onApply }) => (
     <div className="card p-4 rounded-xl flex flex-col justify-between">
         <div>
             <h4 className="font-bold font-display text-lg">{item.name}</h4>
-            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mt-1 h-10">{item.description}</p>
+            <p className="text-sm text-text-secondary mt-1 h-10">{item.description}</p>
         </div>
         <div className="flex justify-between items-center mt-4">
             <p className="font-bold text-accent flex items-center gap-1"><SparklesIcon className="w-4 h-4" /> {item.cost}</p>
@@ -26,7 +26,7 @@ const RewardCard: React.FC<{item: RewardItem, isPurchased: boolean, isActive: bo
                     isActive ? (
                         <span className="flex items-center gap-1.5 font-semibold text-sm text-green-500"><CheckCircleIcon className="w-5 h-5" /> Applied</span>
                     ) : (
-                        <button onClick={onApply} className="font-semibold text-sm bg-light-bg dark:bg-dark-bg px-3 py-1.5 rounded-lg hover:ring-2 ring-accent">Apply</button>
+                        <button onClick={onApply} className="font-semibold text-sm bg-bg px-3 py-1.5 rounded-lg hover:ring-2 ring-accent">Apply</button>
                     )
                 ) : (
                     <span className="font-semibold text-sm text-green-500">Purchased</span>
@@ -47,7 +47,7 @@ const Rewards: React.FC<RewardsProps> = ({ onBack, praxisFlow, purchasedRewards,
                 <button onClick={onBack} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"><ChevronLeftIcon className="w-6 h-6"/></button>
                 <div>
                     <h2 className="text-2xl font-bold font-display">Rewards Hub</h2>
-                    <p className="text-light-text-secondary dark:text-dark-text-secondary">Spend your Praxis Flow to customize your workspace.</p>
+                    <p className="text-text-secondary">Spend your Praxis Flow to customize your workspace.</p>
                 </div>
             </div>
             
@@ -62,7 +62,7 @@ const Rewards: React.FC<RewardsProps> = ({ onBack, praxisFlow, purchasedRewards,
                                 isPurchased={purchasedRewards.includes(item.id)}
                                 isActive={activeTheme === item.value}
                                 canAfford={praxisFlow >= item.cost}
-                                onPurchase={() => onPurchase(item.id)}
+                                onPurchase={() => onPurchase(item)}
                                 onApply={() => setActiveTheme(item.value)}
                             />
                         ))}

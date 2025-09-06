@@ -80,7 +80,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ goals, setGoals, onComplete }) 
     ];
 
     return (
-        <div className="fixed inset-0 bg-light-bg dark:bg-dark-bg z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-bg z-50 flex items-center justify-center p-4">
              <AnimatePresence mode="wait">
                 <motion.div
                     key={step}
@@ -93,7 +93,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ goals, setGoals, onComplete }) 
                 >
                     {steps[step].icon && <div className="mx-auto mb-6">{steps[step].icon}</div>}
                     <h2 className="text-2xl font-bold font-display mb-4">{steps[step].title}</h2>
-                    <p className="text-light-text-secondary dark:text-dark-text-secondary mb-8">{steps[step].content}</p>
+                    <p className="text-text-secondary mb-8">{steps[step].content}</p>
 
                     {steps[step].isInput ? (
                          <div className="w-full">
@@ -102,7 +102,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ goals, setGoals, onComplete }) 
                                 value={steps[step].value}
                                 onChange={(e) => steps[step].setter(e.target.value)}
                                 placeholder={steps[step].placeholder}
-                                className="w-full text-center bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent"
+                                className="w-full text-center bg-bg border border-border rounded-lg shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent"
                             />
                         </div>
                     ) : null}
@@ -119,12 +119,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ goals, setGoals, onComplete }) 
 
                      <div className="flex justify-center mt-6 gap-2">
                         {steps.map((_, i) => (
-                            <div key={i} className={`w-2 h-2 rounded-full transition-colors ${i === step ? 'bg-accent' : 'bg-gray-300 dark:bg-dark-border'}`} />
+                            <div key={i} className={`w-2 h-2 rounded-full transition-colors ${i === step ? 'bg-accent' : 'bg-gray-300 dark:bg-border'}`} />
                         ))}
                     </div>
                 </motion.div>
             </AnimatePresence>
-            <button onClick={onComplete} className="absolute top-4 right-4 p-2 text-light-text-secondary dark:text-dark-text-secondary hover:text-accent rounded-full">
+            <button onClick={onComplete} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-accent rounded-full">
                 <XMarkIcon className="w-6 h-6"/>
             </button>
         </div>

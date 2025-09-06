@@ -14,14 +14,14 @@ Praxis is a hyper-personalized web application designed for creators and entrepr
 
 ## ✨ Core Features
 
-### 🧠 AI-Powered Intelligence (Powered by Google Gemini)
+### 🧠 Intelligent Partner (Powered by Google Gemini)
 
--   **Strategic Daily Briefing:** Get a personalized morning report synthesizing your goal progress, health data, recent learnings, and new opportunities in the Kiko AI Hub.
+-   **Strategic Daily Briefing:** Get a personalized morning report synthesizing your goal progress, health data, recent learnings, and new opportunities in the Kiko Hub.
 -   **Dynamic Mind Mapping:** Visualize the connections between your goals, tasks, and notes with an AI-generated mind map.
 -   **Actionable Insights:** Generate concrete project ideas and applications from your course notes and readings.
 -   **Smart Notes:** Utilize AI to summarize, expand, find action items, and even generate proposal drafts directly within the note editor.
 -   **Explore Hub:** Perform grounded web searches with Google Search and analyze images to get quick answers and inspiration.
--   **AI Chat:** A conversational AI assistant, "Kiko," that is aware of your goals and can help you brainstorm or retrieve information.
+-   **Kiko Chat:** A conversational AI assistant, "Kiko," that is aware of your goals and can help you brainstorm or retrieve information.
 
 ### 🚀 Productivity & Workflow
 

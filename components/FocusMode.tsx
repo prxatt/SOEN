@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Task, TaskPrep } from '../types';
 import { getActualDuration } from '../utils/taskUtils';
 import { generateTaskPrimer } from '../services/geminiService';
-import { PauseIcon, PlayIcon, CheckCircleIcon, XMarkIcon, LightBulbIcon, ClipboardDocumentListIcon, ChatBubbleLeftRightIcon, LinkIcon } from './Icons';
+import { PauseIcon, PlayIcon, CheckCircleIcon, XMarkIcon, LightBulbIcon, ClipboardDocumentListIcon, ChatBubbleLeftRightIcon, LinkIcon, CheckIcon } from './Icons';
 import LoadingSpinner from './LoadingSpinner';
 
 interface FocusModeProps {
@@ -19,6 +19,7 @@ const FocusMode: React.FC<FocusModeProps> = ({ task, onComplete, onClose, active
     const [isPaused, setIsPaused] = useState(false);
     const [prep, setPrep] = useState<TaskPrep | null>(null);
     const [isLoadingPrep, setIsLoadingPrep] = useState(true);
+    const [completedActionItems, setCompletedActionItems] = useState<boolean[]>([]);
     const timerRef = useRef<number | null>(null);
 
     useEffect(() => {
@@ -26,6 +27,9 @@ const FocusMode: React.FC<FocusModeProps> = ({ task, onComplete, onClose, active
             setIsLoadingPrep(true);
             const primerData = await generateTaskPrimer(task);
             setPrep(primerData);
+            if (primerData?.action_plan) {
+                setCompletedActionItems(new Array(primerData.action_plan.length).fill(false));
+            }
             setIsLoadingPrep(false);
         };
         fetchPrimer();
@@ -61,6 +65,14 @@ const FocusMode: React.FC<FocusModeProps> = ({ task, onComplete, onClose, active
         const elapsedSeconds = durationSeconds - remainingSeconds;
         const elapsedMinutes = Math.max(1, Math.ceil(elapsedSeconds / 60)); // Complete with at least 1 minute
         onComplete(task.id, elapsedMinutes);
+    };
+    
+    const toggleActionItem = (index: number) => {
+        setCompletedActionItems(prev => {
+            const newCompleted = [...prev];
+            newCompleted[index] = !newCompleted[index];
+            return newCompleted;
+        });
     };
 
     const formatTime = (seconds: number) => {
@@ -128,7 +140,20 @@ const FocusMode: React.FC<FocusModeProps> = ({ task, onComplete, onClose, active
                     >
                         <div className="p-3 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
                            <h4 className="font-semibold text-xs flex items-center gap-2 mb-1 text-purple-300"><ClipboardDocumentListIcon className="w-4 h-4"/> Action Plan</h4>
-                           <ul className="space-y-1 list-decimal list-inside text-xs text-white/80">{prep.action_plan.slice(0, 3).map((s,i) => <li key={i}>{s}</li>)}</ul>
+                           <ul className="space-y-1 text-xs text-white/80">
+                                {prep.action_plan.slice(0, 3).map((step, index) => (
+                                    <li key={index} className="flex items-start gap-2 py-0.5">
+                                        <button 
+                                            onClick={() => toggleActionItem(index)}
+                                            aria-label={`Mark step ${index + 1} as ${completedActionItems[index] ? 'incomplete' : 'complete'}`}
+                                            className={`w-4 h-4 mt-0.5 rounded-sm border-2 flex-shrink-0 flex items-center justify-center transition-all ${completedActionItems[index] ? 'bg-purple-400 border-purple-400' : 'border-white/50'}`}
+                                        >
+                                            {completedActionItems[index] && <CheckIcon className="w-3 h-3 text-black/70" />}
+                                        </button>
+                                        <span className={`${completedActionItems[index] ? 'line-through opacity-60' : ''}`}>{step}</span>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                         <div className="p-3 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
                            <h4 className="font-semibold text-xs flex items-center gap-2 mb-1 text-green-300"><ChatBubbleLeftRightIcon className="w-4 h-4"/> Inquiry Prompts</h4>

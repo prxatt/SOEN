@@ -1,9 +1,11 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { parseCommandWithLlama3 } from './groqService';
-import { analyzeImageWithGPT4o, generateTextWithGPT4o, generateBriefingWithGPT4o } from './openAIService';
+import { parseCommandWithLlama3, parseUpdateCommandWithLlama3 } from './groqService';
+import { analyzeImageWithGPT4o, generateTextWithGPT4o, generateBriefingWithGPT4o, generateActionableInsightsWithGPT4o } from './openAIService';
 import { generateImageWithImagen, parseCommandWithGemini, generateCompletionSummaryWithGemini, generateActionableInsights, getAutocompleteSuggestions } from './geminiService';
 import { Task, Note, HealthData, MissionBriefing, CompletionSummary, ActionItem, Goal } from '../types';
 import { extractJson } from "../utils/jsonUtils";
+import { inferHomeLocation } from "../utils/taskUtils";
 
 const API_KEY = process.env.API_KEY;
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
@@ -91,6 +93,7 @@ const generateMissionBriefingWithGemini = async (
 const getErrorFallbackData = (taskType: KikoTaskType, payload: any): any => {
     switch (taskType) {
         case 'parse_command':
+        case 'parse_task_update':
              const title = payload.command.startsWith('/') ? payload.command.substring(1).trim().split('@')[0].trim() : payload.command;
              return { title: title || "New Task", category: 'Personal', plannedDuration: 60 };
         case 'generate_completion_summary':
@@ -105,6 +108,7 @@ export type KikoTaskType =
     | 'generate_briefing' 
     | 'analyze_image' 
     | 'parse_command'
+    | 'parse_task_update'
     | 'generate_completion_summary'
     | 'generate_completion_image'
     | 'generate_note_thumbnail'
@@ -112,13 +116,14 @@ export type KikoTaskType =
     | 'generate_note_tags'
     | 'generate_note_title'
     | 'generate_task_insights'
+    | 'generate_note_from_template'
     | 'generate_daily_image';
 
 export const kikoRequest = async (
     taskType: KikoTaskType,
     payload: any
 ): Promise<{ data: any; fallbackUsed: boolean; }> => {
-    console.log('Kiko AI orchestrator received request:', taskType);
+    console.log('Kiko orchestrator received request:', taskType);
     let primaryAgent: Function, fallbackAgent: Function | null = null;
     let finalPayload = payload;
 
@@ -131,26 +136,74 @@ export const kikoRequest = async (
             break;
         }
         case 'generate_task_insights': {
-            const { task, healthData, notes, goals, allTasks } = payload;
-            // The core `generateActionableInsights` is now the primary, as it's been re-engineered.
-            primaryAgent = () => generateActionableInsights(task, healthData, notes, null, goals, allTasks, true);
-            // No fallback for this complex, re-engineered agent for now.
+            const { task, healthData, notes, goals, allTasks, isRegeneration } = payload;
+            primaryAgent = () => generateActionableInsights(task, healthData, notes, inferHomeLocation(allTasks), goals, allTasks, isRegeneration);
+            fallbackAgent = () => generateActionableInsightsWithGPT4o(task, healthData, goals);
             break;
         }
         // --- ARCHITECT AGENT ---
         case 'parse_command': {
             primaryAgent = async () => {
                 const parsedData = await parseCommandWithLlama3(payload.command);
-                // Location enrichment step
+                
+                // Location enrichment step for physical locations
                 if (parsedData.location && !parsedData.isVirtual) {
                     const suggestions = await getAutocompleteSuggestions(parsedData.location);
                     if (suggestions && suggestions.length > 0) {
                         parsedData.location = suggestions[0].address; // Use the top suggestion
                     }
                 }
+                // Location enrichment for virtual events from URL
+                if (parsedData.isVirtual && parsedData.linkedUrl) {
+                    try {
+                        const url = new URL(parsedData.linkedUrl);
+                        if (url.hostname.includes('zoom.us')) {
+                            const pathParts = url.pathname.split('/').filter(p => p);
+                            parsedData.location = (pathParts[0] === 'j' && pathParts[1]) ? `Zoom: ${pathParts[1]}` : 'Zoom Meeting';
+                        } else if (url.hostname.includes('meet.google.com')) {
+                            const path = url.pathname.replace('/', '');
+                            parsedData.location = path ? `Google Meet: ${path}` : 'Google Meet';
+                        } else {
+                            parsedData.location = `Virtual Event: ${url.hostname}`;
+                        }
+                    } catch (e) {
+                        console.warn('Could not parse linkedUrl for virtual location:', parsedData.linkedUrl);
+                    }
+                }
+
+                // --- NEW: Title Refinement Step ---
+                const isTitleGeneric = parsedData.title && parsedData.category && parsedData.title.toLowerCase() === parsedData.category.toLowerCase();
+
+                if (isTitleGeneric && (parsedData.location || parsedData.linkedUrl)) {
+                    const context = `Category: ${parsedData.category}\nLocation: ${parsedData.location || 'N/A'}\nVirtual Meeting Link: ${parsedData.linkedUrl || 'N/A'}`;
+                    const prompt = `Based on the following task details, generate a short, descriptive, and engaging title for a to-do list item. The current title is too generic.
+                    
+                    **Task Details:**
+                    ${context}
+
+                    **Examples:**
+                    - Details: Category: Meeting, Location: Google Meet: abc-def-ghi -> Title: "Sync on Google Meet"
+                    - Details: Category: Workout, Location: 24 Hour Fitness, San Francisco -> Title: "Workout at 24 Hour Fitness"
+                    - Details: Category: Learning, Location: N/A -> Title: "Learning Session" (No change if not enough context)
+
+                    Respond ONLY with the new title.`;
+
+                    try {
+                        const newTitle = await generateTextWithGPT4o(prompt);
+                        parsedData.title = newTitle.replace(/"/g, '').trim();
+                    } catch (e) {
+                        console.warn("Title refinement with GPT-4o failed. Using generic title.", e);
+                    }
+                }
+                
                 return parsedData;
             };
             fallbackAgent = () => parseCommandWithGemini(payload.command);
+            break;
+        }
+        case 'parse_task_update': {
+            primaryAgent = () => parseUpdateCommandWithLlama3(payload.command);
+            // No simple fallback for this specialized parsing
             break;
         }
          // --- MUSE AGENT (Creative Text) ---
@@ -161,6 +214,25 @@ export const kikoRequest = async (
             const schema = { newTitle: 'string', shortInsight: 'string' };
             primaryAgent = () => generateTextWithGPT4o(prompt, schema);
             fallbackAgent = () => generateCompletionSummaryWithGemini(task);
+            break;
+        }
+        case 'generate_note_from_template': {
+            const { type } = payload;
+            let prompt = '';
+            let schema = {};
+
+            if (type === 'daily_planner') {
+                prompt = `Generate a JSON object for a daily planner for a creative entrepreneur. Include an array of 3 inspiring priorities, a schedule array with 4 example tasks (with 'time' and 'task' string properties), a short 'mindfulness_moment' string, and an empty 'notes' string.`;
+                schema = { priorities: ["string"], schedule: [{time: "string", task: "string"}], mindfulness_moment: "string", notes: "string" };
+            } else if (type === 'case_study') {
+                prompt = `Generate a JSON object for a business case study template. Include a 'title' string (e.g., "Case Study: [Client Name]") and a 'content' string with HTML placeholders for sections like Summary, Problem, Solution, and Results.`;
+                schema = { title: "string", content: "string" };
+            } else {
+                return { data: { title: 'New Note', content: '<p>Start here...</p>', error: "Invalid template type" }, fallbackUsed: true };
+            }
+            
+            primaryAgent = () => generateTextWithGPT4o(prompt, schema);
+            // No Gemini fallback defined for this creative task for now.
             break;
         }
         // --- VISION AGENT ---
@@ -193,8 +265,15 @@ export const kikoRequest = async (
         case 'generate_daily_image': {
             const { date, tasks } = payload as { date: Date; tasks: Task[] };
             const tasksString = tasks.map(t => `${t.title} (${t.category})`).join(', ');
-            const prompt = `Generate a visually stunning, high-concept, artistic image that captures the essence of a day focused on these activities: ${tasksString || 'a day of creative potential'}. Date: ${date.toDateString()}. The style should be abstract, sophisticated, and inspirational. No text. 4k cinematic quality.`;
-            primaryAgent = () => generateImageWithImagen(prompt, '16:9');
+            const prompt = `Generate an ultra-high quality, visually stunning, inspirational piece of art that serves as a phone wallpaper. The image should symbolize the user's achievements for the day.
+            
+            **Daily Activities:** ${tasksString || 'A day of focus and creative potential.'}
+            
+            **Artistic Style:** A masterful blend of painterly strokes, masterful film direction lighting, abstract concepts, and the clean aesthetic of a legendary anime creator or 3D modeler. The mood should be triumphant, inspiring, and sophisticated. It needs to be beautiful and something a user would want to save and share.
+            
+            **Constraints:** Absolutely no text, words, letters, or watermarks. The image should be purely visual. 4k cinematic quality.
+            `;
+            primaryAgent = () => generateImageWithImagen(prompt, '9:16');
             break;
         }
         // --- Other agents without specific failovers defined yet ---
@@ -269,4 +348,9 @@ export const kikoRequest = async (
         // If no fallback agent, return default error data
         return { data: getErrorFallbackData(taskType, payload), fallbackUsed: true };
     }
+};
+
+// FIX: Export a wrapper for the 'parse_command' Kiko task to be used in the NewTaskModal.
+export const parseTaskFromString = (command: string): Promise<{ data: Partial<Task>, fallbackUsed: boolean }> => {
+    return kikoRequest('parse_command', { command });
 };

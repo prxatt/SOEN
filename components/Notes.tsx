@@ -1,9 +1,9 @@
+
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Note, Notebook, Insight, ActionItem } from '../types';
-import { generateNoteFromTemplate } from '../services/geminiService';
 import { kikoRequest } from '../services/kikoAIService';
-import { PlusCircleIcon, TrashIcon, ChatBubbleLeftEllipsisIcon, SparklesIcon, ChevronDownIcon, ArchiveBoxIcon, FlagIcon, XMarkIcon, DocumentPlusIcon, DocumentIcon, BriefcaseIcon, BoldIcon, ItalicIcon, UnderlineIcon, ListBulletIcon, ListOrderedIcon, PhotoIcon, DocumentTextIcon, ArrowsPointingOutIcon } from './Icons';
+import { PlusCircleIcon, TrashIcon, ChatBubbleLeftEllipsisIcon, SparklesIcon, ChevronDownIcon, ArchiveBoxIcon, FlagIcon, XMarkIcon, DocumentPlusIcon, DocumentIcon, BriefcaseIcon, BoldIcon, ItalicIcon, UnderlineIcon, ListBulletIcon, ListOrderedIcon, PhotoIcon, DocumentTextIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from './Icons';
 
 function debounce<T extends (...args: any[]) => any>(func: T, delay: number): (...args: Parameters<T>) => void {
     let timeoutId: number | undefined;
@@ -51,31 +51,31 @@ const EditorToolbar: React.FC<{ onCommand: (cmd: string) => void; onAiCommand: (
     }, []);
 
     const TButton: React.FC<{onClick: () => void; children: React.ReactNode; title: string, 'aria-label': string}> = ({onClick, children, title, ...props}) => (
-      <button type="button" title={title} onMouseDown={(e) => { e.preventDefault(); onClick(); }} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors hover:bg-light-bg dark:hover:bg-black/20 text-light-text-secondary dark:text-dark-text-secondary`} {...props}>{children}</button>
+      <button type="button" title={title} onMouseDown={(e) => { e.preventDefault(); onClick(); }} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors hover:bg-bg dark:hover:bg-black/20 text-text-secondary`} {...props}>{children}</button>
     );
 
     return (
-        <div className="flex items-center gap-1 p-2 bg-light-card dark:bg-dark-card border-b border-light-border dark:border-dark-border flex-wrap">
+        <div className="flex items-center gap-1 p-2 bg-card border-b border-border flex-wrap">
             <TButton onClick={() => onCommand('bold')} title="Bold" aria-label="Bold"><BoldIcon className="w-5 h-5"/></TButton>
             <TButton onClick={() => onCommand('italic')} title="Italic" aria-label="Italic"><ItalicIcon className="w-5 h-5"/></TButton>
             <TButton onClick={() => onCommand('underline')} title="Underline" aria-label="Underline"><UnderlineIcon className="w-5 h-5"/></TButton>
-            <div className="w-px h-6 bg-light-border dark:bg-dark-border mx-1"></div>
+            <div className="w-px h-6 bg-border mx-1"></div>
             <TButton onClick={() => onCommand('insertUnorderedList')} title="Bullet List" aria-label="Bullet list"><ListBulletIcon className="w-5 h-5"/></TButton>
             <TButton onClick={() => onCommand('insertOrderedList')} title="Numbered List" aria-label="Numbered list"><ListOrderedIcon className="w-5 h-5"/></TButton>
-            <div className="w-px h-6 bg-light-border dark:bg-dark-border mx-1"></div>
+            <div className="w-px h-6 bg-border mx-1"></div>
             <div className="relative" ref={aiMenuRef}>
                  <button onClick={() => setIsAiMenuOpen(prev => !prev)} className="flex items-center gap-1.5 p-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm" aria-haspopup="true" aria-expanded={isAiMenuOpen}>
-                    <SparklesIcon className="w-5 h-5"/> Kiko AI <ChevronDownIcon className="w-4 h-4"/>
+                    <SparklesIcon className="w-5 h-5"/> Kiko <ChevronDownIcon className="w-4 h-4"/>
                 </button>
                 {isAiMenuOpen && (
-                    <div className="absolute top-full right-0 mt-1 w-48 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg shadow-xl z-10 animate-fade-in-fast" role="menu">
-                        <button onClick={onChat} className="w-full text-left px-3 py-1.5 text-sm hover:bg-light-card dark:hover:bg-dark-card" role="menuitem">Chat about selection</button>
-                        <div className="h-px bg-light-border dark:bg-dark-border my-1"></div>
-                        <button onClick={() => {onAiCommand('summarize', false); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-light-card dark:hover:bg-dark-card" role="menuitem">Summarize selection</button>
-                        <button onClick={() => {onAiCommand('expand', false); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-light-card dark:hover:bg-dark-card" role="menuitem">Expand selection</button>
-                        <button onClick={() => {onAiCommand('findActionItems', false); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-light-card dark:hover:bg-dark-card" role="menuitem">Find action items</button>
-                        <div className="h-px bg-light-border dark:bg-dark-border my-1"></div>
-                        <button onClick={() => {onAiCommand('generateProposal', true); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-light-card dark:hover:bg-dark-card" role="menuitem">Generate Proposal</button>
+                    <div className="absolute top-full right-0 mt-1 w-48 bg-bg border border-border rounded-lg shadow-xl z-10 animate-fade-in-fast" role="menu">
+                        <button onClick={onChat} className="w-full text-left px-3 py-1.5 text-sm hover:bg-card" role="menuitem">Chat about selection</button>
+                        <div className="h-px bg-border my-1"></div>
+                        <button onClick={() => {onAiCommand('summarize', false); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-card" role="menuitem">Summarize selection</button>
+                        <button onClick={() => {onAiCommand('expand', false); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-card" role="menuitem">Expand selection</button>
+                        <button onClick={() => {onAiCommand('findActionItems', false); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-card" role="menuitem">Find action items</button>
+                        <div className="h-px bg-border my-1"></div>
+                        <button onClick={() => {onAiCommand('generateProposal', true); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-card" role="menuitem">Generate Proposal</button>
                     </div>
                 )}
             </div>
@@ -93,25 +93,25 @@ const NewNoteModal: React.FC<{onClose: () => void; onCreate: (type: 'blank' | 'd
                     <button onClick={onClose} aria-label="Close modal" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"><XMarkIcon className="w-6 h-6"/></button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button onClick={() => onCreate('blank')} className="flex flex-col items-center justify-center text-center p-6 bg-light-bg dark:bg-dark-bg rounded-xl hover:ring-2 ring-accent transition-all border border-light-border dark:border-dark-border">
+                    <button onClick={() => onCreate('blank')} className="flex flex-col items-center justify-center text-center p-6 bg-bg rounded-xl hover:ring-2 ring-accent transition-all border border-border">
                         <DocumentIcon className="w-10 h-10 mb-2"/>
                         <p className="font-semibold">Blank Note</p>
-                        <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Start from scratch.</p>
+                        <p className="text-xs text-text-secondary">Start from scratch.</p>
                     </button>
-                    <button onClick={() => onCreate('daily_planner')} className="flex flex-col items-center justify-center text-center p-6 bg-light-bg dark:bg-dark-bg rounded-xl hover:ring-2 ring-accent transition-all border border-light-border dark:border-dark-border">
+                    <button onClick={() => onCreate('daily_planner')} className="flex flex-col items-center justify-center text-center p-6 bg-bg rounded-xl hover:ring-2 ring-accent transition-all border border-border">
                         <SparklesIcon className="w-10 h-10 mb-2 text-accent"/>
                         <p className="font-semibold">AI Daily Planner</p>
-                        <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Let AI structure your day.</p>
+                        <p className="text-xs text-text-secondary">Let Kiko structure your day.</p>
                     </button>
-                    <button onClick={() => onCreate('case_study')} className="flex flex-col items-center justify-center text-center p-6 bg-light-bg dark:bg-dark-bg rounded-xl hover:ring-2 ring-accent transition-all border border-light-border dark:border-dark-border">
+                    <button onClick={() => onCreate('case_study')} className="flex flex-col items-center justify-center text-center p-6 bg-bg rounded-xl hover:ring-2 ring-accent transition-all border border-border">
                         <BriefcaseIcon className="w-10 h-10 mb-2"/>
                         <p className="font-semibold">Business Case Study</p>
-                        <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">For clients and proposals.</p>
+                        <p className="text-xs text-text-secondary">For clients and proposals.</p>
                     </button>
-                     <div className="flex flex-col items-center justify-center text-center p-6 bg-light-bg dark:bg-dark-bg rounded-xl opacity-50 cursor-not-allowed border border-light-border dark:border-dark-border">
+                     <div className="flex flex-col items-center justify-center text-center p-6 bg-bg rounded-xl opacity-50 cursor-not-allowed border border-border">
                          <PhotoIcon className="w-10 h-10 mb-2"/>
                          <p className="font-semibold">Visual Note</p>
-                         <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">From image (soon).</p>
+                         <p className="text-xs text-text-secondary">From image (soon).</p>
                      </div>
                 </div>
             </div>
@@ -127,7 +127,7 @@ interface NotesProps {
     addInsights: (newInsights: Insight[]) => void;
     updateNote: (note: Note) => void;
     addTask: (title: string, notebookId: number) => void;
-    startChatWithContext: (context: string, type: 'note' | 'suggestion' | 'theme' | 'selection') => void;
+    startChatWithContext: (context: string) => void;
     selectedNote: Note | null;
     setSelectedNote: (note: Note | null) => void;
     activeNotebookId: number | 'all' | 'flagged' | 'archived';
@@ -179,11 +179,11 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
             };
         } else {
             setIsLoadingAI(true);
-            const templateContent = await generateNoteFromTemplate(type);
+            const { data: templateContent } = await kikoRequest('generate_note_from_template', { type });
             setIsLoadingAI(false);
-            if (templateContent.error) {
+            if (!templateContent) {
                 // handle error, maybe show toast
-                console.error("Failed to generate note from template:", templateContent.error);
+                console.error("Failed to generate note from template.");
                 return;
             }
             if (type === 'daily_planner') {
@@ -317,18 +317,18 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
         });
         setIsLoadingAI(false);
 
-        if (command === 'findActionItems' && Array.isArray(result)) {
-            result.forEach(item => addTask((item as ActionItem).title, selectedNote.notebookId));
+        if (command === 'findActionItems' && Array.isArray(result.data)) {
+            result.data.forEach(item => addTask((item as ActionItem).title, selectedNote.notebookId));
             // Maybe show toast here
-        } else if (typeof result === 'string') {
+        } else if (typeof result.data === 'string') {
             const editor = editorContainerRef.current?.querySelector('[contenteditable]');
             if (editor) {
                 if (selection && selection.rangeCount > 0 && selection.toString().trim().length > 0) {
                      const range = selection.getRangeAt(0);
                      range.deleteContents();
-                     range.insertNode(document.createTextNode(result));
+                     range.insertNode(document.createTextNode(result.data));
                 } else {
-                    const newContent = `${selectedNote.content}<hr><p><strong>${command.toUpperCase()}:</strong></p><p>${result}</p>`;
+                    const newContent = `${selectedNote.content}<hr><p><strong>${command.toUpperCase()}:</strong></p><p>${result.data}</p>`;
                     handleNoteContentChange(newContent);
                 }
             }
@@ -342,21 +342,21 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
     const handleChatFromSelection = () => {
         const selection = window.getSelection()?.toString().trim();
         if (selection) {
-            startChatWithContext(selection, 'selection');
+            startChatWithContext(`Let's talk about this selection from my notes: "${selection}"`);
         }
     };
     
     const NotebookItem: React.FC<{id: number | 'all' | 'flagged' | 'archived', icon: React.ReactNode, title: string, count?: number}> = ({id, icon, title, count}) => (
         <button onClick={() => setActiveNotebookId(id)} className={`flex items-center justify-between w-full text-left px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeNotebookId === id ? 'bg-accent/10 text-accent' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>
             <span className="flex items-center gap-2 truncate">{icon}{title}</span>
-            {count !== undefined && <span className="text-xs text-light-text-secondary dark:text-dark-text-secondary">{count}</span>}
+            {count !== undefined && <span className="text-xs text-text-secondary">{count}</span>}
         </button>
     );
 
     const NoteListItem: React.FC<{note: Note}> = ({note}) => (
-        <button onClick={() => setSelectedNote(note)} className={`block w-full text-left p-3 border-b border-light-border dark:border-dark-border ${selectedNote?.id === note.id ? 'bg-accent/10' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>
+        <button onClick={() => setSelectedNote(note)} className={`block w-full text-left p-3 border-b border-border ${selectedNote?.id === note.id ? 'bg-accent/10' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>
             <h4 className="font-semibold truncate">{note.title}</h4>
-            <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary truncate mt-1">{(note?.content || '').replace(/<[^>]*>?/gm, '')}</p>
+            <p className="text-xs text-text-secondary truncate mt-1">{(note?.content || '').replace(/<[^>]*>?/gm, '')}</p>
         </button>
     );
     
@@ -368,24 +368,26 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
             <AnimatePresence>
             {!isFocusMode && (
                 <motion.aside 
-                    initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: '25%', opacity: 1 }}
-                    exit={{ width: 0, opacity: 0 }}
+                    initial={{ width: 0, opacity: 0, padding: 0 }}
+                    animate={{ width: '25%', opacity: 1, padding: '0.75rem' }}
+                    exit={{ width: 0, opacity: 0, padding: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="max-w-[250px] border-r border-light-border dark:border-dark-border flex-shrink-0 flex flex-col p-3 overflow-hidden"
+                    className="max-w-[250px] border-r border-border flex-shrink-0 flex flex-col overflow-hidden"
                 >
-                    <h3 className="font-bold font-display px-2 mb-2">Notebooks</h3>
-                    <div className="space-y-1">
-                        <NotebookItem id="all" icon={<DocumentTextIcon className="w-5 h-5"/>} title="All Notes" count={notes.filter(n => !n.archived).length} />
-                        <NotebookItem id="flagged" icon={<FlagIcon className="w-5 h-5"/>} title="Flagged" count={notes.filter(n => n.flagged && !n.archived).length} />
-                    </div>
-                    <div className="my-2 border-t border-light-border dark:border-dark-border"></div>
-                    <div className="space-y-1 flex-grow overflow-y-auto">
-                        {notebooks.map(nb => <NotebookItem key={nb.id} id={nb.id} icon={<div className="w-3 h-3 rounded-full" style={{backgroundColor: nb.color}}/>} title={nb.title} count={notes.filter(n => n.notebookId === nb.id && !n.archived).length}/>)}
-                    </div>
-                    <div className="mt-2 border-t border-light-border dark:border-dark-border"></div>
-                    <div className="pt-2">
-                        <NotebookItem id="archived" icon={<ArchiveBoxIcon className="w-5 h-5"/>} title="Archived" count={notes.filter(n => n.archived).length} />
+                    <div className="flex flex-col h-full">
+                        <h3 className="font-bold font-display px-2 mb-2 flex-shrink-0">Notebooks</h3>
+                        <div className="space-y-1 flex-shrink-0">
+                            <NotebookItem id="all" icon={<DocumentTextIcon className="w-5 h-5"/>} title="All Notes" count={notes.filter(n => !n.archived).length} />
+                            <NotebookItem id="flagged" icon={<FlagIcon className="w-5 h-5"/>} title="Flagged" count={notes.filter(n => n.flagged && !n.archived).length} />
+                        </div>
+                        <div className="my-2 border-t border-border flex-shrink-0"></div>
+                        <div className="space-y-1 flex-grow overflow-y-auto">
+                            {notebooks.map(nb => <NotebookItem key={nb.id} id={nb.id} icon={<div className="w-3 h-3 rounded-full" style={{backgroundColor: nb.color}}/>} title={nb.title} count={notes.filter(n => n.notebookId === nb.id && !n.archived).length}/>)}
+                        </div>
+                        <div className="mt-2 border-t border-border flex-shrink-0"></div>
+                        <div className="pt-2 flex-shrink-0">
+                            <NotebookItem id="archived" icon={<ArchiveBoxIcon className="w-5 h-5"/>} title="Archived" count={notes.filter(n => n.archived).length} />
+                        </div>
                     </div>
                 </motion.aside>
             )}
@@ -394,13 +396,13 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
             <AnimatePresence>
             {!isFocusMode && (
                  <motion.section 
-                    initial={{ width: 0, opacity: 0 }}
+                    initial={{ width: 0, opacity: 0, padding: 0 }}
                     animate={{ width: '33.33%', opacity: 1 }}
-                    exit={{ width: 0, opacity: 0 }}
+                    exit={{ width: 0, opacity: 0, padding: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="max-w-[320px] border-r border-light-border dark:border-dark-border flex flex-col"
+                    className="max-w-[320px] border-r border-border flex flex-col"
                 >
-                    <div className="p-3 border-b border-light-border dark:border-dark-border flex-shrink-0">
+                    <div className="p-3 border-b border-border flex-shrink-0">
                         <button onClick={() => setIsNewNoteModalOpen(true)} className="w-full flex items-center justify-center gap-2 text-sm font-semibold p-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors">
                             <DocumentPlusIcon className="w-5 h-5"/> New Note
                         </button>
@@ -412,19 +414,21 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
             )}
             </AnimatePresence>
             
-             <section ref={editorContainerRef} className="flex-1 flex flex-col bg-light-bg dark:bg-dark-bg">
+             <section ref={editorContainerRef} className="flex-1 flex flex-col bg-bg">
                  {selectedNote ? (
                     <>
-                        <div className="p-3 border-b border-light-border dark:border-dark-border flex-shrink-0">
+                        <div className="p-3 border-b border-border flex-shrink-0">
                              <div className="flex items-center">
                                 <input type="text" value={selectedNote.title} onChange={e => handleNoteTitleChange(e.target.value)} className="font-bold text-xl bg-transparent w-full focus:outline-none"/>
                                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-                                <button onClick={handleGenerateTags} disabled={isLoadingAI} className="p-2 rounded-full hover:bg-accent/20 disabled:opacity-50" title="Generate Tags with AI">
-                                    <SparklesIcon className="w-5 h-5 text-light-text-secondary"/>
+                                <button onClick={handleGenerateTags} disabled={isLoadingAI} className="p-2 rounded-full hover:bg-accent/20 disabled:opacity-50" title="Generate Tags with Kiko">
+                                    <SparklesIcon className="w-5 h-5 text-text-secondary"/>
                                 </button>
-                                <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-full hover:bg-accent/20" title="Attach Image"><PhotoIcon className="w-5 h-5 text-light-text-secondary"/></button>
-                                <button onClick={() => setIsFocusMode(!isFocusMode)} className="p-2 rounded-full hover:bg-accent/20" title="Toggle Focus Mode"><ArrowsPointingOutIcon className="w-5 h-5 text-light-text-secondary"/></button>
-                                <button onClick={() => handleDeleteNote(selectedNote.id)} className="p-2 rounded-full hover:bg-red-500/10 text-light-text-secondary"><TrashIcon className="w-5 h-5"/></button>
+                                <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-full hover:bg-accent/20" title="Attach Image"><PhotoIcon className="w-5 h-5 text-text-secondary"/></button>
+                                <button onClick={() => setIsFocusMode(!isFocusMode)} className="p-2 rounded-full hover:bg-accent/20" title={isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode"}>
+                                    {isFocusMode ? <ArrowsPointingInIcon className="w-5 h-5 text-text-secondary"/> : <ArrowsPointingOutIcon className="w-5 h-5 text-text-secondary"/>}
+                                </button>
+                                <button onClick={() => handleDeleteNote(selectedNote.id)} className="p-2 rounded-full hover:bg-red-500/10 text-text-secondary"><TrashIcon className="w-5 h-5"/></button>
                              </div>
                              {selectedNote.tags.length > 0 && (
                                 <div className="flex flex-wrap items-center gap-2 pt-2">
@@ -440,7 +444,7 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
                              )}
                         </div>
                         {selectedNote.imageUrl && (
-                            <div className="p-4 border-b border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg/50">
+                            <div className="p-4 border-b border-border bg-bg/50">
                                 <div className="relative group max-w-xs mx-auto">
                                     <img src={selectedNote.imageUrl} alt="Note attachment" className="rounded-lg shadow-md w-full object-contain" />
                                     <button 
@@ -469,7 +473,7 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
                         </div>
                     </>
                  ) : (
-                    <div className="flex-grow flex items-center justify-center text-light-text-secondary dark:text-dark-text-secondary">
+                    <div className="flex-grow flex items-center justify-center text-text-secondary">
                         <p>Select a note to view or create a new one.</p>
                     </div>
                  )}

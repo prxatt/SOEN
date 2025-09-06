@@ -52,11 +52,11 @@ const Projects: React.FC<ProjectsProps> = ({ projects, setProjects }) => {
                         <motion.div key={project.id} variants={itemVariants} className="card p-5 rounded-2xl flex flex-col justify-between hover:shadow-lg transition-shadow">
                            <div>
                                 <h3 className="font-bold font-display text-xl mb-2">{project.title}</h3>
-                                <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">{project.description}</p>
+                                <p className="text-sm text-text-secondary">{project.description}</p>
                            </div>
-                           <div className="mt-4 pt-4 border-t border-light-border dark:border-dark-border">
-                                <p className="text-xs font-semibold text-light-text-secondary dark:text-dark-text-secondary">PROGRESS (DEMO)</p>
-                                <div className="w-full bg-light-border dark:bg-dark-border rounded-full h-2.5 mt-1">
+                           <div className="mt-4 pt-4 border-t border-border">
+                                <p className="text-xs font-semibold text-text-secondary">PROGRESS (DEMO)</p>
+                                <div className="w-full bg-border rounded-full h-2.5 mt-1">
                                     <div className="bg-accent h-2.5 rounded-full" style={{width: `${Math.floor(Math.random() * 80) + 10}%`}}></div>
                                 </div>
                            </div>
@@ -64,9 +64,9 @@ const Projects: React.FC<ProjectsProps> = ({ projects, setProjects }) => {
                     ))}
                 </motion.div>
             ) : (
-                <div className="text-center text-light-text-secondary dark:text-dark-text-secondary py-24">
+                <div className="text-center text-text-secondary py-24">
                     <BriefcaseIcon className="w-16 h-16 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold font-display text-light-text dark:text-dark-text">No Projects Yet</h3>
+                    <h3 className="text-xl font-bold font-display text-text">No Projects Yet</h3>
                     <p>Create your first project to start organizing your work.</p>
                 </div>
             )}

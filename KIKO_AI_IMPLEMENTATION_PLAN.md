@@ -1,24 +1,24 @@
 
-# Kiko AI Multi-Agent Implementation Plan
+# Kiko Multi-Agent Implementation Plan
 
-This document outlines the step-by-step process to evolve Praxis from using a single AI service into a sophisticated multi-agent system orchestrated by "Kiko AI". Each step is written as a prompt for an AI engineering assistant to ensure precise execution.
+This document outlines the step-by-step process to evolve Praxis from using a single AI service into a sophisticated multi-agent system orchestrated by "Kiko". Each step is written as a prompt for an AI engineering assistant to ensure precise execution.
 
 ---
 
 ### **Phase 1: Stabilize the Core & Build the Orchestrator**
 
-**Objective:** Create the central "brain" for Kiko AI and fix the critical `MissionBriefing` API error to stabilize the AI Hub.
+**Objective:** Create the central "brain" for Kiko and fix the critical `MissionBriefing` API error to stabilize the AI Hub.
 
-**Step 1.1: Create the Kiko AI Service and Orchestrator Stub**
+**Step 1.1: Create the Kiko Service and Orchestrator Stub**
 
 *   **Act as a world-class senior frontend engineer.**
-*   **Request:** Create a new service file that will house the central AI orchestrator, "Kiko AI". This service will be responsible for routing requests to the correct AI model or agent based on the task type.
+*   **Request:** Create a new service file that will house the central AI orchestrator, "Kiko". This service will be responsible for routing requests to the correct AI model or agent based on the task type.
 *   **Reasoning:** Centralizing AI logic in a single orchestrator (`kikoRequest`) makes the system modular. It allows us to easily add new AI models (like OpenAI or Groq) in the future without refactoring every component that needs AI. This is the foundation of our multi-agent architecture.
 *   **Implementation:**
     1.  Create a new file: `services/kikoAIService.ts`.
     2.  Inside this file, define a type for the Kiko request: `type KikoTaskType = 'generate_briefing' | 'analyze_image' | 'parse_command';`
     3.  Create an asynchronous function stub named `kikoRequest(taskType: KikoTaskType, payload: any): Promise<any>`.
-    4.  For now, the function body can simply log the request and return `null`: `console.log('Kiko AI request received:', taskType, payload); return null;`
+    4.  For now, the function body can simply log the request and return `null`: `console.log('Kiko request received:', taskType, payload); return null;`
     5.  Export the function and type.
 
 ---
@@ -96,7 +96,7 @@ This document outlines the step-by-step process to evolve Praxis from using a si
 *   **Reasoning:** Good UX requires keeping the user informed. When the AI is working, we should show it. This builds trust and makes the app feel more intelligent and responsive.
 *   **Implementation:**
     1.  In `components/PraxisAI.tsx` inside the `MissionControl` component, when the `isLoading` state is true, display the dynamic `loadingText` ("Generating daily intelligence...") to give the user more specific feedback.
-    2.  When an image is being analyzed by the Vision Agent, overlay a shimmering or pulsing animation on the image thumbnail to indicate that Kiko AI is actively "looking" at it.
+    2.  When an image is being analyzed by the Vision Agent, overlay a shimmering or pulsing animation on the image thumbnail to indicate that Kiko is actively "looking" at it.
     3.  In `components/EventDetail.tsx`, when regenerating insights, ensure the `ArrowPathIcon` has a CSS spinning animation applied to give immediate feedback that the button press was registered.
 
 This structured plan will guide us through a complex architectural change, ensuring stability, scalability, and a superior user experience.

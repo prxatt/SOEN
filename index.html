@@ -17,19 +17,12 @@
             colors: {
               'accent': 'var(--color-accent)',
               'accent-hover': 'var(--color-accent-hover)',
+              'bg': 'var(--color-bg)',
+              'card': 'var(--color-card)',
+              'border': 'var(--color-border)',
+              'text': 'var(--color-text)',
+              'text-secondary': 'var(--color-text-secondary)',
               
-              'light-bg': '#FFFFFF',
-              'light-card': '#F7F7F7',
-              'light-border': '#EAEAEA',
-              'light-text': '#111827',
-              'light-text-secondary': '#6B7280',
-
-              'dark-bg': '#101010',
-              'dark-card': '#1C1C1E',
-              'dark-border': '#2D2D2F',
-              'dark-text': '#F3F4F6',
-              'dark-text-secondary': '#9CA3AF',
-
               // Chart colors for new Mission Control
               'chart-pink': '#EC4899',
               'chart-purple': '#A855F7',
@@ -66,6 +59,10 @@
               'highlight': {
                 '0%, 100%': { 'background-color': 'transparent' },
                 '50%': { 'background-color': 'rgba(168, 85, 247, 0.15)' },
+              },
+              'gradient-shift': {
+                '0%, 100%': { 'background-position': '0% 50%' },
+                '50%': { 'background-position': '100% 50%' },
               }
             },
             animation: {
@@ -73,6 +70,7 @@
               'fade-in': 'fade-in 0.5s ease-out forwards',
               'fade-in-fast': 'fade-in-fast 0.2s ease-out forwards',
               'highlight': 'highlight 1.5s ease-in-out',
+              'gradient-shift': 'gradient-shift 15s ease infinite',
             },
           }
         }
@@ -83,39 +81,60 @@
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
   <style>
     :root {
+      /* Default Theme: Obsidian */
       --color-accent: #A855F7;
       --color-accent-hover: #9333EA;
+
+      /* Default Mode: Dark */
+      --color-bg: #101010;
+      --color-card: #1C1C1E;
+      --color-border: #2D2D2F;
+      --color-text: #F3F4F6;
+      --color-text-secondary: #9CA3AF;
     }
-    [data-theme="solaris"] {
-      --color-accent: #F97316;
-      --color-accent-hover: #EA580C;
+    
+    html:not(.dark) {
+      /* Glass Mode */
+      --color-bg: #F0F2F5;
+      --color-card: rgba(255, 255, 255, 0.5);
+      --color-border: rgba(255, 255, 255, 0.25);
+      --color-text: #111827;
+      --color-text-secondary: #4B5563;
     }
-    [data-theme="crimson"] {
-      --color-accent: #DC2626;
-      --color-accent-hover: #B91C1C;
-    }
-    [data-theme="oceanic"] {
-      --color-accent: #0EA5E9;
-      --color-accent-hover: #0284C7;
-    }
+
+    /* Theme Definitions (Accent Colors Only) */
+    [data-theme="obsidian"] { --color-accent: #A855F7; --color-accent-hover: #9333EA; }
+    [data-theme="synthwave"] { --color-accent: #EC4899; --color-accent-hover: #DB2777; }
+    [data-theme="solarpunk"] { --color-accent: #84CC16; --color-accent-hover: #65A30D; }
+    [data-theme="luxe"] { --color-accent: #EAB308; --color-accent-hover: #CA8A04; } /* Gold */
+    [data-theme="aurelian"] { --color-accent: #F59E0B; --color-accent-hover: #D97706; }
+    [data-theme="crimson"] { --color-accent: #DC2626; --color-accent-hover: #B91C1C; }
+    [data-theme="oceanic"] { --color-accent: #0EA5E9; --color-accent-hover: #0284C7; }
+    
     body {
-      color: #111827; /* light-text */
-      background-color: #FFFFFF; /* light-bg */
+      color: var(--color-text);
+      background-color: var(--color-bg);
     }
-    .dark body {
-      color: #F3F4F6; /* dark-text */
-      background-color: #000000; /* dark-bg */
+    
+    html:not(.dark) body {
+      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+	    background-size: 400% 400%;
+	    animation: gradient-shift 15s ease infinite;
     }
-    /* Updated solid card style for better visibility */
+
     .card {
-        @apply bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border;
+      background-color: var(--color-card);
+      border: 1px solid var(--color-border);
     }
-    .glass-card { /* Kept for navigation */
-        @apply bg-light-card/80 dark:bg-dark-card/80 backdrop-blur-xl border border-light-border dark:border-dark-border;
+    
+    html:not(.dark) .card {
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
     }
+    
     /* Consistent focus styles */
     input:focus, select:focus, textarea:focus, button:focus-visible, [contenteditable]:focus {
-        @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-light-bg dark:ring-offset-dark-bg rounded-sm;
+        @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg rounded-sm;
     }
     .break-word {
       overflow-wrap: break-word;

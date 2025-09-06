@@ -1,529 +1,469 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+
+// Import types
+import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatMessage, SearchHistoryItem, VisionHistoryItem, HealthData, TaskStatus, Category, RewardItem, CompletionSummary } from './types';
+
+// Import components
+import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
 import Schedule from './components/Schedule';
-import EventDetail from './components/EventDetail';
 import Notes from './components/Notes';
-import PraxisAI from './components/PraxisAI';
 import Profile from './components/Profile';
+import PraxisAI from './components/PraxisAI';
+import Settings from './components/Settings';
+import Projects from './components/Projects';
 import Rewards from './components/Rewards';
-import Navigation from './components/Navigation';
 import Auth from './components/auth/Auth';
 import Onboarding from './components/Onboarding';
+import FocusMode from './components/FocusMode';
 import Toast from './components/Toast';
-import { MOCKED_TASKS, MOCKED_NOTES, MOCKED_NOTEBOOKS, MOCKED_INSIGHTS, MOCKED_GOALS, MOCKED_PROJECTS, REWARDS_CATALOG, DEFAULT_CATEGORIES } from './constants';
-import { Task, Note, Notebook, Insight, Category, TaskStatus, ChatMessage, SearchHistoryItem, VisionHistoryItem, Goal, PraxisPointLog, Theme, Screen, Project, HealthData, ActionableInsight } from './types';
-import { getActualDuration, calculateStreak, getTodaysTaskCompletion, inferHomeLocation } from './utils/taskUtils';
-import { continueChat, setChatContext, parseHealthDataFromTasks, getProactiveHealthSuggestion, analyzeImageWithPrompt } from './services/geminiService';
+import { PraxisLogo } from './components/Icons';
+
+// Import services and utils
+import { syncCalendar } from './services/googleCalendarService';
 import { kikoRequest } from './services/kikoAIService';
-import { syncCalendar, addEventToCalendar, updateEventInCalendar } from './services/googleCalendarService';
+import { calculateStreak, getTodaysTaskCompletion, inferHomeLocation } from './utils/taskUtils';
 import { triggerHapticFeedback } from './utils/haptics';
+import { MOCKED_BRIEFING, REWARDS_CATALOG, DEFAULT_CATEGORIES } from './constants';
 
-const getInitialState = <T,>(key: string, fallback: T): T => {
-  try {
-    const item = window.localStorage.getItem(key);
-    if (item) {
-      return JSON.parse(item, (key, value) => {
-        if (key === 'startTime' || key === 'createdAt' || key === 'timestamp') return new Date(value);
-        return value;
-      });
+// --- MOCK DATA GENERATION ---
+const generateMockTasksForMonth = (year: number, month: number): Task[] => {
+    const tasks: Task[] = [];
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const tasksPerDay = Math.floor(Math.random() * 4) + 2; // 2-5 tasks per day
+
+        for (let i = 0; i < tasksPerDay; i++) {
+            const category = DEFAULT_CATEGORIES[Math.floor(Math.random() * DEFAULT_CATEGORIES.length)];
+            const hour = Math.floor(Math.random() * 12) + 8; // 8am - 7pm
+            const minute = Math.random() > 0.5 ? 30 : 0;
+            const startTime = new Date(year, month, day, hour, minute);
+
+            let status = TaskStatus.Pending;
+            if (date.getTime() < today.getTime()) {
+                status = Math.random() > 0.2 ? TaskStatus.Completed : TaskStatus.Pending; // 80% chance of completion for past tasks
+            } else if (date.toDateString() === today.toDateString() && startTime.getTime() < today.getTime()) {
+                // status = TaskStatus.Completed; // Commented out to make today's tasks pending by default for demo
+            }
+            
+            const task: Task = {
+                id: tasks.length + 1,
+                title: `${category} Session ${i + 1}`,
+                category,
+                startTime,
+                plannedDuration: [30, 45, 60, 90, 120][Math.floor(Math.random() * 5)],
+                status,
+                priority: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
+                progress: status === TaskStatus.Completed ? 100 : Math.random() > 0.7 ? Math.floor(Math.random() * 80) : 0,
+            };
+            tasks.push(task);
+        }
     }
-  } catch (error) {
-    console.warn(`Error reading localStorage key "${key}":`, error);
-  }
-  return fallback;
+    return tasks;
 };
 
-const PraxisLogo = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="6"/>
-        <path d="M42 35V75" stroke="currentColor" strokeWidth="6" strokeLinecap="round"/>
-        <path d="M42 50C42 42.268 48.268 36 56 36H60" stroke="currentColor" strokeWidth="6" strokeLinecap="round"/>
-    </svg>
-);
+const initialTasks: Task[] = generateMockTasksForMonth(new Date().getFullYear(), new Date().getMonth());
 
 
-const AppHeader: React.FC = () => (
-    <header className="flex justify-between items-center mb-6 flex-shrink-0">
-        <div className="flex items-center gap-3">
-            <PraxisLogo className="w-9 h-9 text-light-text dark:text-dark-text" />
-            <div>
-                <h1 className="text-xl font-bold font-display text-light-text dark:text-dark-text leading-tight tracking-wide">PRAXIS AI</h1>
-            </div>
-        </div>
-    </header>
-);
+const initialNotebooks: Notebook[] = [
+    { id: 1, title: 'Praxis AI', color: '#A855F7' },
+    { id: 2, title: 'Surface Tension', color: '#3B82F6' },
+    { id: 3, title: 'Personal', color: '#10B981' },
+];
 
-const screenVariants = {
-  initial: { opacity: 0, y: 10 },
-  in: { opacity: 1, y: 0 },
-  out: { opacity: 0, y: -10 },
-};
+const initialNotes: Note[] = [
+    { id: 101, notebookId: 1, title: 'Initial Project Ideas', content: '<p>Exploring concepts for a new AI-driven productivity tool...</p>', createdAt: new Date(), archived: false, flagged: true, tags: ['idea', 'ai'] },
+    { id: 102, notebookId: 2, title: 'Brand Guidelines', content: '<p>Core principles for the Surface Tension brand...</p>', createdAt: new Date(Date.now() - 86400000), archived: false, flagged: false, tags: ['branding'] },
+];
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => getInitialState('praxis-isAuthenticated', false));
-  const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean>(() => getInitialState('praxis-onboardingComplete', false));
-  const [screen, setScreen] = useState<Screen>('Schedule');
-  const [tasks, setTasks] = useState<Task[]>(() => getInitialState('praxis-tasks', MOCKED_TASKS));
-  const [notes, setNotes] = useState<Note[]>(() => getInitialState('praxis-notes', MOCKED_NOTES));
-  const [notebooks, setNotebooks] = useState<Notebook[]>(() => getInitialState('praxis-notebooks', MOCKED_NOTEBOOKS));
-  const [projects, setProjects] = useState<Project[]>(() => getInitialState('praxis-projects', MOCKED_PROJECTS));
-  const [insights, setInsights] = useState<Insight[]>(() => getInitialState('praxis-insights', MOCKED_INSIGHTS));
-  const [goals, setGoals] = useState<Goal[]>(() => getInitialState('praxis-goals', MOCKED_GOALS));
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => getInitialState('praxis-isDarkMode', true)); // Default to dark mode
-  const [customCategories, setCustomCategories] = useState<Category[]>(() => getInitialState('praxis-customCategories', []));
-  
-  const [viewingTask, setViewingTask] = useState<Task | null>(null);
+    // --- STATE MANAGEMENT ---
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
+    const [uiMode, setUiMode] = useState<'dark' | 'glass'>('dark');
+    const [activeTheme, setActiveTheme] = useState('obsidian');
+    const [toast, setToast] = useState<{ message: string; id: number; action?: { label: string; onClick: () => void; } } | null>(null);
 
-  // State lifted from Notes.tsx
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [activeNotebookId, setActiveNotebookId] = useState<number | 'all' | 'flagged' | 'archived'>('all');
-
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => getInitialState('praxis-chat-history', []));
-  const [isAiReplying, setIsAiReplying] = useState(false);
-
-  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>(() => getInitialState('praxis-search-history', []));
-  const [visionHistory, setVisionHistory] = useState<VisionHistoryItem[]>(() => getInitialState('praxis-vision-history', []));
-  
-  // Gamification & Rewards State
-  const [praxisFlow, setPraxisFlow] = useState<PraxisPointLog[]>(() => getInitialState('praxis-flow-log', []));
-  const totalFlow = praxisFlow.reduce((sum, log) => sum + log.points, 0);
-  const [toast, setToast] = useState<{ message: string; visible: boolean; action?: { label: string; onClick: () => void; } }>({ message: '', visible: false });
-  const [dailyStreak, setDailyStreak] = useState<number>(0);
-  const [completionPercentage, setCompletionPercentage] = useState<number>(0);
-  const prevStreakRef = useRef<number | undefined>(undefined);
-  
-  const [activeTheme, setActiveTheme] = useState<string>(() => getInitialState('praxis-activeTheme', 'default'));
-  const [purchasedRewards, setPurchasedRewards] = useState<string[]>(() => getInitialState('praxis-purchasedRewards', []));
-
-  useEffect(() => { localStorage.setItem('praxis-isAuthenticated', JSON.stringify(isAuthenticated)); }, [isAuthenticated]);
-  useEffect(() => { localStorage.setItem('praxis-onboardingComplete', JSON.stringify(isOnboardingComplete)); }, [isOnboardingComplete]);
-  useEffect(() => { localStorage.setItem('praxis-tasks', JSON.stringify(tasks)); }, [tasks]);
-  useEffect(() => { localStorage.setItem('praxis-notes', JSON.stringify(notes)); }, [notes]);
-  useEffect(() => { localStorage.setItem('praxis-notebooks', JSON.stringify(notebooks)); }, [notebooks]);
-  useEffect(() => { localStorage.setItem('praxis-projects', JSON.stringify(projects)); }, [projects]);
-  useEffect(() => { localStorage.setItem('praxis-insights', JSON.stringify(insights)); }, [insights]);
-  useEffect(() => { localStorage.setItem('praxis-goals', JSON.stringify(goals)); }, [goals]);
-  useEffect(() => { localStorage.setItem('praxis-isDarkMode', JSON.stringify(isDarkMode)); }, [isDarkMode]);
-  useEffect(() => { localStorage.setItem('praxis-chat-history', JSON.stringify(chatMessages)); }, [chatMessages]);
-  useEffect(() => { localStorage.setItem('praxis-search-history', JSON.stringify(searchHistory)); }, [searchHistory]);
-  useEffect(() => { localStorage.setItem('praxis-vision-history', JSON.stringify(visionHistory)); }, [visionHistory]);
-  useEffect(() => { localStorage.setItem('praxis-flow-log', JSON.stringify(praxisFlow)); }, [praxisFlow]);
-  useEffect(() => { localStorage.setItem('praxis-activeTheme', JSON.stringify(activeTheme)); }, [activeTheme]);
-  useEffect(() => { localStorage.setItem('praxis-customCategories', JSON.stringify(customCategories)); }, [customCategories]);
-  useEffect(() => { localStorage.setItem('praxis-purchasedRewards', JSON.stringify(purchasedRewards)); }, [purchasedRewards]);
+    // Data states
+    const [tasks, setTasks] = useState<Task[]>(initialTasks);
+    const [notes, setNotes] = useState<Note[]>(initialNotes);
+    const [notebooks, setNotebooks] = useState<Notebook[]>(initialNotebooks);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [goals, setGoals] = useState<Goal[]>([]);
+    const [insights, setInsights] = useState<Insight[]>([]);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [isAiReplying, setIsAiReplying] = useState(false);
+    const [praxisFlow, setPraxisFlow] = useState(500);
+    const [purchasedRewards, setPurchasedRewards] = useState<string[]>(['theme-obsidian']);
+    const [focusTask, setFocusTask] = useState<Task | null>(null);
+    const [activeFocusBackground, setActiveFocusBackground] = useState<string>('synthwave');
+    const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+    const [activeNotebookId, setActiveNotebookId] = useState<number | 'all' | 'flagged' | 'archived'>('all');
+    const [dailyCompletionImage, setDailyCompletionImage] = useState<string | null>(null);
 
 
-  useEffect(() => { setChatContext(goals); }, [goals]);
-  useEffect(() => { document.documentElement.classList.toggle('dark', isDarkMode); }, [isDarkMode]);
-  useEffect(() => { document.documentElement.setAttribute('data-theme', activeTheme); }, [activeTheme]);
+    // Derived/Generated states
+    const [healthData, setHealthData] = useState<HealthData>({ totalWorkouts: 1, totalWorkoutMinutes: 28, workoutTypes: { 'Running': 1 }, avgSleepHours: 7.5, sleepQuality: 'good', energyLevel: 'high' });
+    const [briefing, setBriefing] = useState(MOCKED_BRIEFING);
 
-  useEffect(() => {
-    const newStreak = calculateStreak(tasks);
-    setDailyStreak(newStreak);
-    setCompletionPercentage(getTodaysTaskCompletion(tasks));
-    
-    const prevStreak = prevStreakRef.current;
-    if (newStreak > (prevStreak || 0) && newStreak > 1) {
-        setToast({ message: `🔥 ${newStreak} Day Streak!`, visible: true });
-    }
-    prevStreakRef.current = newStreak;
-  }, [tasks]);
-
-   // Simulate checking for proactive health suggestions from Kiko AI
-   useEffect(() => {
-        const interval = setInterval(() => {
-            const healthData: HealthData = parseHealthDataFromTasks(tasks);
-            const suggestion = getProactiveHealthSuggestion(healthData, tasks);
-            if (suggestion) {
-                setToast({ message: suggestion, visible: true });
-            }
-        }, 30 * 60 * 1000); // Check every 30 minutes
-
-        return () => clearInterval(interval);
-   }, [tasks]);
-
-  const toggleTheme = useCallback(() => setIsDarkMode(prev => !prev), []);
-  const showToast = useCallback((message: string) => {
-    setToast({ message, visible: true });
-  }, []);
-
-  const addInsights = (newInsights: Insight[]) => {
-    setInsights(prev => [...newInsights, ...prev]);
-  }
-
-  const applyInsight = (insightId: number) => {
-    const insight = insights.find(i => i.id === insightId);
-    if (insight && !insight.applied) {
-        triggerHapticFeedback('light');
-        setInsights(prev => prev.map(i => i.id === insightId ? { ...i, applied: true } : i));
-        setPraxisFlow(log => [
-            ...log,
-            { id: Date.now(), reason: `Applied insight: "${insight.insightText.substring(0, 30)}..."`, points: insight.points, timestamp: new Date() }
-        ]);
-        const newTask: Omit<Task, 'id' | 'status'> = {
-            title: insight.insightText,
-            category: 'Prototyping',
-            startTime: new Date(),
-            plannedDuration: 60
-        };
-        addTask(newTask);
-        setToast({ message: `Insight applied & task created!`, visible: true });
-    }
-  };
-
-    const generateRecurringTasks = (initialTask: Task): Task[] => {
-        const futureTasks: Task[] = [];
-        if (!initialTask.repeat || initialTask.repeat === 'none') {
-            return [];
-        }
-
-        let tasksToCreate = 0;
-        switch (initialTask.repeat) {
-            case 'daily': tasksToCreate = 30; break;
-            case 'weekly': tasksToCreate = 8; break;
-            case 'monthly': tasksToCreate = 3; break;
-        }
-
-        let currentDate = new Date(initialTask.startTime);
-        for (let i = 0; i < tasksToCreate; i++) {
-            let nextDate = new Date(currentDate);
-            if (initialTask.repeat === 'daily') nextDate.setDate(nextDate.getDate() + 1);
-            else if (initialTask.repeat === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
-            else if (initialTask.repeat === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
-
-            const futureTask: Task = {
-                ...initialTask,
-                id: Date.now() + Math.random(),
-                startTime: nextDate,
-                status: TaskStatus.Pending,
-                actualDuration: undefined,
-                pausedElapsedTime: undefined,
-                undoStatus: undefined,
-                insights: null,
-                isGeneratingInsights: false,
-                completionImageUrl: undefined,
-                completionSummary: undefined,
-                googleCalendarEventId: undefined,
-            };
-            futureTasks.push(futureTask);
-            currentDate = nextDate;
-        }
-        return futureTasks;
+    const showToast = (message: string, action?: { label: string; onClick: () => void; }) => {
+        setToast({ message, id: Date.now(), action });
     };
 
-  const updateTask = (updatedTask: Task) => {
-    let futureTasks: Task[] = [];
-    const originalTask = tasks.find(t => t.id === updatedTask.id);
+    // --- EFFECTS ---
+    useEffect(() => {
+        // Mock loading and auth check
+        const authStatus = localStorage.getItem('praxis-authenticated') === 'true';
+        const onboardingStatus = localStorage.getItem('praxis-onboarding-complete') === 'true';
 
-    if (originalTask && (!originalTask.repeat || originalTask.repeat === 'none') && updatedTask.repeat && updatedTask.repeat !== 'none') {
-        futureTasks = generateRecurringTasks(updatedTask);
-        if (futureTasks.length > 0) {
-            showToast(`Scheduled ${futureTasks.length} recurring task(s).`);
-        }
-    }
+        setTimeout(() => {
+            setIsAuthenticated(authStatus);
+            setIsOnboardingComplete(onboardingStatus);
+            setIsLoading(false);
+        }, 1500);
 
-    setTasks(prevTasks => {
-        const updatedTasks = prevTasks.map(task => task.id === updatedTask.id ? updatedTask : task);
-        return [...updatedTasks, ...futureTasks].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-    });
-
-    if (viewingTask?.id === updatedTask.id) {
-        setViewingTask(updatedTask);
-    }
-    
-    // Improved GCal Sync Logic
-    if (updatedTask.googleCalendarEventId) {
-        updateEventInCalendar(updatedTask);
-    } else {
-        // This handles both new tasks and existing tasks being synced for the first time
-        addEventToCalendar(updatedTask);
-        // In a real app, we'd get the event ID back and update the task state.
-    }
-  };
-
-  const triggerInsightGeneration = useCallback(async (task: Task, isRegeneration = false) => {
-    if (task.status === TaskStatus.Completed && !isRegeneration) return;
-      
-    const healthData = parseHealthDataFromTasks(tasks);
-    
-    const { data: insightData, fallbackUsed } = await kikoRequest('generate_task_insights', {
-        task, healthData, notes, goals, allTasks: tasks, isRegeneration
-    });
-
-    const finalTaskWithInsight: Task = { ...task, insights: insightData, isGeneratingInsights: false };
-    updateTask(finalTaskWithInsight);
-    
-    if (fallbackUsed) {
-        showToast("Kiko is using a backup model for insights.");
-    } else if (isRegeneration) {
-        setToast({
-            message: `✨ New insights ready for "${task.title}"`,
-            visible: true,
-            action: {
-                label: 'View',
-                onClick: () => {
-                    setViewingTask(finalTaskWithInsight);
-                    setToast({ message: '', visible: false });
-                }
-            }
-        });
-    }
-  }, [tasks, notes, goals]);
-
-  const handleCompleteTask = async (taskId: number) => {
-    const taskToComplete = tasks.find(t => t.id === taskId);
-    if (!taskToComplete) return;
-
-    triggerHapticFeedback('success');
-    
-    const actualDuration = getActualDuration(taskToComplete);
-
-    // Optimistically update UI
-    const tempCompletedTask: Task = {
-        ...taskToComplete, status: TaskStatus.Completed, undoStatus: taskToComplete.status, actualDuration, completionImageUrl: 'loading'
-    };
-    updateTask(tempCompletedTask);
-    if (viewingTask?.id === taskId) setViewingTask(null);
-
-    // AI Generations in parallel, now routed through the Kiko "Muse" Agent
-    const [imageResult, summaryResult] = await Promise.all([
-        kikoRequest('generate_completion_image', { task: taskToComplete }),
-        kikoRequest('generate_completion_summary', { task: taskToComplete })
-    ]);
-    
-    if (summaryResult.fallbackUsed) {
-        showToast("Kiko is using a backup model for this summary.");
-    }
-
-    // Final update with all AI content
-    let finalCompletedTask: Task = { ...tempCompletedTask, completionImageUrl: imageResult.data, completionSummary: summaryResult.data, isGeneratingInsights: true };
-    updateTask(finalCompletedTask);
-    
-    // Trigger background insight generation for the *completed* task, allowing for post-task analysis
-    triggerInsightGeneration(finalCompletedTask, true);
-    
-    // Award points
-    const points = Math.round(actualDuration / 5) + 10;
-    setPraxisFlow(log => [...log, { id: Date.now(), reason: `Completed: "${finalCompletedTask.title}"`, points, timestamp: new Date() }]);
-    setToast({ message: `+${points} Flow! Task Complete!`, visible: true });
-};
-  
-  const handleUndoCompleteTask = (taskId: number) => {
-    triggerHapticFeedback('light');
-    setTasks(prevTasks =>
-        prevTasks.map(task => {
-            if (task.id === taskId && task.status === TaskStatus.Completed) {
-                // BUG FIX: Correctly revert state.
-                return {
-                    ...task,
-                    status: task.undoStatus || TaskStatus.Pending,
-                    undoStatus: undefined,
-                    actualDuration: undefined,
-                    completionImageUrl: undefined,
-                    completionSummary: undefined,
-                    insights: null, // Clear insights as they were for the completed state
-                };
-            }
-            return task;
-        })
-    );
-  };
-  
-  const updateNote = (updatedNote: Note) => {
-    setNotes(prevNotes => prevNotes.map(note => note.id === updatedNote.id ? updatedNote : note));
-    if (selectedNote?.id === updatedNote.id) {
-        setSelectedNote(updatedNote);
-    }
-  };
-  
-  const addNote = (title: string, content: string, notebookId: number) => {
-    const newNote: Note = {
-      id: Date.now(), notebookId, title, content,
-      createdAt: new Date(), archived: false, flagged: false,
-      tags: ['ai-briefing', 'summary'],
-    };
-    setNotes(prev => [newNote, ...prev]);
-    setScreen('Notes'); // Switch to notes screen to show the new note
-    setSelectedNote(newNote); // Select the newly created note
-    setToast({ message: `Insight saved to notes!`, visible: true });
-  };
-
-  const deleteNote = (noteId: number) => {
-    setNotes(prevNotes => prevNotes.filter(note => note.id !== noteId));
-  }
-  
-  const addTask = (taskDetails: Partial<Task> & { title: string }) => {
-      // Add custom category to the list if it's new
-      if (taskDetails.category && !DEFAULT_CATEGORIES.includes(taskDetails.category) && !customCategories.includes(taskDetails.category)) {
-          setCustomCategories(prev => [...prev, taskDetails.category!]);
-      }
-
-      const now = new Date();
-      const newTask: Task = {
-          id: Date.now(),
-          status: TaskStatus.Pending,
-          category: 'Prototyping',
-          plannedDuration: 60,
-          startTime: new Date(now.setHours(now.getHours() + 1)),
-          ...taskDetails,
-          repeat: taskDetails.repeat || 'none',
-      };
-
-      const recurringTasks = generateRecurringTasks(newTask);
-      if (recurringTasks.length > 0) {
-          showToast(`Scheduled ${recurringTasks.length} recurring task(s).`);
-      }
-
-      setTasks(prevTasks => {
-          return [...prevTasks, newTask, ...recurringTasks].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-      });
-      
-      // Sync the new event to Google Calendar
-      addEventToCalendar(newTask);
-  };
-
-  const handleCalendarSync = async () => {
-    setToast({ message: 'Syncing with Google Calendar...', visible: true });
-    const calendarTasks = await syncCalendar();
-    
-    setTasks(prevTasks => {
-        const existingGcalIds = new Set(prevTasks.map(t => t.googleCalendarEventId).filter(Boolean));
-        const newTasks = calendarTasks.filter(ct => !existingGcalIds.has(ct.googleCalendarEventId));
+        const savedTheme = localStorage.getItem('praxis-theme') || 'obsidian';
+        setActiveTheme(savedTheme);
+        document.documentElement.setAttribute('data-theme', savedTheme);
         
-        const tasksToAdd = newTasks.map(ct => ({
-            id: Date.now() + Math.random(),
-            status: TaskStatus.Pending,
-            ...ct
-        } as Task));
-
-        if (tasksToAdd.length > 0) {
-            setToast({ message: `Synced ${tasksToAdd.length} new event(s)!`, visible: true });
-            return [...prevTasks, ...tasksToAdd].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        const savedUiMode = (localStorage.getItem('praxis-ui-mode') as 'dark' | 'glass') || 'dark';
+        setUiMode(savedUiMode);
+        if (savedUiMode === 'dark') {
+            document.documentElement.classList.add('dark');
         } else {
-            setToast({ message: 'Calendar is up to date!', visible: true });
-            return prevTasks;
+            document.documentElement.classList.remove('dark');
         }
-    });
-  };
+    }, []);
 
-  const handleSendMessage = async (message: string, attachment?: ChatMessage['attachment']) => {
-    if ((!message.trim() && !attachment) || isAiReplying) return;
+    // Effect to check for daily completion and generate reward image
+    useEffect(() => {
+        const todaysTasks = tasks.filter(t => new Date(t.startTime).toDateString() === new Date().toDateString());
+        const allTasksCompleted = todaysTasks.length > 0 && todaysTasks.every(t => t.status === TaskStatus.Completed);
+        const dayIdentifier = new Date().toDateString();
+        const hasGeneratedToday = localStorage.getItem('dailyImageGenerated') === dayIdentifier;
+        
+        if (allTasksCompleted && !hasGeneratedToday) {
+            console.log("All tasks for today completed! Generating reward image...");
+            const generateImage = async () => {
+                try {
+                    const { data: imageUrl } = await kikoRequest('generate_daily_image', { date: new Date(), tasks: todaysTasks });
+                    setDailyCompletionImage(imageUrl);
+                    localStorage.setItem('dailyImageGenerated', dayIdentifier);
+                    showToast("Daily tasks complete! Your reward image is ready on the Dashboard.");
+                } catch (error) {
+                    console.error("Failed to generate daily reward image:", error);
+                    showToast("Couldn't generate reward image. Kiko might be busy.");
+                }
+            };
+            generateImage();
+        }
+    }, [tasks]);
+    
+    // --- AUTH & ONBOARDING HANDLERS ---
+    const handleLogin = () => {
+        localStorage.setItem('praxis-authenticated', 'true');
+        setIsAuthenticated(true);
+        if (!isOnboardingComplete) {
+            // Stay on auth screen, let it transition to onboarding
+        }
+    };
+    
+    const handleLogout = () => {
+        localStorage.removeItem('praxis-authenticated');
+        setIsAuthenticated(false);
+    };
 
-    const userMessage: ChatMessage = { role: 'user', text: message, attachment };
-    const newMessages: ChatMessage[] = [...chatMessages, userMessage];
-    setChatMessages(newMessages);
-    setIsAiReplying(true);
+    const handleOnboardingComplete = () => {
+        localStorage.setItem('praxis-onboarding-complete', 'true');
+        setIsOnboardingComplete(true);
+    };
 
-    let responseText;
-    if (attachment) {
-        const visionPrompt = message.trim() || 'Analyze this image...';
-        // Per user request, directly use the analyzeImageWithPrompt function for vision tasks.
-        responseText = await analyzeImageWithPrompt(
-            attachment.base64,
-            attachment.mimeType,
-            visionPrompt
-        );
-    } else {
-        // Standard text chat goes to the Gemini chat model
-        responseText = await continueChat(newMessages);
+    // --- THEME HANDLER ---
+    const toggleUiMode = () => {
+        const newMode = uiMode === 'dark' ? 'glass' : 'dark';
+        setUiMode(newMode);
+        localStorage.setItem('praxis-ui-mode', newMode);
+        if (newMode === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    };
+    
+    const handleSetActiveTheme = (themeValue: string) => {
+        const theme = REWARDS_CATALOG.find(r => r.value === themeValue);
+        if (theme && purchasedRewards.includes(theme.id)) {
+            setActiveTheme(themeValue);
+            localStorage.setItem('praxis-theme', themeValue);
+            document.documentElement.setAttribute('data-theme', themeValue);
+            showToast(`Theme changed to ${theme.name}`);
+        } else {
+            showToast("Theme not purchased yet!");
+        }
+    };
+    
+    const handlePurchaseReward = (reward: RewardItem) => {
+        if (praxisFlow >= reward.cost && !purchasedRewards.includes(reward.id)) {
+            setPraxisFlow(prev => prev - reward.cost);
+            setPurchasedRewards(prev => [...prev, reward.id]);
+            showToast(`Unlocked ${reward.name}!`);
+            if (reward.type === 'theme') {
+                handleSetActiveTheme(reward.value);
+            }
+        } else if (purchasedRewards.includes(reward.id)) {
+            showToast("You already own this item.");
+        } else {
+            showToast("Not enough Flow to unlock this!");
+        }
+    };
+
+    // --- DATA HANDLERS ---
+    const updateTask = (updatedTask: Task) => {
+        setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    };
+
+    const handleTaskSwap = (draggedId: number, targetId: number) => {
+        setTasks(prevTasks => {
+            const newTasks = [...prevTasks];
+            const draggedTask = newTasks.find(t => t.id === draggedId);
+            const targetTask = newTasks.find(t => t.id === targetId);
+
+            if (!draggedTask || !targetTask) return prevTasks;
+
+            // Simple swap of start times
+            const tempStartTime = draggedTask.startTime;
+            draggedTask.startTime = targetTask.startTime;
+            targetTask.startTime = tempStartTime;
+            
+            // Re-sort tasks for the day and apply 15-min gaps
+            const dayOfSwap = new Date(draggedTask.startTime).toDateString();
+            const tasksForDay = newTasks
+                .filter(t => new Date(t.startTime).toDateString() === dayOfSwap)
+                .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+            
+            for (let i = 1; i < tasksForDay.length; i++) {
+                const prevTask = tasksForDay[i-1];
+                const currentTask = tasksForDay[i];
+                const expectedStartTime = new Date(prevTask.startTime.getTime() + (prevTask.plannedDuration * 60000) + (15 * 60000));
+                currentTask.startTime = expectedStartTime;
+            }
+
+            return newTasks;
+        });
+        showToast("Schedule adjusted!");
+    };
+    
+    const addTask = (task: Partial<Task> & { title: string }) => {
+        const newTask: Task = {
+            id: Date.now(),
+            status: TaskStatus.Pending,
+            startTime: new Date(),
+            category: 'Personal',
+            plannedDuration: 60,
+            ...task,
+        };
+        setTasks(prev => [newTask, ...prev]);
+        showToast(`Task "${newTask.title}" added!`);
+        triggerHapticFeedback('success');
+    };
+
+    const deleteTask = (taskId: number) => {
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        showToast('Task deleted successfully.');
+        triggerHapticFeedback('medium');
+    };
+
+    const addNote = (title: string, content: string, notebookId: number) => {
+        const newNote: Note = {
+            id: Date.now(),
+            notebookId, title, content,
+            createdAt: new Date(), archived: false, flagged: false, tags: [],
+        };
+        setNotes(prev => [newNote, ...prev]);
+        showToast(`Note "${title}" created.`);
+    };
+
+    const updateNote = (updatedNote: Note) => {
+        setNotes(prev => prev.map(n => n.id === updatedNote.id ? updatedNote : n));
+    };
+    
+    const handleSyncCalendar = async () => {
+        showToast('Syncing with Google Calendar...');
+        const newEvents = await syncCalendar();
+        const newTasks: Task[] = newEvents.map((e, i) => ({
+            id: Date.now() + i,
+            status: TaskStatus.Pending,
+            category: 'Meeting', // Default category for calendar events
+            plannedDuration: 60, // Default duration
+            ...e,
+        } as Task));
+        setTasks(prev => [...prev, ...newTasks.filter(nt => !prev.some(pt => pt.googleCalendarEventId === nt.googleCalendarEventId))]);
+        showToast(`${newTasks.length} new events synced!`);
+    };
+
+    const handleSendMessage = async (message: string, attachment?: ChatMessage['attachment']) => {
+        const userMessage: ChatMessage = { role: 'user', text: message, attachment };
+        setChatMessages(prev => [...prev, userMessage]);
+        setIsAiReplying(true);
+        // This is a simplified call. In a real app, you might have different AI tasks.
+        const responseText = `This is a mocked response to: "${message}". In a real app, Kiko would provide a detailed answer.`;
+        setTimeout(() => {
+            const modelMessage: ChatMessage = { role: 'model', text: responseText };
+            setChatMessages(prev => [...prev, modelMessage]);
+            setIsAiReplying(false);
+        }, 1500);
+    };
+    
+    const startChatWithContext = (context: string) => {
+        setActiveScreen('Kiko');
+        setChatMessages([{ role: 'user', text: context }]);
+        // Mock a reply
+        handleSendMessage(context);
+    };
+
+    const redirectToKikoAIWithChat = (history: ChatMessage[]) => {
+        setActiveScreen('Kiko');
+        setChatMessages(history);
+    };
+    
+    const handleUndoCompleteTask = (taskToUndo: Task) => {
+        if (!taskToUndo) return;
+
+        // Revert status
+        const revertedTask: Task = {
+            ...taskToUndo,
+            status: TaskStatus.Pending,
+            actualDuration: undefined,
+            completionSummary: undefined,
+            completionImageUrl: undefined
+        };
+        updateTask(revertedTask);
+
+        // Revert points
+        const points = Math.round((taskToUndo.actualDuration || taskToUndo.plannedDuration) * 0.5);
+        setPraxisFlow(prev => prev - points);
+
+        showToast(`"${taskToUndo.title}" marked as pending.`);
+    };
+
+    const handleCompleteTask = async (taskId: number, actualDuration: number) => {
+        let taskToComplete = tasks.find(t => t.id === taskId);
+        if (!taskToComplete || taskToComplete.status === TaskStatus.Completed) return;
+
+        showToast(`Completing "${taskToComplete.title}"...`);
+        setFocusTask(null); // Close focus mode if open
+
+        // Generate completion summary with Kiko
+        const { data: summary } = await kikoRequest('generate_completion_summary', { task: taskToComplete }) as { data: CompletionSummary };
+        
+        // Generate a completion image
+        const { data: imageUrl } = await kikoRequest('generate_completion_image', { task: taskToComplete }) as { data: string };
+
+        const updatedTask: Task = {
+            ...taskToComplete,
+            status: TaskStatus.Completed,
+            actualDuration,
+            completionSummary: summary,
+            completionImageUrl: imageUrl
+        };
+        updateTask(updatedTask);
+        
+        const points = Math.round(actualDuration * 0.5);
+        setPraxisFlow(prev => prev + points);
+        
+        showToast(`+${points} Flow! Great work!`, {
+            label: 'Undo',
+            onClick: () => handleUndoCompleteTask(updatedTask)
+        });
+        triggerHapticFeedback('success');
+    };
+
+    
+    const triggerInsightGeneration = useCallback(async (task: Task, isRegeneration: boolean) => {
+        try {
+            const { data: insightData, fallbackUsed } = await kikoRequest('generate_task_insights', {
+                task,
+                healthData,
+                notes,
+                goals,
+                allTasks: tasks,
+                isRegeneration
+            });
+
+            if (fallbackUsed) {
+                showToast("Kiko's primary brain had a glitch. Using a creative backup!");
+            }
+
+            updateTask({ ...task, insights: insightData, isGeneratingInsights: false });
+        } catch (error) {
+            console.error("Failed to generate insights via Kiko orchestrator", error);
+            showToast("Kiko seems to be offline. Could not generate insights.");
+            updateTask({ ...task, isGeneratingInsights: false });
+        }
+    }, [tasks, notes, goals, healthData]);
+
+    // --- RENDER LOGIC ---
+    const renderScreen = () => {
+        switch (activeScreen) {
+            case 'Dashboard': return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} />;
+            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={DEFAULT_CATEGORIES} showToast={showToast} onCompleteTask={handleCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} />;
+            case 'Notes': return <Notes notes={notes} setNotes={setNotes} notebooks={notebooks} setNotebooks={setNotebooks} addInsights={setInsights} updateNote={updateNote} addTask={(title, notebookId) => addTask({title, notebookId})} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} />;
+            case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={setActiveScreen} goals={goals} setGoals={setGoals} />;
+            case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;
+            case 'Kiko': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} projects={projects} healthData={healthData} addTask={(title) => addTask({title})} addNote={addNote} startChatWithContext={startChatWithContext} searchHistory={[]} setSearchHistory={()=>{}} visionHistory={[]} setVisionHistory={()=>{}} applyInsight={()=>{}} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} showToast={showToast} />;
+            case 'Settings': return <Settings uiMode={uiMode} toggleUiMode={toggleUiMode} onSyncCalendar={handleSyncCalendar} onLogout={handleLogout} />;
+            case 'Rewards': return <Rewards onBack={() => setActiveScreen('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} />;
+            case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
+            default: return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} />;
+        }
+    };
+    
+    if (isLoading) {
+        return <div className="min-h-screen flex items-center justify-center bg-bg"><PraxisLogo className="w-24 h-24 text-accent animate-pulse" /></div>;
+    }
+
+    if (!isAuthenticated) {
+        return <Auth onLogin={handleLogin} Logo={PraxisLogo} />;
     }
     
-    setChatMessages(prev => [...prev, { role: 'model', text: responseText }]);
-    setIsAiReplying(false);
-  }
-  
-  const redirectToKikoAIWithChat = (history: ChatMessage[]) => {
-      setChatMessages(history);
-      setScreen('KikoAI');
-  };
-
-  const startChatWithContext = (context: string, type: 'note' | 'suggestion' | 'theme' | 'selection') => {
-      setScreen('KikoAI');
-      let initialPrompt = `User wants to discuss: ${context}`;
-      let initialBotMessage = `Let's talk about it. What's on your mind?`;
-      const history: ChatMessage[] = [{ role: 'user', text: initialPrompt }, { role: 'model', text: initialBotMessage }];
-      setChatMessages(history);
-  }
-  
-  const purchaseReward = (rewardId: string) => {
-    const reward = REWARDS_CATALOG.find(r => r.id === rewardId);
-    if (!reward || purchasedRewards.includes(rewardId)) return;
-    if (totalFlow >= reward.cost) {
-        triggerHapticFeedback('success');
-        setPurchasedRewards(prev => [...prev, rewardId]);
-        setPraxisFlow(log => [
-            ...log,
-            { id: Date.now(), reason: `Purchased: "${reward.name}"`, points: -reward.cost, timestamp: new Date() }
-        ]);
-        setToast({ message: `Unlocked: ${reward.name}!`, visible: true });
-        
-        if (reward.type === 'theme') {
-            setActiveTheme(reward.value);
-        }
-    } else {
-        setToast({ message: 'Not enough Flow!', visible: true });
+    if (!isOnboardingComplete) {
+        return <Onboarding goals={goals} setGoals={setGoals} onComplete={handleOnboardingComplete} />;
     }
-  };
 
-  const onViewNote = (noteId: number) => {
-    const noteToView = notes.find(n => n.id === noteId);
-    if (noteToView) {
-        const notebookId = noteToView.notebookId || 'all';
-        setActiveNotebookId(notebookId);
-        setSelectedNote(noteToView);
-        setScreen('Notes');
-    }
-  };
-
-  const allCategories = [...DEFAULT_CATEGORIES, ...customCategories];
-
-  const renderScreen = () => {
-    switch (screen) {
-      case 'Dashboard': return <Dashboard tasks={tasks} notes={notes} goals={goals} praxisFlow={totalFlow} dailyStreak={dailyStreak} completionPercentage={completionPercentage} setScreen={setScreen} />;
-      case 'Schedule': return <Schedule tasks={tasks} updateTask={updateTask} onViewTask={setViewingTask} addTask={addTask} projects={projects} notes={notes} onUndoTask={handleUndoCompleteTask} onCompleteTask={handleCompleteTask} categories={allCategories} onSyncCalendar={handleCalendarSync} showToast={showToast} />;
-      case 'Notes': return <Notes notes={notes} setNotes={setNotes} notebooks={notebooks} setNotebooks={setNotebooks} addInsights={addInsights} updateNote={updateNote} addTask={(title, notebookId) => addTask({title, category: 'Prototyping', plannedDuration: 60, notebookId, startTime: new Date()})} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} />;
-      case 'KikoAI': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} addTask={(title) => addTask({title, category: 'Prototyping', plannedDuration: 60, startTime: new Date()})} startChatWithContext={startChatWithContext} searchHistory={searchHistory} setSearchHistory={setSearchHistory} visionHistory={visionHistory} setVisionHistory={setVisionHistory} addNote={addNote} goals={goals} setGoals={setGoals} applyInsight={applyInsight} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} projects={projects} healthData={parseHealthDataFromTasks(tasks)} showToast={showToast} />;
-      case 'Profile': return <Profile isDarkMode={isDarkMode} toggleTheme={toggleTheme} onLogout={() => setIsAuthenticated(false)} praxisFlow={totalFlow} setScreen={setScreen} activeTheme={activeTheme} setActiveTheme={setActiveTheme} purchasedRewards={purchasedRewards} />;
-      case 'Rewards': return <Rewards onBack={() => setScreen('Profile')} praxisFlow={totalFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={setActiveTheme} onPurchase={purchaseReward} />;
-      default: return <Dashboard tasks={tasks} notes={notes} goals={goals} praxisFlow={totalFlow} dailyStreak={dailyStreak} completionPercentage={completionPercentage} setScreen={setScreen} />;
-    }
-  };
-  
-  if (!isAuthenticated) return <Auth onLogin={() => setIsAuthenticated(true)} Logo={PraxisLogo} />;
-  if (!isOnboardingComplete) return <Onboarding goals={goals} setGoals={setGoals} onComplete={() => setIsOnboardingComplete(true)} />;
-
-  return (
-    <div className="min-h-screen text-light-text dark:text-dark-text bg-light-bg dark:bg-dark-bg">
-      <AnimatePresence>
-        {toast.visible && <Toast message={toast.message} action={toast.action} onClose={() => setToast({ ...toast, visible: false })} />}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {viewingTask && <EventDetail task={viewingTask} allTasks={tasks} notes={notes} notebooks={notebooks} projects={projects} goals={goals} updateTask={updateTask} onClose={() => setViewingTask(null)} onComplete={() => handleCompleteTask(viewingTask.id)} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} categories={allCategories} triggerInsightGeneration={triggerInsightGeneration} onViewNote={onViewNote} />}
-      </AnimatePresence>
-
-      <div className="max-w-7xl mx-auto p-4 pb-28 h-screen flex flex-col">
-         <AppHeader />
-        <main className="flex-grow min-h-0">
-           <AnimatePresence mode="wait">
-                <motion.div
-                    key={screen}
-                    variants={screenVariants}
-                    initial="initial"
-                    animate="in"
-                    exit="out"
-                    transition={{ duration: 0.3 }}
-                    className="h-full"
-                >
-                    {renderScreen()}
-                </motion.div>
+    return (
+        <div className={`min-h-screen font-sans ${uiMode === 'dark' ? 'bg-bg' : ''} text-text transition-colors duration-300`}>
+            {focusTask ? (
+                 <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
+            ) : (
+                <>
+                    <main className="max-w-6xl mx-auto px-4 pt-6 pb-24">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeScreen}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                {renderScreen()}
+                            </motion.div>
+                        </AnimatePresence>
+                    </main>
+                    <Navigation activeScreen={activeScreen} setScreen={setActiveScreen} />
+                </>
+            )}
+            <AnimatePresence>
+                {toast && <Toast key={toast.id} message={toast.message} action={toast.action} onClose={() => setToast(null)} />}
             </AnimatePresence>
-        </main>
-      </div>
-       <Navigation activeScreen={screen} setScreen={setScreen} />
-    </div>
-  );
+        </div>
+    );
 };
 
 export default App;

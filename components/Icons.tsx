@@ -188,7 +188,7 @@ export const ClipboardDocumentListIcon: React.FC<IconProps> = (props) => (
 );
 
 export const ChatBubbleLeftRightIcon: React.FC<IconProps> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.72 3.72a1.125 1.125 0 01-1.59 0l-3.72-3.72a2.474 2.474 0 01-1.98-2.193V10.608c0-.97.616-1.813 1.5-2.097m0 0A2.466 2.466 0 0012 6.25a2.466 2.466 0 00-2.25 2.261m0 0A2.466 2.466 0 007.5 6.25a2.466 2.466 0 00-2.25 2.261m0 0A2.466 2.466 0 003 10.608v4.286c0 1.136.847 2.1 1.98 2.193l3.72 3.72a1.125 1.125 0 001.59 0l3.72-3.72a2.474 2.474 0 001.98-2.193V10.608c0-.97-.616-1.813 1.5-2.097z" /></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.72 3.72a1.125 1.125 0 01-1.59 0l-3.72-3.72a2.474 2.474 0 01-1.98-2.193V10.608c0-.97.616-1.813 1.5-2.097m0 0A2.466 2.466 0 0012 6.25a2.466 2.466 0 00-2.25 2.261m0 0A2.466 2.466 0 007.5 6.25a2.466 2.466 0 00-2.25 2.261m0 0A2.466 2.466 0 003 10.608v4.286c0 1.136.847 2.1 1.98 2.193l3.72 3.72a1.125 1.125 0 001.59 0l3.72-3.72a2.474 2.474 0 001.98-2.193V10.608c0-.97-.616-1.813-1.5-2.097z" /></svg>
 );
 
 export const BookOpenIcon: React.FC<IconProps> = (props) => (
@@ -260,6 +260,10 @@ export const ArrowPathIcon: React.FC<IconProps> = (props) => (
 );
 export const CalendarDaysIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25m10.5-2.25v2.25m-10.5 0H3.75a2.25 2.25 0 00-2.25 2.25v11.25a2.25 2.25 0 002.25 2.25h16.5a2.25 2.25 0 002.25-2.25V7.5a2.25 2.25 0 00-2.25-2.25H17.25m-10.5 0h10.5m-10.5 0V3m10.5 0V3m0 0H6.75M7.5 11.25h9v5.25h-9z" /></svg>
+);
+
+export const ClockIcon: React.FC<IconProps> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 );
 
 // Weather Icons

@@ -219,68 +219,47 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
 
     const primaryGoal = goals.find(g => g.term === 'mid' && g.status === 'active')?.text || "achieve peak performance and build a successful business";
     const todaysOtherTasks = allTasks.filter(t => t.id !== task.id && new Date(t.startTime).toDateString() === new Date().toDateString() && t.status !== TaskStatus.Completed).map(t => t.title).join(', ');
-
-    // Sanitize note content to prevent API errors
     const linkedNoteContent = task.notebookId ? (notes.find(n => n.id === task.notebookId)?.content || '').replace(/<[^>]*>?/gm, '').substring(0, 500) : '';
 
-    const systemInstruction = `You are Kiko, a hyper-intelligent AI strategist. Your goal is to provide diverse, actionable, and visually engaging widgets to help Pratt, founder of 'Surface Tension', achieve his goals. Strictly adhere to the provided JSON schema. Ensure all content is concise, directly relevant, and spelled perfectly. The current date and time is ${new Date().toString()}.`;
+    const systemInstruction = `You are Kiko, a hyper-intelligent, emotionally-aware AI strategist. Your goal is to provide diverse, actionable, and visually engaging widgets to help Pratt achieve his goals. Strictly adhere to the provided JSON schema. Ensure all content is concise, insightful, and directly relevant. The current date and time is ${new Date().toString()}.`;
     
-    let mission: string;
-    const isLearningTask = task.category === 'Learning' || (task.referenceUrl && (task.referenceUrl.includes('youtube.com') || task.referenceUrl.includes('coursera.org') || task.referenceUrl.includes('edx.org'))) || (task.title.toLowerCase().includes('learning'));
+    // Determine the "Playbook" based on task status
+    const playbook = task.status === TaskStatus.Completed ? `
+        **PLAYBOOK: REFLECTION & INTEGRATION (Task is COMPLETE)**
+        - Act as a Performance Analyst & Strategist. Your goal is to help the user learn from their completed work.
+        - **Analyze Performance:** DO NOT give a "readiness score." Instead, create a 'KeyMetricWidget' that analyzes a key performance indicator from the completed task (e.g., for a 'Runna' task, analyze pace or duration).
+        - **Connect to Health Data:** If the user's sleep quality is 'poor', generate a 'TextWidget' suggesting a schedule adjustment or a lighter task for tomorrow. Be specific.
+        - **Connect to Goals:** Generate a 'TextWidget' explaining how completing this task ("${task.title}") moves the user closer to their primary goal ("${primaryGoal}").
+        - **Synthesize Knowledge:** If a note is linked, find one key takeaway and present it in a 'TextWidget' with the title "Knowledge Integration."
+        - **Provide Recovery:** For 'Workout' tasks, ALWAYS provide a 'RecipeWidget' for post-workout recovery.
+    ` : `
+        **PLAYBOOK: PREPARATION & STRATEGY (Task is PENDING)**
+        - Act as an Executive Assistant & Creative Muse. Your goal is to prepare the user for success.
+        - **Set the Stage:** For 'Learning' tasks, provide a 'KeyMetricWidget' with a key concept to focus on. For 'Workout' tasks, provide a performance goal.
+        - **Provide Tools:** For 'Meeting' tasks, suggest an agenda and provide links to transcription tools in a 'TextWidget'.
+        - **Creative Spark:** If a note is linked, consider generating a 'GeneratedImageWidget' to provide a creative spark related to the note's content.
+        - **Logistics:** If a location is present and not virtual, ALWAYS generate a 'MapWidget'.
+    `;
 
-    if (isLearningTask) {
-        mission = `
-        **MISSION: ACT AS A LEARNING ACCELERATOR & STRATEGIST**
-        The user is engaged in a learning task. Analyze the task title and linked URL to provide visually engaging, actionable insights that connect this knowledge to their primary goal of building monetizable products.
-        
-        **TASK DATA:**
-        - **Task Title:** "${task.title}"
-        - **Reference URL:** ${task.referenceUrl || 'Not provided.'}
-        - **User Primary Goal:** "${primaryGoal}"
+    const prompt = `
+    Generate 2-4 diverse, actionable, and visually engaging widgets based on the following context.
+    Respond ONLY with a valid JSON object matching the schema.
 
-        **YOUR DIRECTIVES (Generate 3-4 diverse, visual widgets):**
-        1.  **Key Concepts (KeyMetricWidget):** Identify 2-3 core concepts from the learning topic. Use icons like 'LightBulbIcon', 'BrainCircuitIcon', 'BookOpenIcon'. Be creative and assign a relevant value/unit, e.g., Value: "8/10", Unit: "Complexity".
-        2.  **Learning Velocity (RadialChartWidget):** Create a "Learning Velocity" score. For this task, give a score of 85% to show progress and encourage completion. Label it "Focus". Use color '#A855F7' (purple).
-        3.  **Monetization Idea (TextWidget):** Generate one novel, specific idea for a digital product or feature that applies the concepts from this learning task to the user's industry (creative events, branding). Use icon 'RocketIcon'.
-        4.  **Related Resources (TextWidget with links):** Find 1-2 real, high-quality online articles or tools related to the topic. Provide valid URLs. Use icon 'LinkIcon'.
-        `;
-    } else if (task.category === 'Workout') {
-        const workoutData = `
-        - **Workout Title:** "${task.title}"
-        - **Planned Duration:** ${task.plannedDuration} minutes.
-        - **User's Overall Health State:** Energy level is '${healthData.energyLevel}', Sleep quality is '${healthData.sleepQuality}'.
-        - **Recent Workout Mix:** ${Object.keys(healthData.workoutTypes).join(', ')}.
-        - **User Primary Goal:** "${primaryGoal}"
-        `;
+    **CONTEXT:**
+    - Task Title: "${task.title}"
+    - Task Category: "${task.category}"
+    - Task Status: "${task.status}"
+    - Task Location: ${task.location || 'None'}
+    - User Primary Goal: "${primaryGoal}"
+    - Health Context: Energy is ${healthData.energyLevel}, Sleep Quality is ${healthData.sleepQuality}.
+    - Linked Note Content: "${linkedNoteContent || 'None'}"
 
-        mission = `
-        **MISSION: ACT AS AN ELITE PERFORMANCE & RECOVERY COACH**
-        The user, Pratt, is preparing for a workout. Analyze the following data to provide insights like Apple Health or Whoop. The goal here is peak physical and cognitive performance, not business monetization. Emphasize data visualization.
-        
-        **WORKOUT DATA:**
-        ${workoutData}
+    ${playbook}
 
-        **YOUR DIRECTIVES (Generate 3-4 diverse widgets, prioritizing visual charts):**
-        1.  **Performance Metrics (KeyMetricWidget):** Generate 2-3 key performance indicators. For a run, this could be "Target Pace" or "Distance Goal". For boxing, "Intensity Focus" or "Est. Calories Burn". Be creative and realistic. Use icons like 'FireIcon', 'BoltIcon', 'RocketIcon'.
-        2.  **Readiness Score (RadialChartWidget):** Create a "Readiness Score" as a percentage. Base it on the provided energy/sleep data. A 'poor' sleep quality should result in a score below 60%. 'Good' sleep should be above 85%. Label it "Readiness". Use color '#06B6D4' (cyan).
-        3.  **Coaching Insight (TextWidget):** Provide a concise, actionable tip. Connect the workout to cognitive performance. Example: "This high-intensity session boosts BDNF, critical for creative thinking. Prioritize hydration to maintain focus for your afternoon 'Prototyping' task." Use icon 'BrainCircuitIcon'.
-        4.  **Recovery Nutrition (RecipeWidget):** Suggest a simple, healthy post-workout meal or snack. Provide a name, a short list of key ingredients (3-5), and a one-sentence instruction. For sourceUrl, use a placeholder like "https://example.com/health-recipes".
-        `;
-    } else {
-        mission = `
-        **MISSION BRIEFING FOR TASK: "${task.title}"**
-        - **User:** Pratt, founder of 'Surface Tension'.
-        - **Primary Goal:** "${primaryGoal}"
-        - **Task in Focus:** "${task.title}" (Category: ${task.category}, Status: ${task.status})
-        - **Linked Note Context (Sanitized):** ${linkedNoteContent || 'None'}
-        - **Today's Other Tasks:** ${todaysOtherTasks || 'None'}
-        
-        **YOUR DIRECTIVES (Generate 2-4 diverse widgets):**
-        1.  **Mission Context:** How does this task connect to his primary goal? Is there an industry gap this relates to? (Use TextWidget).
-        2.  **Operations Expert:** Provide practical tools, data, or efficiency tips. (Use KeyMetricWidget, AreaChartWidget, MapWidget, WeatherWidget).
-        3.  **Creative Muse:** Offer an unexpected, inspiring idea. If a note is linked, generate an inspiring image from its context (Use GeneratedImageWidget).
-        `;
-    }
+    **General Directives:**
+    - Ensure all generated colors are valid hex codes (e.g., '#A855F7') or Tailwind color classes (e.g., 'text-green-400'). Icons should be valid names from the icon library (e.g., 'SparklesIcon', 'BoltIcon').
+    - Keep all text concise and sharp.
+    `;
     
     const schema = {
         type: Type.OBJECT,
@@ -290,34 +269,26 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
                 items: {
                     type: Type.OBJECT,
                     properties: {
-                        type: { type: Type.STRING, enum: ['area', 'radial', 'metric', 'text', 'map', 'generated_image', 'weather', 'recipe'] },
+                        type: { type: Type.STRING, enum: ['area', 'radial', 'metric', 'text', 'map', 'generated_image', 'weather', 'recipe', 'bar', 'line'] },
                         title: { type: Type.STRING },
-                        // ChartWidget properties
                         data: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, value: { type: Type.NUMBER }, fill: { type: Type.STRING } } } },
                         commentary: { type: Type.STRING },
                         stroke: { type: Type.STRING },
-                        // RadialChartWidget properties
                         value: { type: Type.NUMBER }, 
                         label: { type: Type.STRING },
-                        // KeyMetricWidget properties
                         unit: { type: Type.STRING },
                         icon: { type: Type.STRING },
                         color: { type: Type.STRING },
-                        // TextWidget properties
                         content: { type: Type.STRING },
                         links: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, url: { type: Type.STRING } } } },
-                        // MapWidget properties
                         locationQuery: { type: Type.STRING },
                         embedUrl: { type: Type.STRING },
-                        // GeneratedImageWidget properties
                         prompt: { type: Type.STRING },
                         imageUrl: { type: Type.STRING },
-                        // WeatherWidget properties
                         location: { type: Type.STRING },
                         currentTemp: { type: Type.NUMBER },
                         conditionIcon: { type: Type.STRING },
                         hourlyForecast: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { time: {type: Type.STRING}, temp: {type: Type.NUMBER}, icon: {type: Type.STRING} } } },
-                        // RecipeWidget properties
                         name: { type: Type.STRING },
                         sourceUrl: { type: Type.STRING },
                         ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
@@ -334,21 +305,32 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
             responseMimeType: "application/json", 
             responseSchema: schema, 
             systemInstruction: systemInstruction,
-            // Use no thinking budget for initial load for speed, allow more for quality on regeneration.
-            thinkingConfig: isRegeneration ? undefined : { thinkingBudget: 0 } 
+            thinkingConfig: { thinkingBudget: 0 } // Always prioritize speed for UI interactions
         };
-        const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: mission, config });
+        const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt, config });
         const jsonString = extractJson(response.text);
         if (!jsonString) { throw new Error("Primary insight generation failed: No valid JSON found."); }
         
         const result = JSON.parse(jsonString) as ActionableInsight;
 
-        // Post-process to fill in generated content
+        // Post-processing to enrich the AI's response and fix critical omissions
+        if (task.location && !task.isVirtual && !result.widgets.some(w => w.type === 'map')) {
+            console.log("AI failed to generate map widget, manually injecting one.");
+            result.widgets.unshift({
+                type: 'map',
+                title: 'Location Map',
+                locationQuery: task.location,
+                embedUrl: generateMapsEmbedUrl(task.location),
+            });
+        }
         for (let i = 0; i < result.widgets.length; i++) {
             const widget = result.widgets[i];
-            if (widget.type === 'generated_image' && !widget.imageUrl) { // Only generate if URL is missing
+            if (widget.type === 'generated_image' && !widget.imageUrl) {
                 const generatedImageWidget = await generateImageFromNoteContext(task, notes);
                 if (generatedImageWidget) result.widgets[i] = generatedImageWidget;
+            }
+            if (widget.type === 'map' && widget.locationQuery && !widget.embedUrl) {
+                widget.embedUrl = generateMapsEmbedUrl(widget.locationQuery);
             }
         }
         if (task.recipeQuery) {
@@ -359,13 +341,8 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
 
     } catch (error: any) {
         console.error("Primary insight generation failed with Gemini:", error);
-        // Fallback to GPT-4o on rate limit error
-        if (error.toString().includes("429") || error.toString().includes("RESOURCE_EXHAUSTED")) {
-            console.warn("Gemini rate limit hit. Falling back to GPT-4o for insights.");
-            return generateActionableInsightsWithGPT4o(task, healthData, goals);
-        }
-
-        return { widgets: [{ type: 'text', title: 'Insight Error', icon: 'SparklesIcon', content: `Kiko had trouble generating insights. This might be due to the content of the task or linked note. Please try regenerating.\n\n*Error: ${error instanceof Error ? error.message : String(error)}*` }] };
+        const errorWidget: ActionableInsight = { widgets: [{ type: 'text', title: 'Insight Error', icon: 'SparklesIcon', content: `Kiko had trouble generating insights. This might be due to a model constraint or content safety block. Please try regenerating.\n\n*Error: ${error instanceof Error ? error.message : String(error)}*` }] };
+        return errorWidget;
     }
 };
 
@@ -427,19 +404,6 @@ export const generateTaskPrimer = async (task: Task, customPrompt?: string): Pro
         return { action_plan: ["Could not generate primer. Just dive in!"], key_takeaways: [], inquiry_prompts: [], related_links: [] };
     }
 }
-
-export const generateTagsForNote = async (noteTitle: string, noteContent: string): Promise<string[]> => {
-    if (!ai) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return ["mock-tag", "ai-generated", "test"];
-    }
-    const prompt = `Analyze the following note title and content. Extract the 3 to 5 most relevant single-word or two-word tags for categorization. Note Title: "${noteTitle}". Content: "${noteContent}".`;
-    const schema = { type: Type.OBJECT, properties: { tags: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ["tags"] };
-    try {
-        const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt, config: { responseMimeType: "application/json", responseSchema: schema } });
-        return (JSON.parse(response.text)).tags || [];
-    } catch (error) { console.error("Error generating tags:", error); return []; }
-};
 
 export const generateNoteFromTemplate = async (templateType: 'daily_planner' | 'case_study'): Promise<any> => {
      if (templateType === 'case_study') {
@@ -602,9 +566,15 @@ export const parseCommandWithGemini = async (command: string): Promise<Partial<T
     }
 
     const prompt = `
-    You are a fallback command parsing agent. Analyze the user's natural language input and convert it into a structured JSON object representing a task.
-    - Current date is: ${new Date().toString()}.
-    - The "title" is the main subject. Extract it from the input.
+    You are a fallback command parsing agent. Analyze the user's natural language input and convert it into a structured JSON object representing a task, using the provided schema.
+
+    **Instructions:**
+    - The current date is: ${new Date().toString()}.
+    - The "title" is the main subject of the task.
+    - If a URL is present (like zoom.us or meet.google.com), set \`isVirtual\` to true and put the full URL in \`linkedUrl\`.
+    - If a physical place is mentioned (like "at the office"), put it in the \`location\` field.
+    - Infer a \`category\` from the title (e.g., 'meeting', 'workout').
+    - Determine the \`startTime\` and \`plannedDuration\` in minutes.
     - Respond ONLY with the JSON object.
 
     **User Input:** "${command.substring(1).trim()}"

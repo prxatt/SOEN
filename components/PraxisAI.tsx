@@ -5,7 +5,8 @@ import { Insight, StrategicBriefing, Task, Note, SearchResult, SearchHistoryItem
 // FIX: Removed unused import 'generateMindMapData' as it is not exported from geminiService.
 import { performInternetSearch, analyzeImageWithPrompt, generateProjectStatusReport, getChatContextualPrompts } from '../services/geminiService';
 import { kikoRequest } from '../services/kikoAIService';
-import { LightBulbIcon, BookOpenIcon, LinkIcon, FlagIcon, PlusCircleIcon, CheckCircleIcon, SparklesIcon, ShareIcon, UserIcon, PaperAirplaneIcon, PaperClipIcon, HeartIcon, BrainCircuitIcon, RocketIcon, MagnifyingGlassIcon, KikoIcon, ChevronDownIcon, ChevronRightIcon, BriefcaseIcon, ArrowPathIcon, XMarkIcon } from './Icons';
+// FIX: Removed 'ShareIcon' as it is not an exported member of './Icons'.
+import { LightBulbIcon, BookOpenIcon, LinkIcon, FlagIcon, PlusCircleIcon, CheckCircleIcon, SparklesIcon, UserIcon, PaperAirplaneIcon, PaperClipIcon, HeartIcon, BrainCircuitIcon, RocketIcon, MagnifyingGlassIcon, KikoIcon, ChevronDownIcon, ChevronRightIcon, BriefcaseIcon, ArrowPathIcon, XMarkIcon } from './Icons';
 import * as Icons from './Icons';
 import LoadingSpinner from './LoadingSpinner';
 

@@ -25,25 +25,41 @@ export const parseCommandWithLlama3 = async (command: string): Promise<Partial<T
     }
     
     const prompt = `
-    You are an expert command parsing agent. Analyze the user's natural language input and convert it into a structured JSON object representing a task.
-    
-    **Rules:**
-    - The current date is: ${new Date().toString()}. Assume all relative times are from now.
-    - The "title" should be the main subject of the command.
-    - The output MUST be only the JSON object, with no surrounding text, explanations, or markdown.
-    
-    **JSON Schema:**
+    You are an expert command parsing agent (Architect Agent). Your task is to analyze the user's natural language input and convert it into a structured JSON object representing a task. You must be extremely accurate and intelligent in your parsing.
+
+    **Core Rules:**
+    - The current date is: ${new Date().toString()}. All relative times ('tomorrow', 'in 2 days', 'next week', 'this afternoon') are relative to this date.
+    - **Title:** The 'title' should be the core activity. Exclude time, location, or duration details unless they are part of the event name itself (e.g., "Digital Drip 0.2 Planning").
+    - **Virtual vs. Physical:**
+        - If a URL (e.g., zoom.us, meet.google.com) is detected, set \`isVirtual\` to \`true\` and populate \`linkedUrl\` with the full URL. DO NOT put the URL in the \`location\` field.
+        - If a physical place is mentioned with 'at' or 'in' (e.g., "at Blue Bottle", "in the office"), populate the \`location\` field. \`isVirtual\` should be \`false\` or omitted.
+    - **Duration:** If a duration is mentioned (e.g., 'for 120 mins', 'for 1 hr', 'for 30 minutes'), extract it to \`plannedDuration\` in MINUTES. If a meeting or learning session is mentioned but no duration is given, default to 60 minutes. For quick calls, default to 30 minutes.
+    - **Category:** Infer the most logical category from this list: [${DEFAULT_CATEGORIES.join(', ')}]. Be smart: 'Run', 'boxing' -> 'Workout'. 'Client call', 'sync' -> 'Meeting'. 'Code', 'design' -> 'Prototyping'.
+    - **Output:** The output MUST be only the JSON object, with no surrounding text, explanations, or markdown.
+
+    **Example 1:**
+    User Input: "/meeting with Apoorva for Praxis AI @ 3pm in Blue Bottle FiDi for 90 mins"
+    JSON Output for Example 1:
     {
-      "title": "string",
-      "category": "string // Choose one from: [${DEFAULT_CATEGORIES.join(', ')}]",
-      "isVirtual": "boolean",
-      "location": "string",
-      "linkedUrl": "string",
-      "startTime": "string // ISO 8601 format (e.g., 'YYYY-MM-DDTHH:mm:ss.sssZ').",
-      "plannedDuration": "number // in minutes."
+      "title": "Meeting with Apoorva for Praxis AI",
+      "category": "Meeting",
+      "location": "Blue Bottle FiDi",
+      "plannedDuration": 90,
+      "isVirtual": false
+    }
+
+    **Example 2:**
+    User Input: "/Weekly design sync with the team on zoom https://zoom.us/j/12345 tomorrow at 10am"
+    JSON Output for Example 2:
+    {
+      "title": "Weekly design sync with the team",
+      "category": "Meeting",
+      "isVirtual": true,
+      "linkedUrl": "https://zoom.us/j/12345",
+      "plannedDuration": 60
     }
     
-    **User Input:** "${command.substring(1).trim()}"
+    **User Input to Process:** "${command.substring(1).trim()}"
     
     **Your JSON Output:**
     `;

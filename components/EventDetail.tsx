@@ -22,6 +22,7 @@ interface EventDetailProps {
     addNote: (title: string, content: string, notebookId: number) => void;
     categories: Category[];
     triggerInsightGeneration: (task: Task, isRegeneration: boolean) => void;
+    onViewNote?: (noteId: number) => void;
 }
 
 const modalVariants = { hidden: { opacity: 0, scale: 0.95 }, visible: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.95 }};
@@ -34,8 +35,8 @@ const InsightWidgetContainer: React.FC<{title: string, icon: React.ReactNode, on
          <div className="flex justify-between items-center mb-2">
             <h5 className="font-semibold text-xs flex items-center gap-2 text-light-text-secondary dark:text-dark-text-secondary uppercase tracking-wider">{icon}{title}</h5>
             <div className="flex items-center">
-                {onChat && <button onClick={onChat} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" aria-label="Chat about this"><ChatBubbleLeftEllipsisIcon className="w-4 h-4"/></button>}
-                {onAddToNotes && <button onClick={onAddToNotes} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" aria-label="Add to Notes"><PlusIcon className="w-4 h-4"/></button>}
+                {onChat && <button onClick={onChat} title="Chat about this insight" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" aria-label="Chat about this"><ChatBubbleLeftEllipsisIcon className="w-4 h-4"/></button>}
+                {onAddToNotes && <button onClick={onAddToNotes} title="Save insight to notes" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" aria-label="Add to Notes"><PlusIcon className="w-4 h-4"/></button>}
             </div>
         </div>
         {children}
@@ -74,6 +75,35 @@ const TextWidgetComponent: React.FC<{widget: TextWidget, onAddToNotes: () => voi
         </InsightWidgetContainer>
      )
 };
+
+const ChartWidgetComponent: React.FC<{widget: ChartWidget, onAddToNotes: () => void, onChat: () => void}> = ({widget, onAddToNotes, onChat}) => (
+    <InsightWidgetContainer title={widget.title} icon={<Icons.ChartBarIcon className="w-4 h-4"/>} onAddToNotes={onAddToNotes} onChat={onChat}>
+        <div className="h-40 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+                {widget.type === 'bar' ? (
+                    <BarChart data={widget.data} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                        <XAxis dataKey="name" stroke="var(--color-text-secondary)" fontSize={10} tickLine={false} axisLine={false} />
+                        <YAxis stroke="var(--color-text-secondary)" fontSize={10} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={{backgroundColor: 'var(--color-card, #1C1C1E)', border: '1px solid var(--color-border, #2D2D2F)', borderRadius: '0.75rem'}}/>
+                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                            {widget.data.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                ) : ( // 'line'
+                    <LineChart data={widget.data} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                        <XAxis dataKey="name" stroke="var(--color-text-secondary)" fontSize={10} tickLine={false} axisLine={false} />
+                        <YAxis stroke="var(--color-text-secondary)" fontSize={10} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={{backgroundColor: 'var(--color-card, #1C1C1E)', border: '1px solid var(--color-border, #2D2D2F)', borderRadius: '0.75rem'}}/>
+                        <Line type="monotone" dataKey="value" stroke={widget.data[0]?.fill || '#8884d8'} strokeWidth={2} dot={{ r: 4, fill: widget.data[0]?.fill }} activeDot={{ r: 6 }}/>
+                    </LineChart>
+                )}
+            </ResponsiveContainer>
+        </div>
+         <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-1">{widget.commentary}</p>
+    </InsightWidgetContainer>
+);
 
 const AreaChartWidgetComponent: React.FC<{widget: AreaChartWidget, onAddToNotes: () => void, onChat: () => void}> = ({widget, onAddToNotes, onChat}) => (
     <InsightWidgetContainer title={widget.title} icon={<Icons.ChartBarIcon className="w-4 h-4"/>} onAddToNotes={onAddToNotes} onChat={onChat}>
@@ -184,82 +214,51 @@ const GeneratedImageWidgetComponent: React.FC<{widget: GeneratedImageWidget, onA
     );
 };
 
-const FullScreenImageViewer: React.FC<{images: string[], initialIndex: number, onClose: () => void}> = ({images, initialIndex, onClose}) => {
-    const [currentIndex, setCurrentIndex] = useState(initialIndex);
-    const nextImage = () => setCurrentIndex(prev => (prev + 1) % images.length);
-    const prevImage = () => setCurrentIndex(prev => (prev - 1 + images.length) % images.length);
+/**
+ * A reusable component to render any type of insight widget.
+ * It acts as a dispatcher, selecting the correct sub-component based on the widget's type.
+ */
+const InsightWidget: React.FC<{
+    widget: InsightWidgetData;
+    onAddToNotes: () => void;
+    onChat: () => void;
+}> = ({ widget, onAddToNotes, onChat }) => {
+    const props = { widget: widget as any, onAddToNotes, onChat };
 
-    return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center animate-fade-in-fast" onClick={onClose}>
-            <button onClick={(e) => { e.stopPropagation(); prevImage(); }} className="absolute left-4 p-2 text-white bg-black/30 rounded-full hover:bg-black/50"><ChevronLeftIcon className="w-8 h-8"/></button>
-            <AnimatePresence mode="wait">
-            <motion.img 
-                key={currentIndex}
-                src={images[currentIndex]} 
-                alt="Full screen view" 
-                className="max-h-[90vh] max-w-[90vw] object-contain"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-                onClick={(e) => e.stopPropagation()}
-            />
-            </AnimatePresence>
-            <button onClick={(e) => { e.stopPropagation(); nextImage(); }} className="absolute right-4 p-2 text-white bg-black/30 rounded-full hover:bg-black/50"><ChevronRightIcon className="w-8 h-8"/></button>
-        </div>
-    )
-}
-
-const ImageViewer: React.FC<{ attachments: string[], onImageClick: (index: number) => void }> = ({ attachments, onImageClick }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-
-    const nextImage = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setCurrentIndex(prev => (prev + 1) % attachments.length);
-    };
-    const prevImage = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setCurrentIndex(prev => (prev - 1 + attachments.length) % attachments.length);
-    };
-
-    if (attachments.length === 0) {
-        return <div className="w-full h-10 bg-light-bg dark:bg-dark-bg flex-shrink-0"></div>;
+    switch (widget.type) {
+        case 'bar':
+        case 'line':
+            return <div className="sm:col-span-2"><ChartWidgetComponent {...props} /></div>;
+        case 'metric':
+            return <KeyMetricWidgetComponent {...props} />;
+        case 'text':
+            return <div className="sm:col-span-2"><TextWidgetComponent {...props} /></div>;
+        case 'area':
+            return <div className="sm:col-span-2"><AreaChartWidgetComponent {...props} /></div>;
+        case 'radial':
+            return <RadialChartWidgetComponent {...props} />;
+        case 'recipe':
+            return <div className="sm:col-span-2"><RecipeWidgetComponent {...props} /></div>;
+        case 'map':
+            if (widget.embedUrl) return <div className="sm:col-span-2"><MapWidgetComponent {...props} /></div>;
+            return null;
+        case 'generated_image':
+            return <GeneratedImageWidgetComponent {...props} />;
+        case 'weather':
+            return <div className="sm:col-span-2"><WeatherWidgetComponent {...props} /></div>;
+        default:
+            const _exhaustiveCheck: never = widget;
+            console.warn("Unhandled widget type:", _exhaustiveCheck);
+            return null;
     }
-
-    return (
-        <div onClick={() => onImageClick(currentIndex)} className="w-full h-40 bg-black relative overflow-hidden cursor-pointer group">
-             <AnimatePresence>
-                <motion.img
-                    key={currentIndex}
-                    src={attachments[currentIndex]}
-                    alt={`Attachment ${currentIndex + 1}`}
-                    className="w-full h-full object-cover"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
-                />
-            </AnimatePresence>
-            {attachments.length > 1 && (
-                <>
-                    <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"><ChevronLeftIcon className="w-6 h-6"/></button>
-                    <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"><ChevronRightIcon className="w-6 h-6"/></button>
-                    <div className="absolute bottom-2 right-2 px-2 py-1 rounded-full bg-black/40 text-white text-xs font-mono backdrop-blur-sm">{currentIndex + 1} / {attachments.length}</div>
-                </>
-            )}
-        </div>
-    );
 };
 
-
-const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebooks, projects, goals, updateTask, onComplete, onClose, redirectToKikoAIWithChat, addNote, categories, triggerInsightGeneration }) => {
+const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebooks, projects, goals, updateTask, onComplete, onClose, redirectToKikoAIWithChat, addNote, categories, triggerInsightGeneration, onViewNote }) => {
     const [editableTask, setEditableTask] = useState(task);
-    const [isFullScreenViewerOpen, setIsFullScreenViewerOpen] = useState(false);
-    const [fullScreenInitialIndex, setFullScreenInitialIndex] = useState(0);
     const [locationSuggestions, setLocationSuggestions] = useState<{place_name: string; address: string}[]>([]);
     const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
 
-    const insight = task.insights; // Directly use insight from the task prop for reactivity
+    const insight = task.insights;
 
     useEffect(() => {
         setEditableTask(task);
@@ -268,7 +267,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
     useEffect(() => {
         if (!task.insights && !task.isGeneratingInsights && task.status !== TaskStatus.Completed) {
             updateTask({ ...task, isGeneratingInsights: true });
-            triggerInsightGeneration(task, false); // Initial generation is not a "regeneration"
+            triggerInsightGeneration(task, false);
         }
     }, [task, triggerInsightGeneration, updateTask]);
 
@@ -276,10 +275,10 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
     const handleRegenerateInsights = () => {
         const taskForRegen = { ...editableTask, insights: null, isGeneratingInsights: true };
         updateTask(taskForRegen);
-        triggerInsightGeneration(taskForRegen, true); // Pass true for regeneration
+        triggerInsightGeneration(taskForRegen, true);
     };
 
-    const handleSaveAndClose = () => { updateTask(editableTask); onClose(); };
+    const handleSaveChanges = () => { updateTask(editableTask); onClose(); };
     
     const handleAddInsightToNotes = (widget: InsightWidgetData) => {
         let title: string;
@@ -355,44 +354,58 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
     
     const isCompletedView = task.status === TaskStatus.Completed;
 
-    const renderInsights = (insightData: ActionableInsight) => (
+    const renderInsights = (widgets: InsightWidgetData[]) => (
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {insightData.widgets.map((widget, i) => {
+            {widgets.map((widget, i) => {
                 const widgetTitle = 'title' in widget ? widget.title : 'name' in widget ? widget.name : 'Insight';
-                const widgetContent = widget.type === 'text' ? widget.content : widget.type === 'recipe' ? widget.ingredients.join(', ') : '';
+                
+                let widgetContent = '';
+                if (widget.type === 'text') {
+                    widgetContent = widget.content;
+                } else if (widget.type === 'recipe') {
+                    widgetContent = widget.ingredients.join(', ');
+                } else if (widget.type === 'generated_image') {
+                    widgetContent = widget.prompt;
+                }
+                
                 const chatContext = `Let's talk about this insight for my task "${task.title}": ${widgetTitle}. ${widgetContent}`;
                 const onChat = () => redirectToKikoAIWithChat([{ role: 'user', text: chatContext }, { role: 'model', text: `Of course. What are your thoughts on "${widgetTitle}"?` }]);
-                const props = { key: i, widget: widget as any, onAddToNotes: () => handleAddInsightToNotes(widget), onChat };
-                switch (widget.type) {
-                    case 'metric': return <KeyMetricWidgetComponent {...props}/>;
-                    case 'text': return <div className="sm:col-span-2"><TextWidgetComponent {...props}/></div>;
-                    case 'area': return <div className="sm:col-span-2"><AreaChartWidgetComponent {...props}/></div>;
-                    case 'radial': return <RadialChartWidgetComponent {...props} />;
-                    case 'recipe': return <div className="sm:col-span-2"><RecipeWidgetComponent {...props}/></div>;
-                    case 'map': if (widget.embedUrl) return <div className="sm:col-span-2"><MapWidgetComponent {...props}/></div>; else return null;
-                    case 'generated_image': return <GeneratedImageWidgetComponent {...props}/>;
-                    case 'weather': return <div className="sm:col-span-2"><WeatherWidgetComponent {...props}/></div>;
-                    default: return null;
-                }
+                
+                return (
+                    <InsightWidget
+                        key={i}
+                        widget={widget}
+                        onAddToNotes={() => handleAddInsightToNotes(widget)}
+                        onChat={onChat}
+                    />
+                );
             })}
         </motion.div>
     );
 
+    const completionImageUrl = isCompletedView ? editableTask.completionImageUrl : null;
+
     return (
-    <>
-        <AnimatePresence>
-        {isFullScreenViewerOpen && (
-            <FullScreenImageViewer images={(isCompletedView ? [editableTask.completionImageUrl] : []).filter(Boolean) as string[]} initialIndex={fullScreenInitialIndex} onClose={() => setIsFullScreenViewerOpen(false)} />
-        )}
-        </AnimatePresence>
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast" onClick={handleSaveAndClose}>
-            <motion.div variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="card rounded-2xl shadow-xl w-full max-w-4xl flex flex-col overflow-hidden max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                <ImageViewer attachments={(isCompletedView ? [editableTask.completionImageUrl] : []).filter(Boolean) as string[]} onImageClick={(index) => { setFullScreenInitialIndex(index); setIsFullScreenViewerOpen(true); }}/>
-                <header className="p-4 sm:p-6 border-b border-light-border dark:border-dark-border flex-shrink-0">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast" onClick={handleSaveChanges}>
+            {completionImageUrl && (
+                <div className="absolute inset-0 z-0">
+                    <img src={completionImageUrl} alt="Completion background" className="w-full h-full object-cover blur-lg scale-110"/>
+                    <div className="absolute inset-0 bg-black/40"></div>
+                </div>
+            )}
+            <motion.div 
+                variants={modalVariants} 
+                initial="hidden" 
+                animate="visible" 
+                exit="exit" 
+                className={`${completionImageUrl ? 'glass-card text-white' : 'card'} relative rounded-2xl shadow-xl w-full max-w-4xl flex flex-col overflow-hidden max-h-[90vh]`}
+                onClick={e => e.stopPropagation()}
+            >
+                <header className="p-4 sm:p-6 border-b border-light-border/30 dark:border-dark-border/30 flex-shrink-0">
                     <div className="flex justify-between items-start">
                          <div>
                             {isCompletedView ? 
-                                <p className="text-sm font-bold uppercase tracking-wider text-green-500 flex items-center gap-2"><CheckCircleIcon className="w-5 h-5"/> COMPLETED</p>
+                                <p className="text-sm font-bold uppercase tracking-wider text-green-400 flex items-center gap-2"><CheckCircleIcon className="w-5 h-5"/> COMPLETED</p>
                                 :
                                 <input list="category-list" value={editableTask.category} onChange={(e) => setEditableTask({...editableTask, category: e.target.value as Category})} className="text-sm font-bold uppercase tracking-wider text-accent bg-transparent -ml-1 p-1 appearance-none focus:ring-1 focus:ring-accent rounded-md"/>
                             }
@@ -400,10 +413,10 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
 
                             <input type="text" value={isCompletedView ? task.completionSummary?.newTitle || editableTask.title : editableTask.title} onChange={(e) => setEditableTask({...editableTask, title: e.target.value})} className="text-2xl sm:text-3xl font-bold font-display mt-1 bg-transparent w-full focus:outline-none focus:ring-1 focus:ring-accent rounded-sm" disabled={isCompletedView}/>
                          </div>
-                        <button onClick={handleSaveAndClose} aria-label="Close modal" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 ml-4"><XMarkIcon className="w-6 h-6"/></button>
+                        <button onClick={handleSaveChanges} aria-label="Close modal" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 ml-4"><XMarkIcon className="w-6 h-6"/></button>
                     </div>
                 </header>
-                <main className="p-4 sm:p-6 overflow-y-auto bg-light-bg dark:bg-dark-bg">
+                <main className="p-4 sm:p-6 overflow-y-auto bg-light-bg/80 dark:bg-dark-bg/80">
                     {isCompletedView ? (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             <div className="lg:col-span-1 space-y-4 prose prose-sm dark:prose-invert max-w-none">
@@ -416,8 +429,12 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
                             </div>
                             <div className="lg:col-span-2 space-y-4">
                                 <h4 className="font-semibold flex items-center gap-2 text-accent"><SparklesIcon className="w-5 h-5"/> Strategic Insights</h4>
-                                {task.isGeneratingInsights ? <p className="animate-pulse text-sm">✨ Kiko AI is generating new insights...</p> : insight && insight.widgets.length > 0 ? (
-                                    renderInsights(insight)
+                                <button onClick={handleRegenerateInsights} disabled={task.isGeneratingInsights} className="w-full text-sm p-2 rounded-lg bg-accent/10 hover:bg-accent/20 flex items-center justify-center gap-2">
+                                     <ArrowPathIcon className={`w-4 h-4 ${task.isGeneratingInsights ? 'animate-spin' : ''}`} />
+                                     {task.isGeneratingInsights ? 'Analyzing Health Data...' : 'Regenerate with latest Health Data'}
+                                </button>
+                                {insight && insight.widgets && insight.widgets.length > 0 ? (
+                                    renderInsights(insight.widgets)
                                 ) : <p className="text-sm text-light-text-secondary">No AI insight available for this completed task.</p>}
                             </div>
                         </div>
@@ -425,18 +442,36 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                             <div className="lg:col-span-3 space-y-4">
                                 <div className="flex justify-between items-center"><h4 className="font-semibold flex items-center gap-2 text-accent"><SparklesIcon className="w-5 h-5"/> Strategic Insights</h4><button onClick={handleRegenerateInsights} disabled={task.isGeneratingInsights} className="p-1.5 rounded-md hover:bg-accent/20 disabled:opacity-50"><ArrowPathIcon className={`w-4 h-4 ${task.isGeneratingInsights ? 'animate-spin' : ''}`} /></button></div>
-                                {task.isGeneratingInsights ? <p className="animate-pulse text-sm">✨ Kiko AI is generating new insights...</p> : insight && insight.widgets.length > 0 ? (
-                                    renderInsights(insight)
+                                {task.isGeneratingInsights ? <p className="animate-pulse text-sm">✨ Kiko AI is generating new insights...</p> : insight && insight.widgets && insight.widgets.length > 0 ? (
+                                    renderInsights(insight.widgets)
                                 ) : <p className="text-sm text-light-text-secondary">No AI insight available for this task.</p>}
                             </div>
                             <div className="lg:col-span-2 space-y-4">
+                                <button onClick={onComplete} className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-2 px-4 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors">
+                                    <CheckCircleIcon className="w-5 h-5"/> Mark as Complete
+                                </button>
                                 <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-semibold text-light-text-secondary">Start Time</label><input type="time" value={editableTask.startTime.toTimeString().substring(0,5)} onChange={e => { const [h, m] = e.target.value.split(':'); const d = new Date(editableTask.startTime); d.setHours(parseInt(h), parseInt(m)); setEditableTask({...editableTask, startTime: d}); }} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg mt-1" /></div><div><label className="text-xs font-semibold text-light-text-secondary">Duration (min)</label><input type="number" value={editableTask.plannedDuration} onChange={e => setEditableTask({...editableTask, plannedDuration: parseInt(e.target.value) || 0})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg mt-1" /></div></div>
+                                <div>
+                                    <label className="text-xs font-semibold text-light-text-secondary">Repeat</label>
+                                    <select value={editableTask.repeat || 'none'} onChange={e => setEditableTask({...editableTask, repeat: e.target.value as Task['repeat']})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg mt-1">
+                                        <option value="none">Does not repeat</option>
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly">Weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                    </select>
+                                </div>
                                 <div className="space-y-3">
                                      <div><label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1"><Icons.BriefcaseIcon className="w-4 h-4"/> Project</label><select value={editableTask.projectId || ""} onChange={(e) => setEditableTask({...editableTask, projectId: parseInt(e.target.value) || undefined})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"><option value="">None</option>{projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select></div>
-                                     <div><label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1"><DocumentTextIcon className="w-4 h-4"/> Linked Note</label><select value={editableTask.notebookId || ""} onChange={(e) => setEditableTask({...editableTask, notebookId: parseInt(e.target.value) || undefined})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"><option value="">None</option>{notes.map(note => <option key={note.id} value={note.id}>{note.title}</option>)}</select></div>
+                                      <div><label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1"><DocumentTextIcon className="w-4 h-4"/> Linked Note</label>
+                                        {editableTask.notebookId && onViewNote ? (
+                                             <button onClick={() => onViewNote(editableTask.notebookId!)} className="w-full text-left p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg hover:bg-accent/10 truncate">{notes.find(n=>n.id === editableTask.notebookId)?.title || 'Select a Note'}</button>
+                                        ) : (
+                                            <select value={editableTask.notebookId || ""} onChange={(e) => setEditableTask({...editableTask, notebookId: parseInt(e.target.value) || undefined})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"><option value="">None</option>{notes.map(note => <option key={note.id} value={note.id}>{note.title}</option>)}</select>
+                                        )}
+                                     </div>
                                      <div>
                                         <label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1"><LinkIcon className="w-4 h-4"/> Reference URL</label>
-                                        <input type="text" placeholder="https://coursera.org/..." value={editableTask.referenceUrl || ''} onChange={(e) => setEditableTask({...editableTask, referenceUrl: e.target.value})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"/>
+                                        {editableTask.referenceUrl ? <a href={editableTask.referenceUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline block truncate p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg">{editableTask.referenceUrl}</a> : <input type="text" placeholder="https://coursera.org/..." value={editableTask.referenceUrl || ''} onChange={(e) => setEditableTask({...editableTask, referenceUrl: e.target.value})} className="w-full p-2 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg"/>}
                                     </div>
                                      <div className="relative">
                                         <label className="text-xs font-semibold text-light-text-secondary flex items-center gap-1.5 mb-1">
@@ -445,7 +480,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
                                         </label>
                                         <div className="relative">
                                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-light-text-secondary dark:text-dark-text-secondary">{editableTask.isVirtual ? <VideoCameraIcon className="w-4 h-4"/> : <MapPinIcon className="w-4 h-4"/>}</span>
-                                             <input type="text" placeholder={editableTask.isVirtual ? "Zoom Link..." : "123 Main St, San Francisco, CA"} value={editableTask.isVirtual ? editableTask.linkedUrl || '' : editableTask.location || ''} onChange={(e) => editableTask.isVirtual ? setEditableTask({...editableTask, linkedUrl: e.target.value}) : handleLocationInputChange(e.target.value)} className="w-full p-2 pl-9 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg" />
+                                             {editableTask.isVirtual && editableTask.linkedUrl ? <a href={editableTask.linkedUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline block truncate p-2 pl-9 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg">{editableTask.linkedUrl}</a> : <input type="text" placeholder={editableTask.isVirtual ? "Zoom Link..." : "123 Main St, San Francisco, CA"} value={editableTask.isVirtual ? editableTask.linkedUrl || '' : editableTask.location || ''} onChange={(e) => editableTask.isVirtual ? setEditableTask({...editableTask, linkedUrl: e.target.value}) : handleLocationInputChange(e.target.value)} className="w-full p-2 pl-9 bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg" />}
                                         </div>
                                         {locationSuggestions.length > 0 && !editableTask.isVirtual && (
                                             <div className="absolute z-10 w-full mt-1 bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border rounded-lg shadow-lg">
@@ -458,16 +493,15 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
                         </div>
                     )}
                 </main>
-                <footer className="flex-shrink-0 p-4 sm:p-6 border-t border-light-border dark:border-dark-border flex justify-end items-center bg-light-card/80 dark:bg-dark-card/80">
+                <footer className="flex-shrink-0 p-4 sm:p-6 border-t border-light-border/30 dark:border-dark-border/30 flex justify-end items-center">
                     {!isCompletedView && (
-                        <button onClick={onComplete} className="flex items-center gap-2 text-sm font-semibold py-2 px-4 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors">
-                            <CheckCircleIcon className="w-5 h-5"/> Mark as Complete
+                        <button onClick={handleSaveChanges} className="flex items-center gap-2 text-sm font-semibold py-2 px-4 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors">
+                            Save Changes
                         </button>
                     )}
                 </footer>
             </motion.div>
         </div>
-    </>
     );
 }
 

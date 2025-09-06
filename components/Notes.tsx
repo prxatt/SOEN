@@ -128,11 +128,13 @@ interface NotesProps {
     updateNote: (note: Note) => void;
     addTask: (title: string, notebookId: number) => void;
     startChatWithContext: (context: string, type: 'note' | 'suggestion' | 'theme' | 'selection') => void;
+    selectedNote: Note | null;
+    setSelectedNote: (note: Note | null) => void;
+    activeNotebookId: number | 'all' | 'flagged' | 'archived';
+    setActiveNotebookId: (id: number | 'all' | 'flagged' | 'archived') => void;
 }
 
-const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks, addInsights, updateNote, addTask, startChatWithContext }) => {
-    const [activeNotebookId, setActiveNotebookId] = useState<number | 'all' | 'flagged' | 'archived'>('all');
-    const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks, addInsights, updateNote, addTask, startChatWithContext, selectedNote, setSelectedNote, activeNotebookId, setActiveNotebookId }) => {
     const [isNewNoteModalOpen, setIsNewNoteModalOpen] = useState(false);
     const [isLoadingAI, setIsLoadingAI] = useState(false);
     const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -154,14 +156,12 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
     }, [notes, activeNotebookId]);
 
     useEffect(() => {
-        if (filteredNotes.length > 0) {
-            if (!selectedNote || !filteredNotes.find(n => n.id === selectedNote.id)) {
-                setSelectedNote(filteredNotes[0]);
-            }
-        } else {
+        if (filteredNotes.length > 0 && (!selectedNote || !filteredNotes.find(n => n.id === selectedNote.id))) {
+            setSelectedNote(filteredNotes[0]);
+        } else if (filteredNotes.length === 0) {
             setSelectedNote(null);
         }
-    }, [filteredNotes, selectedNote]);
+    }, [filteredNotes, selectedNote, setSelectedNote]);
     
     const handleCreateNote = async (type: 'blank' | 'daily_planner' | 'case_study') => {
         setIsNewNoteModalOpen(false);
@@ -234,7 +234,6 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
             const reader = new FileReader();
             reader.onloadend = () => {
                 const updatedNote = { ...selectedNote, imageUrl: reader.result as string };
-                setSelectedNote(updatedNote);
                 updateNote(updatedNote);
             };
             reader.readAsDataURL(file);
@@ -283,7 +282,6 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
                 // Merge with existing tags, removing duplicates
                 const newTags = [...new Set([...selectedNote.tags, ...result.data])];
                 const updatedNote = { ...selectedNote, tags: newTags };
-                setSelectedNote(updatedNote);
                 updateNote(updatedNote);
             }
         } catch (error) {
@@ -298,7 +296,6 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
         if (selectedNote) {
             const newTags = selectedNote.tags.filter(tag => tag !== tagToRemove);
             const updatedNote = { ...selectedNote, tags: newTags };
-            setSelectedNote(updatedNote);
             updateNote(updatedNote);
         }
     };
@@ -450,7 +447,6 @@ const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks,
                                         onClick={() => {
                                             if (selectedNote) {
                                                 const updated = {...selectedNote, imageUrl: undefined};
-                                                setSelectedNote(updated);
                                                 updateNote(updated);
                                             }
                                         }}

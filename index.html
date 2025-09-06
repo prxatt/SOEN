@@ -39,6 +39,7 @@
             fontFamily: {
               sans: ['"Instrument Sans"', 'sans-serif'],
               display: ['Poppins', 'sans-serif'],
+              mono: ['"Roboto Mono"', 'monospace'],
             },
             backdropBlur: {
               'xl': '24px',
@@ -63,7 +64,23 @@
               'gradient-shift': {
                 '0%, 100%': { 'background-position': '0% 50%' },
                 '50%': { 'background-position': '100% 50%' },
-              }
+              },
+              'pop-in': {
+                '0%': { transform: 'scale(0.9)' },
+                '100%': { transform: 'scale(1.1)' },
+              },
+              'subtle-glow': {
+                '0%, 100%': { 'box-shadow': '0 0 4px transparent' },
+                '50%': { 'box-shadow': '0 0 8px var(--color-accent)' },
+              },
+              'draw-in': {
+                '0%': { transform: 'scaleX(0)', 'transform-origin': 'left' },
+                '100%': { transform: 'scaleX(1)', 'transform-origin': 'left' },
+              },
+              'time-pulse': {
+                '0%, 100%': { opacity: '1' },
+                '50%': { opacity: '0.6' },
+              },
             },
             animation: {
               'subtle-pulse': 'subtle-pulse 3s ease-in-out infinite',
@@ -71,6 +88,10 @@
               'fade-in-fast': 'fade-in-fast 0.2s ease-out forwards',
               'highlight': 'highlight 1.5s ease-in-out',
               'gradient-shift': 'gradient-shift 15s ease infinite',
+              'pop-in': 'pop-in 0.2s ease-out forwards',
+              'subtle-glow': 'subtle-glow 2.5s ease-in-out infinite',
+              'draw-in': 'draw-in 0.8s ease-out forwards',
+              'time-pulse': 'time-pulse 2.5s ease-in-out infinite',
             },
           }
         }
@@ -78,7 +99,7 @@
     </script>
      <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Poppins:wght@600;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
       /* Default Theme: Obsidian */

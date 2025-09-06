@@ -82,53 +82,46 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
     if (!ai) { return null; }
 
     const primaryGoal = goals.find(g => g.term === 'mid' && g.status === 'active')?.text || "achieve peak performance and build a successful business";
-    const todaysOtherTasks = allTasks.filter(t => t.id !== task.id && new Date(t.startTime).toDateString() === new Date().toDateString() && t.status !== TaskStatus.Completed).map(t => t.title).join(', ');
-    const linkedNoteContent = task.notebookId ? (notes.find(n => n.id === task.notebookId)?.content || '').replace(/<[^>]*>?/gm, '').substring(0, 500) : '';
-
-    const systemInstruction = `You are Kiko, a hyper-intelligent, emotionally-aware AI strategist. Your goal is to provide diverse, actionable, and visually engaging widgets to help Pratt achieve his goals. Strictly adhere to the provided JSON schema. Ensure all content is concise, insightful, and directly relevant. The current date and time is ${new Date().toString()}.`;
+    
+    const systemInstruction = `You are Kiko, an AI strategist. Your goal is to provide concise, actionable data for pre-defined UI widgets. Strictly adhere to the provided JSON schema. The current date and time is ${new Date().toString()}. Your responses must be sharp, direct, and ONLY the requested JSON object.`;
     
     const playbook = task.status === TaskStatus.Completed ? `
         **PLAYBOOK: REFLECTION & INTEGRATION (Task is COMPLETE)**
-        - Act as a Performance Analyst & Strategist. Your goal is to help the user learn from their completed work.
-        - **Analyze Performance:** DO NOT give a "readiness score." Instead, create a 'KeyMetricWidget' that analyzes a key performance indicator from the completed task (e.g., for a 'Runna' task, analyze pace or duration).
-        - **Connect to Health Data:** If the user's sleep quality is 'poor', generate a 'TextWidget' suggesting a schedule adjustment or a lighter task for tomorrow. Be specific.
+        Your mission is to generate 2-3 widgets that reflect on the completed task.
+        1.  **Performance Analysis (MANDATORY):** Generate a 'KeyMetricWidget'. Analyze a key performance indicator from the completed task. For a 'Workout', analyze pace or duration. For 'Prototyping', estimate 'Features Shipped'. Be creative. 'title' should be a punchy metric name, 'value' a number, and 'unit' its label (e.g., 'min/km', 'features'). 'icon' should be 'ChartBarIcon'.
+        2.  **Monetization Idea (MANDATORY):** Generate a 'TextWidget'. The 'title' must be "Monetization Idea". The 'content' must be a brief, creative, single-sentence idea on how this completed work could be productized or leveraged for business growth. 'icon' must be 'RocketIcon'.
+        3.  **Health Connection (OPTIONAL):** If health data indicates poor sleep or low energy, generate a 'TextWidget'. The 'title' must be "Strategic Recovery". The 'content' should suggest a specific, actionable schedule adjustment for tomorrow. 'icon' must be 'HeartIcon'.
         ` : `
         **PLAYBOOK: PREPARATION & STRATEGY (Task is PENDING)**
-        - Act as a Chief of Staff & Creative Partner. Your goal is to prepare the user for success.
-        - **Generate 'Readiness Score':** Create a 'RadialChartWidget' assessing the user's readiness for this specific task based on their health data (energy level, sleep quality).
-        - **Provide Strategic Context:** Create a 'TextWidget' linking the task to the user's primary goal. Explain *why* this task is important in 1-2 sharp sentences.
-        - **Anticipate Needs:**
-            - If the task is a 'Meeting', 'Prototyping', or 'Learning' session, create another 'TextWidget' with 2-3 bullet points of "Key Questions to Ask" or "Creative Prompts" to spark ideas.
-            - If the task has a physical location, generate a 'MapWidget' using the location. Also, generate a 'WeatherWidget' for that location.
-            - If the task is 'Personal' and includes keywords like 'cook', 'dinner', 'lunch', etc., find a recipe using a 'RecipeWidget'.
+        Your mission is to generate 2-3 widgets to prepare the user for the upcoming task.
+        1.  **Readiness Score (MANDATORY):** Generate a 'RadialChartWidget'. Assess readiness based on health data. 'value' must be a percentage (0-100) combining energy and sleep quality. 'label' must be a single word like "Primed", "Charged", or "Ready". 'title' must be "Readiness".
+        2.  **Strategic Context (MANDATORY):** Generate a 'TextWidget'. Link the task to the user's primary goal. 'title' must be "Mission Critical". 'content' must explain *why* this task is important for their goal in 1-2 sharp sentences. 'icon' must be 'FlagIcon'.
+        3.  **Anticipate Needs (Choose ONE most relevant):**
+            - For 'Meeting', 'Prototyping', or 'Learning': Generate a 'TextWidget' with 'title': "Key Questions" and 'content' as 2-3 bullet-pointed, creative prompts to stimulate thinking. 'icon' must be 'ChatBubbleLeftEllipsisIcon'.
+            - For tasks with a physical location: Generate a 'MapWidget' ('locationQuery' is the task's location) AND a 'WeatherWidget' ('location' is the task's location).
+            - For 'Personal' tasks with food keywords ('cook', 'dinner', 'lunch', 'recipe'): Generate a 'RecipeWidget' (use the task title for the 'name' and as the search query).
         `;
 
     const prompt = `
     **System Instruction:** ${systemInstruction}
     ${playbook}
 
-    **USER & TASK DATA:**
+    **CONTEXT:**
     - **User's Primary Goal:** ${primaryGoal}
-    - **Task Title:** "${task.title}"
-    - **Category:** ${task.category}
-    - **Status:** ${task.status}
-    - **Description/Notes:** ${task.notes || 'None'}
+    - **Task:** "${task.title}" (Category: ${task.category}, Status: ${task.status}, Location: ${task.location || 'N/A'})
+    - **Task Notes:** ${task.notes || 'None'}
     - **Reference URL:** ${task.referenceUrl || 'None'}
-    - **Linked Note Content Snippet:** ${linkedNoteContent || 'None'}
-    - **Today's Other Tasks:** ${todaysOtherTasks || 'None'}
     - **User Health:** Energy is ${healthData.energyLevel}, Sleep is ${healthData.sleepQuality}.
-    - **Inferred Home Location:** ${inferredHomeLocation || 'San Francisco, CA'}
-    - **Is this a regeneration request?** ${isRegeneration}
+    - **Regeneration Requested:** ${isRegeneration}
 
-    **YOUR MISSION:** Generate a JSON object containing a "widgets" array with 2-4 diverse, highly relevant widgets based on the playbook and all available data.
+    **MISSION:** Generate a JSON object with a "widgets" array containing 2 to 4 diverse, highly relevant widgets based on the playbook and context. Be concise and accurate. Respond with ONLY the valid JSON object.
     `;
-    // SCHEMA Definition would go here... but it's too long for this context and exists in the implementation.
-
-    // This is a simplified representation of the API call. The full schema is complex.
+    
     try {
         const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt, config: { responseMimeType: "application/json" } });
         const jsonString = extractJson(response.text);
-        return jsonString ? JSON.parse(jsonString) : null;
+        if (!jsonString) throw new Error("No valid JSON found in response.");
+        return JSON.parse(jsonString);
     } catch (e) {
         console.error("Error in generateActionableInsights:", e);
         return null;

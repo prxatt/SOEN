@@ -1,6 +1,7 @@
 import React from 'react';
 import { GiftIcon } from './Icons';
 import type { Screen } from '../types';
+import { REWARDS_CATALOG } from '../constants';
 
 interface ProfileProps {
     isDarkMode: boolean;
@@ -8,9 +9,24 @@ interface ProfileProps {
     onLogout: () => void;
     praxisFlow: number;
     setScreen: (screen: Screen) => void;
+    activeTheme: string;
+    setActiveTheme: (theme: string) => void;
+    purchasedRewards: string[];
 }
 
-const Profile: React.FC<ProfileProps> = ({ isDarkMode, toggleTheme, onLogout, praxisFlow, setScreen }) => {
+const Profile: React.FC<ProfileProps> = ({ isDarkMode, toggleTheme, onLogout, praxisFlow, setScreen, activeTheme, setActiveTheme, purchasedRewards }) => {
+  const themeColorMap: Record<string, string> = {
+    default: '#A855F7',
+    solaris: '#F97316',
+    crimson: '#DC2626',
+    oceanic: '#0EA5E9',
+  };
+
+  const availableThemes = [
+    { id: 'theme-default', name: 'Default', value: 'default' },
+    ...REWARDS_CATALOG.filter(r => r.type === 'theme')
+  ];
+  
   return (
     <div className="h-full overflow-y-auto pb-4">
       <div className="flex items-center gap-4 mb-8">
@@ -50,6 +66,31 @@ const Profile: React.FC<ProfileProps> = ({ isDarkMode, toggleTheme, onLogout, pr
               <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${isDarkMode ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
+           <div className="mt-4 pt-4 border-t border-light-border dark:border-dark-border">
+              <h4 className="font-medium mb-3">Theme</h4>
+              <div className="grid grid-cols-2 gap-3">
+                {availableThemes.map(theme => {
+                  const isPurchased = theme.value === 'default' || purchasedRewards.includes(theme.id);
+                  const isActive = activeTheme === theme.value;
+                  return (
+                    <button
+                      key={theme.id}
+                      onClick={() => isPurchased && setActiveTheme(theme.value)}
+                      disabled={!isPurchased}
+                      className={`p-3 rounded-lg text-left transition-all border-2 ${
+                        isActive ? 'border-accent ring-2 ring-accent ring-offset-2 ring-offset-light-card dark:ring-offset-dark-card' : 'border-transparent'
+                      } ${isPurchased ? 'cursor-pointer bg-light-bg dark:bg-dark-bg hover:border-accent/50' : 'opacity-50 cursor-not-allowed bg-light-bg dark:bg-dark-bg'}`}
+                      aria-label={`Apply ${theme.name} theme`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full" style={{ backgroundColor: themeColorMap[theme.value] || '#A855F7' }}></div>
+                        <span className="font-semibold">{theme.name}</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
         </div>
         
         <div className="card p-4 rounded-2xl shadow-sm">

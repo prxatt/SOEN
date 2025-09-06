@@ -1,9 +1,8 @@
-// services/kikoAIService.ts
 import { GoogleGenAI, Type } from "@google/genai";
 import { parseCommandWithLlama3 } from './groqService';
 import { analyzeImageWithGPT4o, generateTextWithGPT4o, generateBriefingWithGPT4o } from './openAIService';
-import { generateImageWithImagen, parseCommandWithGemini, generateCompletionSummaryWithGemini } from './geminiService';
-import { Task, Note, HealthData, MissionBriefing, CompletionSummary, ActionItem } from '../types';
+import { generateImageWithImagen, parseCommandWithGemini, generateCompletionSummaryWithGemini, generateActionableInsights, getAutocompleteSuggestions } from './geminiService';
+import { Task, Note, HealthData, MissionBriefing, CompletionSummary, ActionItem, Goal } from '../types';
 import { extractJson } from "../utils/jsonUtils";
 
 const API_KEY = process.env.API_KEY;
@@ -92,7 +91,8 @@ const generateMissionBriefingWithGemini = async (
 const getErrorFallbackData = (taskType: KikoTaskType, payload: any): any => {
     switch (taskType) {
         case 'parse_command':
-            return { title: payload.command.startsWith('/') ? payload.command.substring(1).trim() : payload.command };
+             const title = payload.command.startsWith('/') ? payload.command.substring(1).trim().split('@')[0].trim() : payload.command;
+             return { title: title || "New Task", category: 'Personal', plannedDuration: 60 };
         case 'generate_completion_summary':
             return { newTitle: payload.task.title, shortInsight: "Task completed successfully!" };
         default:
@@ -110,7 +110,9 @@ export type KikoTaskType =
     | 'generate_note_thumbnail'
     | 'generate_note_text'
     | 'generate_note_tags'
-    | 'generate_note_title';
+    | 'generate_note_title'
+    | 'generate_task_insights'
+    | 'generate_daily_image';
 
 export const kikoRequest = async (
     taskType: KikoTaskType,
@@ -128,9 +130,26 @@ export const kikoRequest = async (
             fallbackAgent = () => generateBriefingWithGPT4o(timeframe, tasks, notes, healthData);
             break;
         }
+        case 'generate_task_insights': {
+            const { task, healthData, notes, goals, allTasks } = payload;
+            // The core `generateActionableInsights` is now the primary, as it's been re-engineered.
+            primaryAgent = () => generateActionableInsights(task, healthData, notes, null, goals, allTasks, true);
+            // No fallback for this complex, re-engineered agent for now.
+            break;
+        }
         // --- ARCHITECT AGENT ---
         case 'parse_command': {
-            primaryAgent = () => parseCommandWithLlama3(payload.command);
+            primaryAgent = async () => {
+                const parsedData = await parseCommandWithLlama3(payload.command);
+                // Location enrichment step
+                if (parsedData.location && !parsedData.isVirtual) {
+                    const suggestions = await getAutocompleteSuggestions(parsedData.location);
+                    if (suggestions && suggestions.length > 0) {
+                        parsedData.location = suggestions[0].address; // Use the top suggestion
+                    }
+                }
+                return parsedData;
+            };
             fallbackAgent = () => parseCommandWithGemini(payload.command);
             break;
         }
@@ -169,6 +188,13 @@ export const kikoRequest = async (
             }
             primaryAgent = () => generateImageWithImagen(prompt, '16:9');
             // No LLM fallback for image generation
+            break;
+        }
+        case 'generate_daily_image': {
+            const { date, tasks } = payload as { date: Date; tasks: Task[] };
+            const tasksString = tasks.map(t => `${t.title} (${t.category})`).join(', ');
+            const prompt = `Generate a visually stunning, high-concept, artistic image that captures the essence of a day focused on these activities: ${tasksString || 'a day of creative potential'}. Date: ${date.toDateString()}. The style should be abstract, sophisticated, and inspirational. No text. 4k cinematic quality.`;
+            primaryAgent = () => generateImageWithImagen(prompt, '16:9');
             break;
         }
         // --- Other agents without specific failovers defined yet ---

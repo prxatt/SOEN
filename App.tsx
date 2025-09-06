@@ -14,7 +14,7 @@ import Toast from './components/Toast';
 import { MOCKED_TASKS, MOCKED_NOTES, MOCKED_NOTEBOOKS, MOCKED_INSIGHTS, MOCKED_GOALS, MOCKED_PROJECTS, REWARDS_CATALOG, DEFAULT_CATEGORIES } from './constants';
 import { Task, Note, Notebook, Insight, Category, TaskStatus, ChatMessage, SearchHistoryItem, VisionHistoryItem, Goal, PraxisPointLog, Theme, Screen, Project, HealthData, ActionableInsight } from './types';
 import { getActualDuration, calculateStreak, getTodaysTaskCompletion, inferHomeLocation } from './utils/taskUtils';
-import { continueChat, setChatContext, parseHealthDataFromTasks, getProactiveHealthSuggestion, generateActionableInsights, generateMapsStaticImageUrl, analyzeImageWithPrompt } from './services/geminiService';
+import { continueChat, setChatContext, parseHealthDataFromTasks, getProactiveHealthSuggestion, analyzeImageWithPrompt } from './services/geminiService';
 import { kikoRequest } from './services/kikoAIService';
 import { syncCalendar, addEventToCalendar, updateEventInCalendar } from './services/googleCalendarService';
 import { triggerHapticFeedback } from './utils/haptics';
@@ -63,7 +63,7 @@ const screenVariants = {
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => getInitialState('praxis-isAuthenticated', false));
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean>(() => getInitialState('praxis-onboardingComplete', false));
-  const [screen, setScreen] = useState<Screen>('Dashboard');
+  const [screen, setScreen] = useState<Screen>('Schedule');
   const [tasks, setTasks] = useState<Task[]>(() => getInitialState('praxis-tasks', MOCKED_TASKS));
   const [notes, setNotes] = useState<Note[]>(() => getInitialState('praxis-notes', MOCKED_NOTES));
   const [notebooks, setNotebooks] = useState<Notebook[]>(() => getInitialState('praxis-notebooks', MOCKED_NOTEBOOKS));
@@ -74,6 +74,10 @@ const App: React.FC = () => {
   const [customCategories, setCustomCategories] = useState<Category[]>(() => getInitialState('praxis-customCategories', []));
   
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
+
+  // State lifted from Notes.tsx
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [activeNotebookId, setActiveNotebookId] = useState<number | 'all' | 'flagged' | 'archived'>('all');
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => getInitialState('praxis-chat-history', []));
   const [isAiReplying, setIsAiReplying] = useState(false);
@@ -107,6 +111,8 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('praxis-flow-log', JSON.stringify(praxisFlow)); }, [praxisFlow]);
   useEffect(() => { localStorage.setItem('praxis-activeTheme', JSON.stringify(activeTheme)); }, [activeTheme]);
   useEffect(() => { localStorage.setItem('praxis-customCategories', JSON.stringify(customCategories)); }, [customCategories]);
+  useEffect(() => { localStorage.setItem('praxis-purchasedRewards', JSON.stringify(purchasedRewards)); }, [purchasedRewards]);
+
 
   useEffect(() => { setChatContext(goals); }, [goals]);
   useEffect(() => { document.documentElement.classList.toggle('dark', isDarkMode); }, [isDarkMode]);
@@ -166,47 +172,103 @@ const App: React.FC = () => {
     }
   };
 
+    const generateRecurringTasks = (initialTask: Task): Task[] => {
+        const futureTasks: Task[] = [];
+        if (!initialTask.repeat || initialTask.repeat === 'none') {
+            return [];
+        }
+
+        let tasksToCreate = 0;
+        switch (initialTask.repeat) {
+            case 'daily': tasksToCreate = 30; break;
+            case 'weekly': tasksToCreate = 8; break;
+            case 'monthly': tasksToCreate = 3; break;
+        }
+
+        let currentDate = new Date(initialTask.startTime);
+        for (let i = 0; i < tasksToCreate; i++) {
+            let nextDate = new Date(currentDate);
+            if (initialTask.repeat === 'daily') nextDate.setDate(nextDate.getDate() + 1);
+            else if (initialTask.repeat === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+            else if (initialTask.repeat === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+
+            const futureTask: Task = {
+                ...initialTask,
+                id: Date.now() + Math.random(),
+                startTime: nextDate,
+                status: TaskStatus.Pending,
+                actualDuration: undefined,
+                pausedElapsedTime: undefined,
+                undoStatus: undefined,
+                insights: null,
+                isGeneratingInsights: false,
+                completionImageUrl: undefined,
+                completionSummary: undefined,
+                googleCalendarEventId: undefined,
+            };
+            futureTasks.push(futureTask);
+            currentDate = nextDate;
+        }
+        return futureTasks;
+    };
+
   const updateTask = (updatedTask: Task) => {
-    setTasks(prevTasks => prevTasks.map(task => task.id === updatedTask.id ? updatedTask : task));
+    let futureTasks: Task[] = [];
+    const originalTask = tasks.find(t => t.id === updatedTask.id);
+
+    if (originalTask && (!originalTask.repeat || originalTask.repeat === 'none') && updatedTask.repeat && updatedTask.repeat !== 'none') {
+        futureTasks = generateRecurringTasks(updatedTask);
+        if (futureTasks.length > 0) {
+            showToast(`Scheduled ${futureTasks.length} recurring task(s).`);
+        }
+    }
+
+    setTasks(prevTasks => {
+        const updatedTasks = prevTasks.map(task => task.id === updatedTask.id ? updatedTask : task);
+        return [...updatedTasks, ...futureTasks].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    });
+
     if (viewingTask?.id === updatedTask.id) {
         setViewingTask(updatedTask);
     }
-    // Simulate updating the event in Google Calendar
+    
+    // Improved GCal Sync Logic
     if (updatedTask.googleCalendarEventId) {
         updateEventInCalendar(updatedTask);
+    } else {
+        // This handles both new tasks and existing tasks being synced for the first time
+        addEventToCalendar(updatedTask);
+        // In a real app, we'd get the event ID back and update the task state.
     }
   };
 
-  const triggerInsightGeneration = useCallback((task: Task, isRegeneration = false) => {
+  const triggerInsightGeneration = useCallback(async (task: Task, isRegeneration = false) => {
+    if (task.status === TaskStatus.Completed && !isRegeneration) return;
+      
     const healthData = parseHealthDataFromTasks(tasks);
-    const homeLocation = inferHomeLocation(tasks);
-
-    // This is the "fire-and-forget" part of the async architecture.
-    // The UI is already updated to show the loading state.
-    generateActionableInsights(task, healthData, notes, homeLocation, goals, tasks, isRegeneration).then(insightData => {
-        const finalTaskWithInsight: Task = { ...task, insights: insightData, isGeneratingInsights: false };
-        updateTask(finalTaskWithInsight);
-        
-        // Don't show toast on initial load, only on regeneration.
-        if (isRegeneration) {
-            setToast({
-                message: `✨ New insights ready for "${task.title}"`,
-                visible: true,
-                action: {
-                    label: 'View',
-                    onClick: () => {
-                        setViewingTask(finalTaskWithInsight);
-                        setToast({ message: '', visible: false });
-                    }
-                }
-            });
-        }
-    }).catch(error => {
-        console.error("Async insight generation failed:", error);
-        const taskWithError: Task = { ...task, isGeneratingInsights: false, insights: { widgets: [{ type: 'text', title: 'Insight Error', icon: 'SparklesIcon', content: 'Kiko had trouble generating insights. Please try regenerating.' }] } };
-        updateTask(taskWithError);
-        setToast({ message: 'Could not generate insights.', visible: true });
+    
+    const { data: insightData, fallbackUsed } = await kikoRequest('generate_task_insights', {
+        task, healthData, notes, goals, allTasks: tasks, isRegeneration
     });
+
+    const finalTaskWithInsight: Task = { ...task, insights: insightData, isGeneratingInsights: false };
+    updateTask(finalTaskWithInsight);
+    
+    if (fallbackUsed) {
+        showToast("Kiko is using a backup model for insights.");
+    } else if (isRegeneration) {
+        setToast({
+            message: `✨ New insights ready for "${task.title}"`,
+            visible: true,
+            action: {
+                label: 'View',
+                onClick: () => {
+                    setViewingTask(finalTaskWithInsight);
+                    setToast({ message: '', visible: false });
+                }
+            }
+        });
+    }
   }, [tasks, notes, goals]);
 
   const handleCompleteTask = async (taskId: number) => {
@@ -238,8 +300,8 @@ const App: React.FC = () => {
     let finalCompletedTask: Task = { ...tempCompletedTask, completionImageUrl: imageResult.data, completionSummary: summaryResult.data, isGeneratingInsights: true };
     updateTask(finalCompletedTask);
     
-    // Trigger background insight generation for the *completed* task
-    triggerInsightGeneration(finalCompletedTask);
+    // Trigger background insight generation for the *completed* task, allowing for post-task analysis
+    triggerInsightGeneration(finalCompletedTask, true);
     
     // Award points
     const points = Math.round(actualDuration / 5) + 10;
@@ -270,6 +332,9 @@ const App: React.FC = () => {
   
   const updateNote = (updatedNote: Note) => {
     setNotes(prevNotes => prevNotes.map(note => note.id === updatedNote.id ? updatedNote : note));
+    if (selectedNote?.id === updatedNote.id) {
+        setSelectedNote(updatedNote);
+    }
   };
   
   const addNote = (title: string, content: string, notebookId: number) => {
@@ -280,6 +345,7 @@ const App: React.FC = () => {
     };
     setNotes(prev => [newNote, ...prev]);
     setScreen('Notes'); // Switch to notes screen to show the new note
+    setSelectedNote(newNote); // Select the newly created note
     setToast({ message: `Insight saved to notes!`, visible: true });
   };
 
@@ -301,16 +367,20 @@ const App: React.FC = () => {
           plannedDuration: 60,
           startTime: new Date(now.setHours(now.getHours() + 1)),
           ...taskDetails,
+          repeat: taskDetails.repeat || 'none',
       };
 
+      const recurringTasks = generateRecurringTasks(newTask);
+      if (recurringTasks.length > 0) {
+          showToast(`Scheduled ${recurringTasks.length} recurring task(s).`);
+      }
+
       setTasks(prevTasks => {
-          return [...prevTasks, newTask].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+          return [...prevTasks, newTask, ...recurringTasks].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
       });
       
-      // Simulate adding the event to Google Calendar
-      if (!newTask.googleCalendarEventId) { // Avoid duplicates
-        addEventToCalendar(newTask);
-      }
+      // Sync the new event to Google Calendar
+      addEventToCalendar(newTask);
   };
 
   const handleCalendarSync = async () => {
@@ -396,15 +466,25 @@ const App: React.FC = () => {
     }
   };
 
+  const onViewNote = (noteId: number) => {
+    const noteToView = notes.find(n => n.id === noteId);
+    if (noteToView) {
+        const notebookId = noteToView.notebookId || 'all';
+        setActiveNotebookId(notebookId);
+        setSelectedNote(noteToView);
+        setScreen('Notes');
+    }
+  };
+
   const allCategories = [...DEFAULT_CATEGORIES, ...customCategories];
 
   const renderScreen = () => {
     switch (screen) {
       case 'Dashboard': return <Dashboard tasks={tasks} notes={notes} goals={goals} praxisFlow={totalFlow} dailyStreak={dailyStreak} completionPercentage={completionPercentage} setScreen={setScreen} />;
       case 'Schedule': return <Schedule tasks={tasks} updateTask={updateTask} onViewTask={setViewingTask} addTask={addTask} projects={projects} notes={notes} onUndoTask={handleUndoCompleteTask} onCompleteTask={handleCompleteTask} categories={allCategories} onSyncCalendar={handleCalendarSync} showToast={showToast} />;
-      case 'Notes': return <Notes notes={notes} setNotes={setNotes} notebooks={notebooks} setNotebooks={setNotebooks} addInsights={addInsights} updateNote={updateNote} addTask={(title, notebookId) => addTask({title, category: 'Prototyping', plannedDuration: 60, notebookId, startTime: new Date()})} startChatWithContext={startChatWithContext} />;
+      case 'Notes': return <Notes notes={notes} setNotes={setNotes} notebooks={notebooks} setNotebooks={setNotebooks} addInsights={addInsights} updateNote={updateNote} addTask={(title, notebookId) => addTask({title, category: 'Prototyping', plannedDuration: 60, notebookId, startTime: new Date()})} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} />;
       case 'KikoAI': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} addTask={(title) => addTask({title, category: 'Prototyping', plannedDuration: 60, startTime: new Date()})} startChatWithContext={startChatWithContext} searchHistory={searchHistory} setSearchHistory={setSearchHistory} visionHistory={visionHistory} setVisionHistory={setVisionHistory} addNote={addNote} goals={goals} setGoals={setGoals} applyInsight={applyInsight} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} projects={projects} healthData={parseHealthDataFromTasks(tasks)} showToast={showToast} />;
-      case 'Profile': return <Profile isDarkMode={isDarkMode} toggleTheme={toggleTheme} onLogout={() => setIsAuthenticated(false)} praxisFlow={totalFlow} setScreen={setScreen} />;
+      case 'Profile': return <Profile isDarkMode={isDarkMode} toggleTheme={toggleTheme} onLogout={() => setIsAuthenticated(false)} praxisFlow={totalFlow} setScreen={setScreen} activeTheme={activeTheme} setActiveTheme={setActiveTheme} purchasedRewards={purchasedRewards} />;
       case 'Rewards': return <Rewards onBack={() => setScreen('Profile')} praxisFlow={totalFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={setActiveTheme} onPurchase={purchaseReward} />;
       default: return <Dashboard tasks={tasks} notes={notes} goals={goals} praxisFlow={totalFlow} dailyStreak={dailyStreak} completionPercentage={completionPercentage} setScreen={setScreen} />;
     }
@@ -420,7 +500,7 @@ const App: React.FC = () => {
       </AnimatePresence>
 
       <AnimatePresence>
-        {viewingTask && <EventDetail task={viewingTask} allTasks={tasks} notes={notes} notebooks={notebooks} projects={projects} goals={goals} updateTask={updateTask} onClose={() => setViewingTask(null)} onComplete={() => handleCompleteTask(viewingTask.id)} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} categories={allCategories} triggerInsightGeneration={triggerInsightGeneration} />}
+        {viewingTask && <EventDetail task={viewingTask} allTasks={tasks} notes={notes} notebooks={notebooks} projects={projects} goals={goals} updateTask={updateTask} onClose={() => setViewingTask(null)} onComplete={() => handleCompleteTask(viewingTask.id)} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} categories={allCategories} triggerInsightGeneration={triggerInsightGeneration} onViewNote={onViewNote} />}
       </AnimatePresence>
 
       <div className="max-w-7xl mx-auto p-4 pb-28 h-screen flex flex-col">

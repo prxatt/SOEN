@@ -48,12 +48,12 @@ const TaskCard: React.FC<{ task: Task; categoryColors: Record<Category, string>;
             layoutId={`task-card-${task.id}`}
             onClick={() => onSelect(task)}
             animate={{ opacity: isCompleted ? 0.6 : 1 }}
-            className="p-4 rounded-3xl cursor-pointer"
-            style={{ backgroundColor: categoryColor, color: textColor }}
+            className="p-4 rounded-3xl cursor-pointer text-white"
+            style={{ backgroundColor: categoryColor }}
         >
             <div className="flex justify-between items-start">
                 <div className="w-3/4">
-                     <h3 className="text-2xl font-bold relative inline-block">{task.title}
+                     <h3 className="text-2xl font-bold relative inline-block break-word">{task.title}
                         <AnimatePresence>
                         {isCompleted && (
                             <motion.div
@@ -68,20 +68,20 @@ const TaskCard: React.FC<{ task: Task; categoryColors: Record<Category, string>;
                     </h3>
                 </div>
                 <div className="flex -space-x-2">
-                    <img className="w-8 h-8 rounded-full object-cover" style={{ borderWidth: '2px', borderColor: textColor }} src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop" alt="user 1" />
-                    <img className="w-8 h-8 rounded-full object-cover" style={{ borderWidth: '2px', borderColor: textColor }} src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop" alt="user 2" />
+                    <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop" alt="user 1" />
+                    <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop" alt="user 2" />
                 </div>
             </div>
-            <div className={`mt-6 pt-4 border-t border-black/20 flex justify-between items-center`}>
+            <div className={`mt-6 pt-4 border-t border-white/20 flex justify-between items-center`}>
                 <div className="text-center">
-                    <p className="font-semibold">{startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="font-semibold">{startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
                     <p className="text-sm opacity-80">Start</p>
                 </div>
-                <div className={`px-4 py-1.5 rounded-full text-sm font-semibold`} style={{ backgroundColor: 'rgba(0,0,0,0.15)', color: textColor }}>
+                <div className={`px-4 py-1.5 rounded-full text-sm font-semibold`} style={{ backgroundColor: 'rgba(0,0,0,0.2)'}}>
                     {task.plannedDuration} Min
                 </div>
                 <div className="text-center">
-                    <p className="font-semibold">{endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="font-semibold">{endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
                     <p className="text-sm opacity-80">End</p>
                 </div>
             </div>
@@ -89,7 +89,7 @@ const TaskCard: React.FC<{ task: Task; categoryColors: Record<Category, string>;
     );
 };
 
-const TodayView: React.FC<{ selectedDate: Date; changeDate: (amount: number); tasks: Task[]; categoryColors: Record<Category, string>; onSelectTask: (task: Task) => void; }> = ({ selectedDate, changeDate, tasks, categoryColors, onSelectTask }) => {
+const TodayView: React.FC<{ selectedDate: Date; tasks: Task[]; categoryColors: Record<Category, string>; onSelectTask: (task: Task) => void; }> = ({ selectedDate, tasks, categoryColors, onSelectTask }) => {
     const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
     const day = String(selectedDate.getDate()).padStart(2, '0');
     const monthNum = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -97,46 +97,43 @@ const TodayView: React.FC<{ selectedDate: Date; changeDate: (amount: number); ta
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
-        const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
+        const timerId = setInterval(() => setCurrentTime(new Date()), 1000 * 60); // Update every minute
         return () => clearInterval(timerId);
     }, []);
 
     return (
-        <div>
+        <div className="bg-[#F0F2F5] dark:bg-black rounded-3xl p-4 sm:p-6 min-h-full">
             <div className="flex mb-8">
                 <div className="flex-grow">
-                    <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-medium text-text-secondary">{dayOfWeek}</h3>
-                        <div className="flex items-center gap-1">
-                            <button onClick={() => changeDate(-1)} className="p-1 rounded-full hover:bg-card"><ChevronLeftIcon className="w-5 h-5"/></button>
-                            <button onClick={() => changeDate(1)} className="p-1 rounded-full hover:bg-card"><ChevronRightIcon className="w-5 h-5"/></button>
-                        </div>
-                    </div>
-                    <div className="flex items-end gap-4 mt-1">
-                        <p className="text-7xl font-bold font-display tracking-tighter leading-none">{day}.{monthNum}</p>
-                        <p className="text-7xl font-bold font-display tracking-tight leading-none text-text-secondary">{month}</p>
+                    <h3 className="text-lg font-medium text-text-secondary">{dayOfWeek}</h3>
+                    <div className="flex items-end gap-x-2 mt-1">
+                        <p className="text-7xl font-bold font-display tracking-tighter leading-none text-black dark:text-white">{day}.{monthNum}</p>
+                        <p className="text-7xl font-bold font-display tracking-tight leading-none text-black/40 dark:text-white/40">{month}</p>
                     </div>
                 </div>
-                <div className="border-l border-border pl-4 flex-shrink-0 flex flex-col justify-center">
+                <div className="border-l border-gray-300 dark:border-zinc-700 pl-4 flex-shrink-0 flex flex-col justify-center gap-y-4">
                     <div className="text-right">
-                        <p className="font-semibold text-lg">{currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                        <p className="text-sm text-text-secondary">San Francisco</p>
+                        <p className="font-semibold text-lg text-black dark:text-white">{currentTime.toLocaleTimeString([], {timeZone: 'America/New_York', hour: 'numeric', minute:'2-digit'})}</p>
+                        <p className="text-sm text-text-secondary">New York</p>
                     </div>
-                    <div className="text-right mt-4">
-                        <p className="font-semibold text-lg">{currentTime.toLocaleTimeString([], {timeZone: 'Europe/London', hour: '2-digit', minute:'2-digit'})}</p>
+                    <div className="text-right">
+                        <p className="font-semibold text-lg text-black dark:text-white">{currentTime.toLocaleTimeString([], {timeZone: 'Europe/London', hour: 'numeric', minute:'2-digit'})}</p>
                         <p className="text-sm text-text-secondary">United Kingdom</p>
                     </div>
                 </div>
             </div>
 
             <div>
-                <h4 className="font-semibold mb-4">Today's tasks</h4>
+                <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-semibold text-black dark:text-white">Today's tasks</h4>
+                    <button className="px-4 py-1.5 bg-white dark:bg-zinc-800 text-black dark:text-white text-sm font-semibold rounded-full shadow-sm">Reminders</button>
+                </div>
                 {tasks.length > 0 ? (
                     <div className="space-y-4">
                         {tasks.map(task => <TaskCard key={task.id} task={task} categoryColors={categoryColors} onSelect={onSelectTask} />)}
                     </div>
                 ) : (
-                     <div className="text-center py-16 text-text-secondary rounded-2xl bg-card">
+                     <div className="text-center py-16 text-text-secondary rounded-2xl bg-white dark:bg-zinc-800/50">
                         <p>Nothing scheduled for today.</p>
                      </div>
                 )}
@@ -323,7 +320,7 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
     };
 
     return (
-        <div className="h-[calc(100vh-10rem)]">
+        <div className="h-[calc(100vh-8rem)]">
              <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-full">
                     <button onClick={() => setView('today')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'today' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Today</button>
@@ -346,7 +343,6 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
                     {view === 'today' ? (
                        <TodayView 
                           selectedDate={selectedDate}
-                          changeDate={changeDate}
                           tasks={tasksForSelectedDate}
                           categoryColors={categoryColors}
                           onSelectTask={setSelectedTask}

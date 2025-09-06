@@ -4,7 +4,6 @@ import React, { useState, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Task, Project, Note, Notebook, Goal, Category, TaskStatus, ScheduleView, ChatMessage } from '../types';
 import { PlusCircleIcon, ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, CalendarIcon } from './Icons';
-import { getCategoryColor } from '../constants';
 import EventDetail from './EventDetail';
 import NewTaskModal from './NewTaskModal';
 import { triggerHapticFeedback } from '../utils/haptics';
@@ -17,6 +16,7 @@ interface ScheduleProps {
     notebooks: Notebook[];
     goals: Goal[];
     categories: Category[];
+    categoryColors: Record<Category, string>;
     showToast: (message: string) => void;
     onCompleteTask: (taskId: number, actualDuration: number) => void;
     triggerInsightGeneration: (task: Task, isRegeneration: boolean) => void;
@@ -25,10 +25,12 @@ interface ScheduleProps {
     deleteTask: (taskId: number) => void;
     addTask: (task: Partial<Task> & { title: string }) => void;
     onTaskSwap: (draggedId: number, targetId: number) => void;
+    onAddNewCategory: (name: string) => boolean;
 }
 
-const TaskItem: React.FC<{ task: Task; onSelect: (task: Task) => void; onComplete: () => void; onDragStart: (e: React.DragEvent<HTMLDivElement>, taskId: number) => void; onDrop: (e: React.DragEvent<HTMLDivElement>, targetTaskId: number) => void; }> = ({ task, onSelect, onComplete, onDragStart, onDrop }) => {
+const TaskItem: React.FC<{ task: Task; onSelect: (task: Task) => void; onComplete: () => void; onDragStart: (e: React.DragEvent<HTMLDivElement>, taskId: number) => void; onDrop: (e: React.DragEvent<HTMLDivElement>, targetTaskId: number) => void; categoryColors: Record<Category, string>; }> = ({ task, onSelect, onComplete, onDragStart, onDrop, categoryColors }) => {
     const isCompleted = task.status === TaskStatus.Completed;
+    const categoryColor = categoryColors[task.category] || '#6B7280';
     
     return (
         <motion.div
@@ -42,13 +44,13 @@ const TaskItem: React.FC<{ task: Task; onSelect: (task: Task) => void; onComplet
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className={`flex items-center gap-4 p-3 rounded-lg transition-all duration-300 ${isCompleted ? '' : 'bg-card hover:shadow-lg cursor-grab'}`}
-            style={isCompleted ? { backgroundColor: getCategoryColor(task.category) } : {}}
+            style={isCompleted ? { backgroundColor: categoryColor } : {}}
         >
             <div className={`flex-shrink-0 w-16 text-center ${isCompleted ? 'text-white/80' : ''}`}>
                 <p className={`font-bold text-sm ${isCompleted ? 'text-white' : ''}`}>{new Date(task.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
                 <p className={`text-xs ${isCompleted ? 'text-white/70' : 'text-text-secondary'}`}>{task.plannedDuration} min</p>
             </div>
-            {!isCompleted && <div className="w-1.5 h-full rounded-full" style={{ backgroundColor: getCategoryColor(task.category) }}></div>}
+            {!isCompleted && <div className="w-1.5 h-full rounded-full" style={{ backgroundColor: categoryColor }}></div>}
             <div className="flex-grow cursor-pointer" onClick={() => onSelect(task)}>
                 <p className={`font-semibold ${isCompleted ? 'line-through text-white' : ''}`}>{task.title}</p>
                 <p className={`text-xs ${isCompleted ? 'text-white/70' : 'text-text-secondary'}`}>{task.category}</p>
@@ -57,9 +59,11 @@ const TaskItem: React.FC<{ task: Task; onSelect: (task: Task) => void; onComplet
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
+                        triggerHapticFeedback('success');
                         onComplete();
                     }}
-                    className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full border-2 transition-colors border-gray-300 dark:border-gray-600 hover:border-accent`}
+                    className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full border-2 transition-colors hover:bg-black/5 dark:hover:bg-white/10`}
+                    style={{ borderColor: categoryColor }}
                 >
                 </button>
             }
@@ -67,7 +71,7 @@ const TaskItem: React.FC<{ task: Task; onSelect: (task: Task) => void; onComplet
     );
 };
 
-const MonthView: React.FC<{ tasks: Task[], selectedDate: Date, setSelectedDate: (date: Date) => void, onSelectTask: (task: Task) => void }> = ({ tasks, selectedDate, setSelectedDate, onSelectTask }) => {
+const MonthView: React.FC<{ tasks: Task[], selectedDate: Date, setSelectedDate: (date: Date) => void, onSelectTask: (task: Task) => void, categoryColors: Record<Category, string> }> = ({ tasks, selectedDate, setSelectedDate, onSelectTask, categoryColors }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
 
     const daysInMonth = () => new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -108,7 +112,7 @@ const MonthView: React.FC<{ tasks: Task[], selectedDate: Date, setSelectedDate: 
                     <div className={`text-xs font-bold ${isToday ? 'text-accent' : ''}`}>{day}</div>
                     <div className="space-y-0.5 mt-1">
                         {dailyTasks.slice(0, 2).map(task => (
-                            <div key={task.id} onClick={(e) => {e.stopPropagation(); onSelectTask(task);}} className="text-xs p-0.5 rounded-sm truncate cursor-pointer" style={{ backgroundColor: getCategoryColor(task.category) + '80' }}>
+                            <div key={task.id} onClick={(e) => {e.stopPropagation(); onSelectTask(task);}} className="text-xs p-0.5 rounded-sm truncate cursor-pointer" style={{ backgroundColor: (categoryColors[task.category] || '#6B7280') + '80' }}>
                                 {task.title}
                             </div>
                         ))}
@@ -136,7 +140,7 @@ const MonthView: React.FC<{ tasks: Task[], selectedDate: Date, setSelectedDate: 
 };
 
 const Schedule: React.FC<ScheduleProps> = (props) => {
-    const { tasks, onCompleteTask, showToast, onTaskSwap } = props;
+    const { tasks, onCompleteTask, showToast, onTaskSwap, categoryColors } = props;
     const [view, setView] = useState<ScheduleView>('today');
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -213,6 +217,7 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
                                         onComplete={() => onCompleteTask(task.id, task.plannedDuration)}
                                         onDragStart={handleDragStart}
                                         onDrop={handleDrop}
+                                        categoryColors={categoryColors}
                                     />
                                 )) : (
                                     <div className="text-center py-16 text-text-secondary">
@@ -223,7 +228,7 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
                             </div>
                         </div>
                     ) : (
-                        <MonthView tasks={tasks} selectedDate={selectedDate} setSelectedDate={setSelectedDate} onSelectTask={setSelectedTask} />
+                        <MonthView tasks={tasks} selectedDate={selectedDate} setSelectedDate={setSelectedDate} onSelectTask={setSelectedTask} categoryColors={categoryColors} />
                     )}
                 </motion.div>
             </AnimatePresence>
@@ -238,6 +243,8 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
                         projects={props.projects}
                         goals={props.goals}
                         categories={props.categories}
+                        categoryColors={props.categoryColors}
+                        onAddNewCategory={props.onAddNewCategory}
                         updateTask={(updatedTask) => {
                             props.setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
                             setSelectedTask(updatedTask);
@@ -264,6 +271,9 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
                         projects={props.projects}
                         notes={props.notes}
                         categories={props.categories}
+                        categoryColors={props.categoryColors}
+                        onAddNewCategory={props.onAddNewCategory}
+                        allTasks={tasks}
                         showToast={props.showToast}
                     />
                 )}

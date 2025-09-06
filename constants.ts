@@ -25,6 +25,12 @@ export const CATEGORY_COLORS: Record<Category, string> = {
     'Deep Work': '#0EA5E9' // sky-500
 };
 
+export const PRESET_COLORS = [
+    '#A855F7', '#3B82F6', '#F59E0B', '#EC4899', '#10B981', '#6366F1', '#84CC16', '#0EA5E9', // Original
+    '#EF4444', '#F97316', '#EAB308', '#22C55E', '#06B6D4', '#D946EF', '#F43F5E' // Added
+];
+
+
 export const getCategoryColor = (category: Category): string => {
     return CATEGORY_COLORS[category] || '#6B7280'; // gray-500
 };

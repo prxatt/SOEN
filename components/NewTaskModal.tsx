@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Category, TaskStatus, Project, Note } from '../types';
-import { getCategoryColor } from '../constants';
 import { PlusCircleIcon, ChevronLeftIcon, ChevronRightIcon, SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, PaperClipIcon, PlayIcon, CheckCircleIcon, ArrowUturnLeftIcon, CalendarIcon, LinkIcon } from './Icons';
 import { triggerHapticFeedback } from '../utils/haptics';
 import { getAutocompleteSuggestions } from '../services/geminiService';
 import { parseTaskFromString } from '../services/kikoAIService';
+import { getTopCategories } from '../utils/taskUtils';
 
 // --- PROPS ---
 interface NewTaskModalProps {
@@ -15,6 +15,9 @@ interface NewTaskModalProps {
   projects: Project[];
   notes: Note[];
   categories: Category[];
+  categoryColors: Record<Category, string>;
+  onAddNewCategory: (name: string) => boolean;
+  allTasks: Task[];
   showToast: (message: string) => void;
 }
 
@@ -27,7 +30,7 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
 }
 
 
-const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedDate, projects, notes, categories, showToast }) => {
+const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedDate, projects, notes, categories, categoryColors, onAddNewCategory, allTasks, showToast }) => {
     const [taskDetails, setTaskDetails] = useState<Partial<Task>>({
         title: '',
         category: 'Prototyping',
@@ -46,6 +49,9 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedD
     const [locationSuggestions, setLocationSuggestions] = useState<{place_name: string; address: string}[]>([]);
 
     const titleInputRef = useRef<HTMLInputElement>(null);
+    const topCategories = useMemo(() => getTopCategories(allTasks, 5), [allTasks]);
+    const otherCategories = useMemo(() => categories.filter(c => !topCategories.includes(c) && c !== taskDetails.category), [categories, topCategories, taskDetails.category]);
+
 
     useEffect(() => { titleInputRef.current?.focus(); }, []);
     
@@ -97,6 +103,21 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedD
         } else {
             setIsParsing(false);
             setAiSummary(null);
+        }
+    };
+
+    const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = e.target.value;
+        if (value === 'CREATE_NEW') {
+            const newCategoryName = prompt('Enter new category name:');
+            if (newCategoryName && newCategoryName.trim()) {
+                const success = onAddNewCategory(newCategoryName.trim());
+                if (success) {
+                    setTaskDetails({...taskDetails, category: newCategoryName.trim() as Category});
+                }
+            }
+        } else {
+            setTaskDetails({...taskDetails, category: value as Category});
         }
     };
 
@@ -172,10 +193,22 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedD
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="task-category" className="block text-sm font-medium text-text-secondary mb-1">Category</label>
-                        <input list="category-list" id="task-category" value={taskDetails.category} onChange={e => setTaskDetails({...taskDetails, category: e.target.value as Category})} className={`block w-full px-3 py-2 bg-bg border border-border rounded-lg ${highlightedFields.includes('category') ? 'animate-highlight' : ''}`} />
-                        <datalist id="category-list">
-                            {categories.map(cat => <option key={cat} value={cat} />)}
-                        </datalist>
+                        <select
+                            id="task-category"
+                            value={taskDetails.category}
+                            onChange={handleCategoryChange}
+                            className={`block w-full px-3 py-2 bg-bg border border-border rounded-lg ${highlightedFields.includes('category') ? 'animate-highlight' : ''}`}
+                        >
+                            <optgroup label="Top Categories">
+                                {topCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                            </optgroup>
+                            {otherCategories.length > 0 && (
+                                <optgroup label="Other Categories">
+                                    {otherCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                </optgroup>
+                            )}
+                             <option value="CREATE_NEW" style={{ fontStyle: 'italic' }}>+ Create New...</option>
+                        </select>
                     </div>
                     <div>
                         <label htmlFor="task-repeat" className="block text-sm font-medium text-text-secondary mb-1">Repeat</label>
@@ -235,7 +268,7 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedD
                     </motion.div>
                 </AnimatePresence>
 
-                <button type="submit" className="w-full py-3 px-4 text-white font-semibold rounded-lg shadow-md transition-colors" style={{backgroundColor: getCategoryColor(taskDetails.category!)}}>Add Task</button>
+                <button type="submit" className="w-full py-3 px-4 text-white font-semibold rounded-lg shadow-md transition-colors" style={{backgroundColor: categoryColors[taskDetails.category!] || '#6B7280'}}>Add Task</button>
             </motion.form>
          </div>
     )

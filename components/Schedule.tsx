@@ -1,12 +1,9 @@
-
-
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { AnimatePresence, motion, PanInfo } from 'framer-motion';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Task, Project, Note, Notebook, Goal, Category, TaskStatus, ScheduleView, ChatMessage } from '../types';
-import { PlusCircleIcon, ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, CalendarIcon, GridIcon, ArrowUturnLeftIcon } from './Icons';
+import { PlusCircleIcon, ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, CalendarIcon, CheckCircleIcon, ArrowUturnLeftIcon, PlusIcon } from './Icons';
 import EventDetail from './EventDetail';
 import NewTaskModal from './NewTaskModal';
-import { triggerHapticFeedback } from '../utils/haptics';
 
 interface ScheduleProps {
     tasks: Task[];
@@ -29,238 +26,273 @@ interface ScheduleProps {
     onAddNewCategory: (name: string) => boolean;
 }
 
-const MonthView: React.FC<{ tasks: Task[], selectedDate: Date, setView: (view: ScheduleView) => void, setSelectedDate: (date: Date) => void; categoryColors: Record<Category, string>; categoryFilter: Category | null }> = ({ tasks, selectedDate, setSelectedDate, setView, categoryColors, categoryFilter }) => {
-    const [currentMonthDate, setCurrentMonthDate] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
+    if (!hexColor.startsWith('#')) return 'black';
+    const r = parseInt(hexColor.slice(1, 3), 16);
+    const g = parseInt(hexColor.slice(3, 5), 16);
+    const b = parseInt(hexColor.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? 'black' : 'white';
+};
+
+
+const TaskCard: React.FC<{ task: Task; categoryColors: Record<Category, string>; onSelect: (task: Task) => void;}> = ({ task, categoryColors, onSelect }) => {
+    const categoryColor = categoryColors[task.category] || '#6B7280';
+    const textColor = getTextColorForBackground(categoryColor);
+    const startTime = new Date(task.startTime);
+    const endTime = new Date(startTime.getTime() + task.plannedDuration * 60000);
+    const isCompleted = task.status === TaskStatus.Completed;
+
+    return (
+        <motion.div
+            layoutId={`task-card-${task.id}`}
+            onClick={() => onSelect(task)}
+            animate={{ opacity: isCompleted ? 0.6 : 1 }}
+            className="p-4 rounded-3xl cursor-pointer"
+            style={{ backgroundColor: categoryColor, color: textColor }}
+        >
+            <div className="flex justify-between items-start">
+                <div className="w-3/4">
+                     <h3 className="text-2xl font-bold relative inline-block">{task.title}
+                        <AnimatePresence>
+                        {isCompleted && (
+                            <motion.div
+                              className="absolute top-1/2 left-0 w-full h-0.5 bg-current"
+                              initial={{ scaleX: 0 }}
+                              animate={{ scaleX: 1, transition: { duration: 0.4, ease: 'circOut' } }}
+                              exit={{ scaleX: 0 }}
+                              style={{ originX: 0 }}
+                            />
+                        )}
+                        </AnimatePresence>
+                    </h3>
+                </div>
+                <div className="flex -space-x-2">
+                    <img className="w-8 h-8 rounded-full object-cover" style={{ borderWidth: '2px', borderColor: textColor }} src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop" alt="user 1" />
+                    <img className="w-8 h-8 rounded-full object-cover" style={{ borderWidth: '2px', borderColor: textColor }} src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop" alt="user 2" />
+                </div>
+            </div>
+            <div className={`mt-6 pt-4 border-t border-black/20 flex justify-between items-center`}>
+                <div className="text-center">
+                    <p className="font-semibold">{startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="text-sm opacity-80">Start</p>
+                </div>
+                <div className={`px-4 py-1.5 rounded-full text-sm font-semibold`} style={{ backgroundColor: 'rgba(0,0,0,0.15)', color: textColor }}>
+                    {task.plannedDuration} Min
+                </div>
+                <div className="text-center">
+                    <p className="font-semibold">{endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="text-sm opacity-80">End</p>
+                </div>
+            </div>
+        </motion.div>
+    );
+};
+
+const TodayView: React.FC<{ selectedDate: Date; changeDate: (amount: number); tasks: Task[]; categoryColors: Record<Category, string>; onSelectTask: (task: Task) => void; }> = ({ selectedDate, changeDate, tasks, categoryColors, onSelectTask }) => {
+    const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    const monthNum = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const month = selectedDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timerId);
+    }, []);
+
+    return (
+        <div>
+            <div className="flex mb-8">
+                <div className="flex-grow">
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-medium text-text-secondary">{dayOfWeek}</h3>
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => changeDate(-1)} className="p-1 rounded-full hover:bg-card"><ChevronLeftIcon className="w-5 h-5"/></button>
+                            <button onClick={() => changeDate(1)} className="p-1 rounded-full hover:bg-card"><ChevronRightIcon className="w-5 h-5"/></button>
+                        </div>
+                    </div>
+                    <div className="flex items-end gap-4 mt-1">
+                        <p className="text-7xl font-bold font-display tracking-tighter leading-none">{day}.{monthNum}</p>
+                        <p className="text-7xl font-bold font-display tracking-tight leading-none text-text-secondary">{month}</p>
+                    </div>
+                </div>
+                <div className="border-l border-border pl-4 flex-shrink-0 flex flex-col justify-center">
+                    <div className="text-right">
+                        <p className="font-semibold text-lg">{currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                        <p className="text-sm text-text-secondary">San Francisco</p>
+                    </div>
+                    <div className="text-right mt-4">
+                        <p className="font-semibold text-lg">{currentTime.toLocaleTimeString([], {timeZone: 'Europe/London', hour: '2-digit', minute:'2-digit'})}</p>
+                        <p className="text-sm text-text-secondary">United Kingdom</p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 className="font-semibold mb-4">Today's tasks</h4>
+                {tasks.length > 0 ? (
+                    <div className="space-y-4">
+                        {tasks.map(task => <TaskCard key={task.id} task={task} categoryColors={categoryColors} onSelect={onSelectTask} />)}
+                    </div>
+                ) : (
+                     <div className="text-center py-16 text-text-secondary rounded-2xl bg-card">
+                        <p>Nothing scheduled for today.</p>
+                     </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+
+const MiniTimeline: React.FC<{ tasks: Task[]; textColor: string; date: Date; onAddTask: (date: Date, hour: number) => void; categoryColors: Record<Category, string> }> = ({ tasks, textColor, date, onAddTask, categoryColors }) => {
+    const tasksByHour = useMemo(() => {
+        const groups: Record<number, Task[]> = {};
+        tasks.forEach(task => {
+            const hour = new Date(task.startTime).getHours();
+            if (!groups[hour]) groups[hour] = [];
+            groups[hour].push(task);
+        });
+        return groups;
+    }, [tasks]);
+    
+    const visibleHours = [];
+    const displayStartHour = 5; // 5 AM
+    const displayEndHour = 23;  // 11 PM (slot ends at 12 AM)
+
+    for (let i = displayStartHour; i <= displayEndHour; i++) {
+        visibleHours.push(i);
+    }
+
+    return (
+        <div className="flex h-full gap-2 pl-4 -mr-4 overflow-x-auto pb-2">
+            {visibleHours.map(hour => (
+                <div key={hour} className="flex flex-col items-center flex-shrink-0 w-24">
+                    <div className="text-center border-b w-full pb-1" style={{ borderColor: `${textColor}40`}}>
+                        <span className="text-xs font-semibold">{hour % 12 === 0 ? 12 : hour % 12}{hour < 12 ? ' am' : ' pm'}</span>
+                    </div>
+                    <div className="flex-grow w-full pt-2 space-y-1.5 min-h-[6rem]">
+                        {(tasksByHour[hour] || []).map(task => (
+                             <div key={task.id} className="p-1.5 rounded-lg text-xs break-words" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                                {task.title}
+                             </div>
+                        ))}
+                        <button onClick={() => onAddTask(date, hour)} className="w-full flex justify-center items-center h-8 rounded-lg transition-colors hover:bg-black/20" style={{ backgroundColor: 'rgba(0,0,0,0.1)'}}>
+                            <PlusIcon className="w-4 h-4" style={{ color: textColor, opacity: 0.7 }} />
+                        </button>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+
+const CalendarDayCard: React.FC<{ date: Date; tasks: Task[]; categoryColors: Record<Category, string>; onAddTask: (date: Date, hour: number) => void; }> = ({ date, tasks, categoryColors, onAddTask }) => {
+    const bgColor = tasks.length > 0 ? categoryColors[tasks[0].category] : '#374151'; // gray-700
+    const textColor = getTextColorForBackground(bgColor);
+
+    return (
+        <div
+            className="rounded-3xl p-4 flex min-h-[10rem]"
+            style={{ backgroundColor: bgColor, color: textColor }}
+        >
+            <div className="w-1/3 flex-shrink-0 pr-4">
+                <p className="font-semibold">{date.toLocaleDateString('en-US', { weekday: 'long' })}</p>
+                <p className="text-6xl font-bold font-display tracking-tighter leading-none mt-1">{String(date.getDate()).padStart(2, '0')}</p>
+                <p className="text-6xl font-bold font-display tracking-tight leading-none opacity-60">{date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</p>
+            </div>
+            <div className="w-2/3">
+                <MiniTimeline tasks={tasks} textColor={textColor} date={date} onAddTask={onAddTask} categoryColors={categoryColors}/>
+            </div>
+        </div>
+    );
+};
+
+
+const CalendarView: React.FC<{ tasks: Task[]; categoryColors: Record<Category, string>; onAddTask: (date: Date, hour: number) => void; }> = ({ tasks, categoryColors, onAddTask }) => {
+    const [currentMonthDate, setCurrentMonthDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    const listRef = useRef<HTMLDivElement>(null);
 
     const tasksByDate = useMemo(() => {
         return tasks.reduce((acc, task) => {
-            if (categoryFilter && task.category !== categoryFilter) return acc;
             const dateStr = new Date(task.startTime).toDateString();
             if (!acc[dateStr]) acc[dateStr] = [];
             acc[dateStr].push(task);
             return acc;
         }, {} as Record<string, Task[]>);
-    }, [tasks, categoryFilter]);
+    }, [tasks]);
 
     const changeMonth = (amount: number) => {
         setCurrentMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() + amount, 1));
     };
+    
+    useEffect(() => {
+        listRef.current?.scrollTo(0, 0);
+    }, [currentMonthDate]);
 
-    const renderCells = () => {
-        const cells: JSX.Element[] = [];
+    const dayElements = useMemo(() => {
         const year = currentMonthDate.getFullYear();
         const month = currentMonthDate.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const firstDayOfMonth = new Date(year, month, 1).getDay();
-        const today = new Date();
         
-        const daysInPrevMonth = new Date(year, month, 0).getDate();
-        for (let i = firstDayOfMonth - 1; i >= 0; i--) {
-            cells.push(<div key={`prev-${i}`} className="text-center p-2 text-text-secondary/30 h-28">{daysInPrevMonth - i}</div>);
-        }
-
+        const elements: JSX.Element[] = [];
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(year, month, day);
             const dateStr = date.toDateString();
-            const isToday = dateStr === today.toDateString();
-            const isSelected = dateStr === selectedDate.toDateString();
             const dailyTasks = (tasksByDate[dateStr] || []).sort((a,b) => a.startTime.getTime() - b.startTime.getTime());
-
-            cells.push(
-                <button
-                    key={day}
-                    onClick={() => { setSelectedDate(date); setView('today'); }}
-                    className={`relative flex flex-col items-start justify-start p-1.5 transition-colors duration-200 rounded-lg focus:outline-none overflow-hidden h-28 ${isSelected ? 'bg-accent/10' : 'hover:bg-card'}`}
-                >
-                    <span className={`text-xs font-bold self-end ${isSelected ? 'text-accent' : isToday ? 'text-text' : 'text-text-secondary'}`}>
-                        {day}
-                    </span>
-                    <div className="w-full space-y-1 overflow-hidden mt-1">
-                        {dailyTasks.slice(0, 3).map(task => (
-                             <div key={task.id} className="flex items-center gap-1.5 text-xs text-left truncate">
-                                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: categoryColors[task.category] }} />
-                                <span className={`truncate ${task.status === TaskStatus.Completed ? 'text-text-secondary line-through' : 'text-text'}`}>{task.title}</span>
-                            </div>
-                        ))}
-                        {dailyTasks.length > 3 && (
-                            <div className="text-xs text-text-secondary pl-3.5 pt-1">+{dailyTasks.length - 3} more</div>
-                        )}
-                    </div>
-                    {isToday && <div className="absolute bottom-1 right-1 w-1.5 h-1.5 bg-accent rounded-full animate-subtle-glow" />}
-                </button>
+            elements.push(
+                <CalendarDayCard key={dateStr} date={date} tasks={dailyTasks} categoryColors={categoryColors} onAddTask={onAddTask}/>
             );
         }
+        return elements;
+    }, [currentMonthDate, tasksByDate, categoryColors, onAddTask]);
 
-        const totalCells = firstDayOfMonth + daysInMonth;
-        const nextMonthDays = (7 - (totalCells % 7)) % 7;
-        for (let i = 1; i <= nextMonthDays; i++) {
-            cells.push(<div key={`next-${i}`} className="text-center p-2 text-text-secondary/30 h-28">{i}</div>);
-        }
 
-        return cells;
-    };
+    const prevMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1).toLocaleString('default', { month: 'short' }).toUpperCase();
+    const currentMonth = currentMonthDate.toLocaleString('default', { month: 'long' }).toUpperCase();
+    const nextMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1).toLocaleString('default', { month: 'short' }).toUpperCase();
     
     return (
-        <div className="bg-bg/50 p-4 rounded-2xl">
-            <div className="flex items-center justify-between px-2 mb-4">
-                 <div className="flex items-baseline gap-2">
-                    <GridIcon className="w-6 h-6 text-accent" />
-                    <h2 className="text-2xl font-bold uppercase tracking-widest text-accent">
-                        {currentMonthDate.toLocaleString('default', { month: 'long' })}
-                    </h2>
-                 </div>
-                 <p className="text-xl font-medium text-text-secondary">{currentMonthDate.getFullYear()}</p>
-                 <div className="flex items-center">
-                    <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-card"><ChevronLeftIcon className="w-6 h-6"/></button>
-                    <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-card"><ChevronRightIcon className="w-6 h-6"/></button>
-                 </div>
+        <div className="flex flex-col h-full">
+            <div className="flex justify-between items-center text-xl font-bold p-2 mb-4">
+                <span className="text-text-secondary/50 font-medium">{prevMonth}</span>
+                <div className="flex items-center gap-2 text-2xl font-display">
+                    <button onClick={() => changeMonth(-1)} className="p-1 rounded-full hover:bg-card"><ChevronLeftIcon className="w-6 h-6"/></button>
+                    <span>{currentMonth}</span>
+                    <button onClick={() => changeMonth(1)} className="p-1 rounded-full hover:bg-card"><ChevronRightIcon className="w-6 h-6"/></button>
+                </div>
+                <span className="text-text-secondary/50 font-medium">{nextMonth}</span>
             </div>
-            <div className="grid grid-cols-7 text-center text-xs font-bold text-text-secondary/50 mb-2">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => <div key={day}>{day}</div>)}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-                {renderCells()}
+            <div className="relative flex-grow h-0 overflow-hidden">
+                 <AnimatePresence mode="wait">
+                    <motion.div
+                        key={currentMonthDate.toISOString()}
+                        ref={listRef}
+                        className="absolute inset-0 overflow-y-auto pr-2 -mr-2 space-y-3"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.25 }}
+                    >
+                        {dayElements}
+                    </motion.div>
+                 </AnimatePresence>
             </div>
         </div>
     );
 };
 
-
-const ColorFilter: React.FC<{categoryColors: Record<Category, string>, onFilterChange: (category: Category | null) => void, activeFilter: Category | null}> = ({ categoryColors, onFilterChange, activeFilter }) => {
-    const lastHoveredRef = useRef<string | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    const handlePan = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-        const element = document.elementFromPoint(info.point.x, info.point.y);
-        const category = element?.getAttribute('data-category') as Category | 'all' | null;
-
-        if (category && category !== lastHoveredRef.current) {
-            lastHoveredRef.current = category;
-            triggerHapticFeedback('light');
-            onFilterChange(category === 'all' ? null : category);
-            
-            const dot = containerRef.current?.querySelector(`[data-category="${category}"]`);
-            if (dot) {
-                dot.classList.add('animate-pop-in');
-                setTimeout(() => dot.classList.remove('animate-pop-in'), 200);
-            }
-        }
-    };
-    
-    return (
-        <motion.div
-            ref={containerRef}
-            onPan={handlePan}
-            onPanEnd={() => lastHoveredRef.current = null}
-            className="card flex justify-center items-center gap-2 mt-4 p-2 rounded-full shadow-lg mx-auto max-w-sm touch-none"
-            >
-            <button data-category="all" onClick={() => onFilterChange(null)} className={`text-xs font-bold px-3 py-1 rounded-full ${!activeFilter ? 'bg-accent text-white' : 'text-text-secondary'}`}>All</button>
-            <div className="w-px h-4 bg-border"/>
-            {Object.entries(categoryColors).map(([category, color]) => (
-                <div
-                    key={category}
-                    data-category={category}
-                    className={`w-5 h-5 rounded-full border-2 transition-all duration-200`}
-                    style={{ backgroundColor: color, borderColor: activeFilter === category ? 'var(--color-text)' : color, transform: activeFilter === category ? 'scale(1.2)' : 'scale(1)' }}
-                />
-            ))}
-        </motion.div>
-    )
-}
-
-const PIXELS_PER_HOUR = 80;
-const PIXELS_PER_MINUTE = PIXELS_PER_HOUR / 60;
-const TIMELINE_START_HOUR = 6;
-const TIMELINE_END_HOUR = 24;
-
-const TimelineTaskItem: React.FC<{ task: Task; onSelect: (task: Task) => void; categoryColors: Record<Category, string>; }> = ({ task, onSelect, categoryColors }) => {
-    const start = task.startTime.getHours() + task.startTime.getMinutes() / 60;
-    const top = (start - TIMELINE_START_HOUR) * PIXELS_PER_HOUR;
-    const height = task.plannedDuration * PIXELS_PER_MINUTE;
-    const categoryColor = categoryColors[task.category] || '#6B7280';
-    const isCompleted = task.status === TaskStatus.Completed;
-
-    return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            onClick={() => onSelect(task)}
-            className={`absolute left-16 right-0 rounded-lg p-2 cursor-pointer transition-all duration-300 flex flex-col justify-between overflow-hidden hover:scale-[1.01] hover:shadow-lg`}
-            style={{
-                top: `${top}px`,
-                height: `${Math.max(height, 30)}px`,
-                backgroundColor: isCompleted ? `${categoryColor}80` : `${categoryColor}33`,
-                borderLeft: `3px solid ${categoryColor}`
-            }}
-        >
-            <div>
-                <p className={`font-bold text-sm break-word ${isCompleted ? 'line-through text-text/80' : 'text-text'}`}>{task.title}</p>
-                <p className={`text-xs ${isCompleted ? 'text-text/60' : 'text-text/80'}`}>{task.plannedDuration} min</p>
-            </div>
-        </motion.div>
-    );
-};
-
-const TodayTimelineView: React.FC<{ tasks: Task[]; onSelectTask: (task: Task) => void; categoryColors: Record<Category, string>; selectedDate: Date }> = ({ tasks, onSelectTask, categoryColors, selectedDate }) => {
-    const timelineRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const now = new Date();
-        const isToday = now.toDateString() === selectedDate.toDateString();
-        const firstTask = tasks[0];
-
-        let scrollTargetHour = isToday ? now.getHours() : 8;
-        if (firstTask && firstTask.startTime.getHours() < scrollTargetHour) {
-            scrollTargetHour = firstTask.startTime.getHours();
-        }
-
-        const scrollTop = Math.max(0, (scrollTargetHour - TIMELINE_START_HOUR - 0.5) * PIXELS_PER_HOUR);
-        timelineRef.current?.scrollTo({ top: scrollTop, behavior: 'smooth' });
-    }, [tasks, selectedDate]);
-
-    const hours = Array.from({ length: TIMELINE_END_HOUR - TIMELINE_START_HOUR + 1 }, (_, i) => TIMELINE_START_HOUR + i);
-    const now = new Date();
-    const nowTop = (now.getHours() - TIMELINE_START_HOUR + now.getMinutes() / 60) * PIXELS_PER_HOUR;
-    const isToday = now.toDateString() === selectedDate.toDateString();
-
-    return (
-        <div ref={timelineRef} className="card rounded-2xl overflow-y-auto relative h-[calc(100vh-15rem)] bg-bg/50">
-            <div className="relative" style={{ height: `${(TIMELINE_END_HOUR - TIMELINE_START_HOUR + 1) * PIXELS_PER_HOUR}px` }}>
-                {hours.map(hour => (
-                    <div key={hour} className="absolute w-full flex items-start" style={{ top: `${(hour - TIMELINE_START_HOUR) * PIXELS_PER_HOUR}px` }}>
-                        <span className="text-xs font-mono text-text-secondary pr-3 -mt-2">{`${String(hour).padStart(2, '0')}:00`}</span>
-                        <div
-                            className="flex-grow border-t border-border/50 animate-draw-in"
-                            style={{ animationDelay: `${(hour - TIMELINE_START_HOUR) * 30}ms` }}
-                        />
-                    </div>
-                ))}
-                {isToday && nowTop > 0 && (
-                     <div className="absolute left-16 right-0 h-px bg-red-500 z-10 animate-time-pulse" style={{ top: `${nowTop}px` }}>
-                        <div className="absolute -left-1.5 -top-1 w-3 h-3 bg-red-500 rounded-full ring-2 ring-bg"></div>
-                    </div>
-                )}
-                <AnimatePresence>
-                    {tasks.map(task => (
-                        <TimelineTaskItem key={task.id} task={task} onSelect={onSelectTask} categoryColors={categoryColors} />
-                    ))}
-                </AnimatePresence>
-            </div>
-        </div>
-    );
-};
 
 const Schedule: React.FC<ScheduleProps> = (props) => {
-    const { tasks, onCompleteTask, onUndoCompleteTask, categoryColors } = props;
+    const { tasks, setTasks, showToast, onCompleteTask, onUndoCompleteTask, categoryColors } = props;
     const [view, setView] = useState<ScheduleView>('today');
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
-    const [categoryFilter, setCategoryFilter] = useState<Category | null>(null);
-    
+    const [prefillDateForModal, setPrefillDateForModal] = useState<Date>(new Date());
+
     const tasksForSelectedDate = useMemo(() => {
         return tasks
             .filter(t => new Date(t.startTime).toDateString() === selectedDate.toDateString())
@@ -273,18 +305,33 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
         setSelectedDate(newDate);
     };
 
+    const handleOpenNewTaskModal = useCallback((date: Date, hour?: number) => {
+        const prefillDate = new Date(date);
+        if (hour !== undefined) {
+            prefillDate.setHours(hour, 0, 0, 0);
+        } else {
+             const now = new Date();
+             prefillDate.setHours(now.getHours() + 1, 0, 0, 0);
+        }
+        setPrefillDateForModal(prefillDate);
+        setIsNewTaskModalOpen(true);
+    }, [setPrefillDateForModal, setIsNewTaskModalOpen]);
+
+    const handleHeaderAddTask = () => {
+        const dateForModal = view === 'month' ? new Date() : selectedDate;
+        handleOpenNewTaskModal(dateForModal);
+    };
+
     return (
-        <div className="h-full">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold font-display">{view === 'today' ? `Schedule, ${selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}` : 'Schedule'}</h2>
-                <div className="flex items-center gap-2">
-                     <button onClick={() => setView(v => v === 'today' ? 'month' : 'today')} className="p-2 rounded-lg hover:bg-card transition-colors" aria-label={view === 'today' ? 'Switch to Month View' : 'Switch to Day View'}>
-                        {view === 'today' ? <CalendarDaysIcon className="w-5 h-5"/> : <CalendarIcon className="w-5 h-5"/>}
-                    </button>
-                     <button onClick={() => setIsNewTaskModalOpen(true)} className="flex items-center justify-center gap-1.5 text-sm font-semibold py-2 px-4 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors">
-                        <PlusCircleIcon className="w-5 h-5"/> New Task
-                    </button>
+        <div className="h-[calc(100vh-10rem)]">
+             <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-full">
+                    <button onClick={() => setView('today')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'today' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Today</button>
+                    <button onClick={() => setView('month')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'month' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Calendar</button>
                 </div>
+                <button onClick={handleHeaderAddTask} className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors">
+                    <PlusIcon className="w-6 h-6"/>
+                </button>
             </div>
 
             <AnimatePresence mode="wait">
@@ -294,33 +341,18 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
+                    className="h-full"
                 >
                     {view === 'today' ? (
-                        <>
-                            <div className="flex justify-between items-center mb-4 px-2">
-                                <button onClick={() => changeDate(-1)} className="p-2 rounded-full hover:bg-card"><ChevronLeftIcon className="w-6 h-6"/></button>
-                                <h3 className="font-semibold text-lg text-center">
-                                    {selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}
-                                </h3>
-                                <button onClick={() => changeDate(1)} className="p-2 rounded-full hover:bg-card"><ChevronRightIcon className="w-6 h-6"/></button>
-                            </div>
-                            
-                            {tasksForSelectedDate.length > 0 ? (
-                                <TodayTimelineView tasks={tasksForSelectedDate} onSelectTask={setSelectedTask} categoryColors={categoryColors} selectedDate={selectedDate} />
-                            ) : (
-                                <div className="text-center py-16 text-text-secondary h-[calc(100vh-17rem)] flex flex-col items-center justify-center card rounded-2xl">
-                                    <p>Nothing scheduled for this day.</p>
-                                    <button onClick={() => setIsNewTaskModalOpen(true)} className="mt-2 text-accent font-semibold">Plan your day?</button>
-                                </div>
-                            )}
-                        </>
+                       <TodayView 
+                          selectedDate={selectedDate}
+                          changeDate={changeDate}
+                          tasks={tasksForSelectedDate}
+                          categoryColors={categoryColors}
+                          onSelectTask={setSelectedTask}
+                       />
                     ) : (
-                        <div className="relative pb-28">
-                             <MonthView tasks={tasks} selectedDate={selectedDate} setSelectedDate={setSelectedDate} setView={setView} categoryColors={categoryColors} categoryFilter={categoryFilter} />
-                             <div className="fixed bottom-24 left-0 right-0 z-10">
-                                <ColorFilter categoryColors={categoryColors} onFilterChange={setCategoryFilter} activeFilter={categoryFilter}/>
-                             </div>
-                        </div>
+                        <CalendarView tasks={tasks} categoryColors={categoryColors} onAddTask={handleOpenNewTaskModal} />
                     )}
                 </motion.div>
             </AnimatePresence>
@@ -363,7 +395,7 @@ const Schedule: React.FC<ScheduleProps> = (props) => {
                     <NewTaskModal 
                         onClose={() => setIsNewTaskModalOpen(false)}
                         addTask={props.addTask}
-                        selectedDate={selectedDate}
+                        selectedDate={prefillDateForModal}
                         projects={props.projects}
                         notes={props.notes}
                         categories={props.categories}

@@ -1,9 +1,8 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { parseCommandWithLlama3, parseUpdateCommandWithLlama3 } from './groqService';
 import { analyzeImageWithGPT4o, generateTextWithGPT4o, generateBriefingWithGPT4o, generateActionableInsightsWithGPT4o } from './openAIService';
 import { generateImageWithImagen, parseCommandWithGemini, generateCompletionSummaryWithGemini, generateActionableInsights, getAutocompleteSuggestions } from './geminiService';
-import { Task, Note, HealthData, MissionBriefing, CompletionSummary, ActionItem, Goal } from '../types';
+import { Task, Note, HealthData, MissionBriefing, CompletionSummary, ActionItem, Goal, ActionableInsight } from '../types';
 import { extractJson } from "../utils/jsonUtils";
 import { inferHomeLocation } from "../utils/taskUtils";
 
@@ -98,6 +97,25 @@ const getErrorFallbackData = (taskType: KikoTaskType, payload: any): any => {
              return { title: title || "New Task", category: 'Personal', plannedDuration: 60 };
         case 'generate_completion_summary':
             return { newTitle: payload.task.title, shortInsight: "Task completed successfully!" };
+        case 'generate_task_insights':
+            return {
+                widgets: [
+                    {
+                        type: 'text',
+                        title: 'AI Connection Error',
+                        icon: 'BoltSlashIcon',
+                        content: "Kiko is currently unable to connect to the strategic insight network. Please check your API key configuration or try again later.",
+                    },
+                    {
+                        type: 'metric',
+                        title: 'Mock Readiness',
+                        value: 75,
+                        unit: '%',
+                        icon: 'SparklesIcon',
+                        color: 'text-amber-400'
+                    }
+                ]
+            } as ActionableInsight;
         default:
             return null;
     }

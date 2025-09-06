@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 // A generic icon wrapper for props
@@ -141,9 +142,17 @@ export const ArrowsPointingInIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5M15 15l5.25 5.25" /></svg>
 );
 
+export const GridIcon: React.FC<IconProps> = (props) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <circle cx="6" cy="6" r="1.5"/><circle cx="12" cy="6" r="1.5"/><circle cx="18" cy="6" r="1.5"/>
+        <circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/>
+        <circle cx="6" cy="18" r="1.5"/><circle cx="12" cy="18" r="1.5"/><circle cx="18" cy="18" r="1.5"/>
+    </svg>
+);
+
 
 export const Cog6ToothIcon: React.FC<IconProps> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.26.716.53 1.003l.867.867c.27.27.63.424 1.003.53l1.28.213c.542.09.94.56.94 1.11v2.594c0 .55-.398 1.02-.94 1.11l-1.28.213c-.374.063-.716.26-1.003.53l-.867.867c-.27.27-.424.63-.53 1.003l-.213 1.28c-.09.542-.56.94-1.11.94h-2.593c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.26-.716-.53-1.003l-.867-.867c-.27-.27-.63-.424-1.003-.53l-1.28-.213c-.542-.09-.94-.56-.94-1.11v-2.594c0 .55.398 1.02.94 1.11l1.28-.213c.374-.063.716-.26 1.003-.53l.867-.867c.27-.27.424-.63.53-1.003l.213-1.28z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.26.716.53 1.003l.867.867c.27.27.63.424 1.003.53l1.28.213c.542.09.94.56.94 1.11v2.594c0 .55-.398 1.02-.94 1.11l-1.28.213c-.374.063-.716.26-1.003.53l-.867.867c-.27.27-.424.63-.53 1.003l-.213 1.28c-.09.542-.56.94-1.11.94h-2.593c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.26-.716-.53-1.003l-.867-.867c-.27-.27-.63-.424-1.003-.53l-1.28-.213c-.542-.09-.94-.56-.94-1.11v-2.594c0 .55.398 1.02.94 1.11l1.28-.213c.374-.063.716-.26 1.003-.53l.867-.867c.27.27.424-.63.53-1.003l.213-1.28z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
 );
 
 export const GoogleCalendarIcon: React.FC<IconProps> = (props) => (
@@ -179,7 +188,7 @@ export const ClipboardDocumentListIcon: React.FC<IconProps> = (props) => (
 );
 
 export const ChatBubbleLeftRightIcon: React.FC<IconProps> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.72 3.72a1.125 1.125 0 01-1.59 0l-3.72-3.72a2.474 2.474 0 01-1.98-2.193V10.608c0-.97.616-1.813 1.5-2.097m0 0A2.466 2.466 0 0012 6.25a2.466 2.466 0 00-2.25 2.261m0 0A2.466 2.466 0 007.5 6.25a2.466 2.466 0 00-2.25 2.261m0 0A2.466 2.466 0 003 10.608v4.286c0 1.136.847 2.1 1.98 2.193l3.72 3.72a1.125 1.125 0 001.59 0l3.72-3.72a2.474 2.474 0 001.98-2.193V10.608c0-.97-.616-1.813-1.5-2.097z" /></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.72 3.72a1.125 1.125 0 01-1.59 0l-3.72-3.72a2.474 2.474 0 01-1.98-2.193V10.608c0-.97.616-1.813 1.5-2.097m0 0A2.466 2.466 0 0012 6.25a2.466 2.466 0 00-2.25 2.261m0 0A2.466 2.466 0 007.5 6.25a2.466 2.466 0 00-2.25 2.261m0 0A2.466 2.466 0 003 10.608v4.286c0 1.136.847 2.1 1.98 2.193l3.72 3.72a1.125 1.125 0 001.59 0l3.72-3.72a2.474 2.474 0 001.98-2.193V10.608c0-.97-.616-1.813 1.5-2.097z" /></svg>
 );
 
 export const BookOpenIcon: React.FC<IconProps> = (props) => (

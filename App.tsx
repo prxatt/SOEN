@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -30,10 +28,25 @@ import { triggerHapticFeedback } from './utils/haptics';
 import { MOCKED_BRIEFING, REWARDS_CATALOG, DEFAULT_CATEGORIES, CATEGORY_COLORS, PRESET_COLORS } from './constants';
 
 // --- MOCK DATA GENERATION ---
+const initialProjects: Project[] = [
+    { id: 1, title: 'Praxis AI Development', description: 'Core development for the Praxis AI application.'},
+    { id: 2, title: 'Surface Tension Branding', description: 'Brand identity and marketing materials.'},
+];
+
 const generateMockTasksForMonth = (year: number, month: number): Task[] => {
     const tasks: Task[] = [];
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const today = new Date();
+    const taskTitlesByCategory: Record<Category, string[]> = {
+        'Prototyping': ['Develop new feature', 'UI/UX design session', 'Fix login bug', 'Refactor database schema'],
+        'Learning': ['Complete AI course module', 'Read chapter on system design', 'Watch tutorial on Framer Motion', 'Study market trends'],
+        'Meeting': ['Client check-in call', 'Weekly sync with team', 'Praxis AI strategy session', 'Investor pitch prep'],
+        'Workout': ['5k morning run', 'Boxing session', 'Leg day at the gym', 'Yoga and meditation'],
+        'Editing': ['Edit promotional video', 'Review brand copy', 'Photo editing for lookbook', 'Finalize blog post'],
+        'Personal': ['Schedule dentist appointment', 'Cook dinner: Tacos', 'Pay monthly bills', 'Call family'],
+        'Admin': ['Respond to important emails', 'Organize file directory', 'Plan next week\'s schedule', 'Update project management board'],
+        'Deep Work': ['Focused writing session', 'Algorithm research', 'Core architecture planning', 'Mind mapping new concept'],
+    };
 
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
@@ -42,26 +55,37 @@ const generateMockTasksForMonth = (year: number, month: number): Task[] => {
         for (let i = 0; i < tasksPerDay; i++) {
             const category = DEFAULT_CATEGORIES[Math.floor(Math.random() * DEFAULT_CATEGORIES.length)];
             const hour = Math.floor(Math.random() * 12) + 8; // 8am - 7pm
-            const minute = Math.random() > 0.5 ? 30 : 0;
+            const minute = [0, 15, 30, 45][Math.floor(Math.random() * 4)];
             const startTime = new Date(year, month, day, hour, minute);
 
             let status = TaskStatus.Pending;
-            if (date.getTime() < today.getTime()) {
-                status = Math.random() > 0.2 ? TaskStatus.Completed : TaskStatus.Pending; // 80% chance of completion for past tasks
-            } else if (date.toDateString() === today.toDateString() && startTime.getTime() < today.getTime()) {
-                // status = TaskStatus.Completed; // Commented out to make today's tasks pending by default for demo
+            if (date.getTime() < today.getTime() - 86400000) { // Anything before yesterday
+                status = Math.random() > 0.1 ? TaskStatus.Completed : TaskStatus.Pending;
             }
             
             const task: Task = {
                 id: tasks.length + 1,
-                title: `${category} Session ${i + 1}`,
+                title: taskTitlesByCategory[category][Math.floor(Math.random() * taskTitlesByCategory[category].length)],
                 category,
                 startTime,
                 plannedDuration: [30, 45, 60, 90, 120][Math.floor(Math.random() * 5)],
                 status,
                 priority: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
                 progress: status === TaskStatus.Completed ? 100 : Math.random() > 0.7 ? Math.floor(Math.random() * 80) : 0,
+                notes: Math.random() > 0.85 ? 'This is a detailed note about the task, requirements, and expected outcomes.' : undefined,
+                projectId: (category === 'Prototyping' || category === 'Admin') && Math.random() > 0.6 ? 1 : (category === 'Editing' && Math.random() > 0.7 ? 2 : undefined),
+                isVirtual: category === 'Meeting' ? Math.random() > 0.4 : false,
             };
+
+            if (task.isVirtual) {
+                task.linkedUrl = `https://meet.google.com/mock-${Math.random().toString(36).substring(7)}`;
+            } else if (category === 'Meeting' && Math.random() > 0.7) {
+                task.location = 'Blue Bottle Cafe, FiDi, San Francisco';
+            } else if (category === 'Workout' && Math.random() > 0.5) {
+                task.location = 'Equinox Gym, 747 Market St, San Francisco';
+            } else if (task.category === 'Personal' && Math.random() > 0.8) {
+                task.location = 'Gus\'s Community Market, San Francisco';
+            }
             tasks.push(task);
         }
     }
@@ -96,7 +120,7 @@ const App: React.FC = () => {
     const [tasks, setTasks] = useState<Task[]>(initialTasks);
     const [notes, setNotes] = useState<Note[]>(initialNotes);
     const [notebooks, setNotebooks] = useState<Notebook[]>(initialNotebooks);
-    const [projects, setProjects] = useState<Project[]>([]);
+    const [projects, setProjects] = useState<Project[]>(initialProjects);
     const [goals, setGoals] = useState<Goal[]>([]);
     const [insights, setInsights] = useState<Insight[]>([]);
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -273,27 +297,21 @@ const App: React.FC = () => {
             const newTasks = [...prevTasks];
             const draggedTask = newTasks.find(t => t.id === draggedId);
             const targetTask = newTasks.find(t => t.id === targetId);
-
-            if (!draggedTask || !targetTask) return prevTasks;
-
-            // Simple swap of start times
+    
+            if (!draggedTask || !targetTask) {
+                return prevTasks;
+            }
+    
+            // Prevent swapping between different days for simplicity and predictability
+            if (new Date(draggedTask.startTime).toDateString() !== new Date(targetTask.startTime).toDateString()) {
+                return prevTasks; // Silently prevent cross-day drag and drop
+            }
+    
+            // Swap the start times to reorder them. The list will sort itself on next render.
             const tempStartTime = draggedTask.startTime;
             draggedTask.startTime = targetTask.startTime;
             targetTask.startTime = tempStartTime;
-            
-            // Re-sort tasks for the day and apply 15-min gaps
-            const dayOfSwap = new Date(draggedTask.startTime).toDateString();
-            const tasksForDay = newTasks
-                .filter(t => new Date(t.startTime).toDateString() === dayOfSwap)
-                .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-            
-            for (let i = 1; i < tasksForDay.length; i++) {
-                const prevTask = tasksForDay[i-1];
-                const currentTask = tasksForDay[i];
-                const expectedStartTime = new Date(prevTask.startTime.getTime() + (prevTask.plannedDuration * 60000) + (15 * 60000));
-                currentTask.startTime = expectedStartTime;
-            }
-
+    
             return newTasks;
         });
         showToast("Schedule adjusted!");
@@ -392,37 +410,59 @@ const App: React.FC = () => {
         showToast(`"${taskToUndo.title}" marked as pending.`);
     };
 
-    const handleCompleteTask = async (taskId: number, actualDuration: number) => {
-        let taskToComplete = tasks.find(t => t.id === taskId);
+    const handleCompleteTask = (taskId: number, actualDuration: number) => {
+        const taskToComplete = tasks.find(t => t.id === taskId);
         if (!taskToComplete || taskToComplete.status === TaskStatus.Completed) return;
-
-        showToast(`Completing "${taskToComplete.title}"...`);
-        setFocusTask(null); // Close focus mode if open
-
-        // Generate completion summary with Kiko
-        const { data: summary } = await kikoRequest('generate_completion_summary', { task: taskToComplete }) as { data: CompletionSummary };
-        
-        // Generate a completion image
-        const { data: imageUrl } = await kikoRequest('generate_completion_image', { task: taskToComplete }) as { data: string };
-
-        const updatedTask: Task = {
+    
+        // --- Optimistic UI Update ---
+        const optimisticTask: Task = {
             ...taskToComplete,
             status: TaskStatus.Completed,
             actualDuration,
-            completionSummary: summary,
-            completionImageUrl: imageUrl
         };
-        updateTask(updatedTask);
-        
+        updateTask(optimisticTask); // Update state immediately
+        setFocusTask(null); // Close focus mode if it was open
+    
         const points = Math.round(actualDuration * 0.5);
         setPraxisFlow(prev => prev + points);
         
         showToast(`+${points} Flow! Great work!`, {
             label: 'Undo',
-            onClick: () => handleUndoCompleteTask(updatedTask)
+            onClick: () => handleUndoCompleteTask(optimisticTask)
         });
+    
+        // --- Background AI Generation (Fire and Forget) ---
+        (async () => {
+            try {
+                // Generate completion summary and image in parallel
+                const [summaryResult, imageResult] = await Promise.all([
+                    kikoRequest('generate_completion_summary', { task: optimisticTask }),
+                    kikoRequest('generate_completion_image', { task: optimisticTask })
+                ]);
+    
+                const summary = summaryResult.data as CompletionSummary;
+                const imageUrl = imageResult.data as string;
+    
+                // Update the task again with the generated details, but use a functional update
+                // to get the latest state and check if the task hasn't been "undone".
+                setTasks(currentTasks => 
+                    currentTasks.map(t => {
+                        if (t.id === taskId && t.status === TaskStatus.Completed) {
+                            return {
+                                ...t,
+                                completionSummary: summary,
+                                completionImageUrl: imageUrl,
+                            };
+                        }
+                        return t;
+                    })
+                );
+            } catch (error) {
+                console.error("Error generating completion details in background:", error);
+                showToast("Couldn't generate completion visuals."); // User-friendly, non-blocking error
+            }
+        })();
     };
-
     
     const triggerInsightGeneration = useCallback(async (task: Task, isRegeneration: boolean) => {
         try {
@@ -451,7 +491,7 @@ const App: React.FC = () => {
     const renderScreen = () => {
         switch (activeScreen) {
             case 'Dashboard': return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} />;
-            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} />;
+            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} />;
             case 'Notes': return <Notes notes={notes} setNotes={setNotes} notebooks={notebooks} setNotebooks={setNotebooks} addInsights={setInsights} updateNote={updateNote} addTask={(title, notebookId) => addTask({title, notebookId})} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} />;
             case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={setActiveScreen} goals={goals} setGoals={setGoals} />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;

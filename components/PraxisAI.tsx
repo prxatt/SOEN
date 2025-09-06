@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, RadialBarChart, RadialBar, Legend, Cell, PieChart, Pie } from 'recharts';
@@ -120,7 +121,7 @@ const ChatInterface: React.FC<PraxisAIProps> = (props) => {
 
 const PraxisAI: React.FC<PraxisAIProps> = (props) => {
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col h-[calc(100vh-9.5rem)]">
       <div className="flex justify-between items-center flex-shrink-0 mb-4">
         <h2 className="text-2xl font-bold font-display flex items-center gap-2"><KikoIcon className="w-8 h-8 text-accent" /> Kiko Hub (キコ)</h2>
       </div>

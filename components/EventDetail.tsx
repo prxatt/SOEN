@@ -7,7 +7,7 @@ import { Task, Note, Project, ActionableInsight, Goal, ChatMessage, TaskStatus, 
 import { getChatFollowUp, getAutocompleteSuggestions, generateMapsEmbedUrl } from '../services/geminiService';
 import { kikoRequest } from '../services/kikoAIService';
 import { inferHomeLocation, getTopCategories } from '../utils/taskUtils';
-import { CheckCircleIcon, XMarkIcon, SparklesIcon, DocumentTextIcon, LinkIcon, ArrowPathIcon, PaperAirplaneIcon, PaperClipIcon, PlusIcon, VideoCameraIcon, LightBulbIcon, ChevronLeftIcon, ChevronRightIcon, PhotoIcon, MapPinIcon, ArrowDownTrayIcon, ChatBubbleLeftEllipsisIcon } from './Icons';
+import { CheckCircleIcon, XMarkIcon, SparklesIcon, DocumentTextIcon, LinkIcon, ArrowPathIcon, PaperAirplaneIcon, PaperClipIcon, PlusIcon, VideoCameraIcon, LightBulbIcon, ChevronLeftIcon, ChevronRightIcon, PhotoIcon, MapPinIcon, ArrowDownTrayIcon, ChatBubbleLeftEllipsisIcon, ArrowUturnLeftIcon } from './Icons';
 import * as Icons from './Icons';
 import { DEFAULT_CATEGORIES } from '../constants';
 
@@ -20,6 +20,7 @@ interface EventDetailProps {
     goals: Goal[];
     updateTask: (task: Task) => void;
     onComplete: () => void;
+    onUndoCompleteTask: (task: Task) => void;
     onClose: () => void;
     redirectToKikoAIWithChat: (history: ChatMessage[]) => void;
     addNote: (title: string, content: string, notebookId: number) => void;
@@ -267,11 +268,12 @@ const InsightWidget: React.FC<{
     }
 };
 
-const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebooks, projects, goals, updateTask, onComplete, onClose, redirectToKikoAIWithChat, addNote, categories, categoryColors, onAddNewCategory, triggerInsightGeneration, onViewNote, deleteTask }) => {
+const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebooks, projects, goals, updateTask, onComplete, onUndoCompleteTask, onClose, redirectToKikoAIWithChat, addNote, categories, categoryColors, onAddNewCategory, triggerInsightGeneration, onViewNote, deleteTask }) => {
     const [editableTask, setEditableTask] = useState(task);
     const [locationSuggestions, setLocationSuggestions] = useState<{place_name: string; address: string}[]>([]);
     const [dirtyFields, setDirtyFields] = useState<Set<keyof Task>>(new Set());
     const [isParsing, setIsParsing] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     const insight = task.insights;
 
@@ -281,14 +283,9 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
 
     useEffect(() => {
         setEditableTask(task);
+        setIsEditing(false); // Reset editing state when task prop changes
     }, [task]);
     
-    useEffect(() => {
-        if (!task.insights && !task.isGeneratingInsights && task.status !== TaskStatus.Completed) {
-            updateTask({ ...task, isGeneratingInsights: true });
-            triggerInsightGeneration(task, false);
-        }
-    }, [task, triggerInsightGeneration, updateTask]);
 
     const debouncedParse = useCallback(debounce(async (currentTask: Task) => {
         const command = currentTask.title;
@@ -323,6 +320,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
 
 
     const handleFieldChange = (field: keyof Task, value: any) => {
+        if (!isEditing) setIsEditing(true);
         const newDetails = { ...editableTask, [field]: value };
         setEditableTask(newDetails);
         setDirtyFields(prev => new Set(prev).add(field));
@@ -353,9 +351,17 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
         triggerInsightGeneration(taskForRegen, true);
     };
 
-    const handleSaveChanges = () => { 
+    const handleSaveAndClose = () => { 
         const finalTitle = editableTask.title.includes('/') ? editableTask.title.substring(0, editableTask.title.indexOf('/')).trim() : editableTask.title;
-        updateTask({ ...editableTask, title: finalTitle }); 
+        const finalTask = { ...editableTask, title: finalTitle };
+        updateTask(finalTask);
+        
+        if (dirtyFields.size > 0 && finalTask.status !== TaskStatus.Completed) {
+            const taskForRegen = { ...finalTask, insights: null, isGeneratingInsights: true };
+            updateTask(taskForRegen); // Update UI to show spinner will start
+            triggerInsightGeneration(taskForRegen, true);
+        }
+        
         onClose(); 
     };
     
@@ -467,9 +473,10 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
     );
 
     const completionImageUrl = isCompletedView ? editableTask.completionImageUrl : null;
+    const showInsightSpinner = task.isGeneratingInsights && !isEditing;
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast" onClick={handleSaveChanges}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast" onClick={handleSaveAndClose}>
             {completionImageUrl && (
                 <div className="absolute inset-0 z-0">
                     <img src={completionImageUrl} alt="Completion background" className="w-full h-full object-cover blur-lg scale-110"/>
@@ -525,7 +532,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
                                 {isParsing && <SparklesIcon className="w-4 h-4 text-accent absolute right-3 top-1/2 -translate-y-1/2 animate-pulse" />}
                             </div>
                          </div>
-                        <button onClick={handleSaveChanges} aria-label="Save & Close" title="Save & Close" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 ml-4"><XMarkIcon className="w-6 h-6"/></button>
+                        <button onClick={handleSaveAndClose} aria-label="Save & Close" title="Save & Close" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 ml-4"><XMarkIcon className="w-6 h-6"/></button>
                     </div>
                 </header>
                 <main className="p-4 sm:p-6 overflow-y-auto bg-bg/80">
@@ -553,8 +560,8 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
                     ) : (
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                             <div className="lg:col-span-3 space-y-4">
-                                <div className="flex justify-between items-center"><h4 className="font-semibold flex items-center gap-2 text-accent"><SparklesIcon className="w-5 h-5"/> Strategic Insights</h4><button onClick={handleRegenerateInsights} disabled={task.isGeneratingInsights} title="Regenerate Insights" className="p-1.5 rounded-md hover:bg-accent/20 disabled:opacity-50"><ArrowPathIcon className={`w-4 h-4 ${task.isGeneratingInsights ? 'animate-spin' : ''}`} /></button></div>
-                                {task.isGeneratingInsights ? <p className="animate-pulse text-sm">✨ Kiko AI is generating new insights...</p> : insight && insight.widgets && insight.widgets.length > 0 ? (
+                                <div className="flex justify-between items-center"><h4 className="font-semibold flex items-center gap-2 text-accent"><SparklesIcon className="w-5 h-5"/> Strategic Insights</h4><button onClick={handleRegenerateInsights} disabled={showInsightSpinner || isEditing} title="Regenerate Insights" className="p-1.5 rounded-md hover:bg-accent/20 disabled:opacity-50"><ArrowPathIcon className={`w-4 h-4 ${showInsightSpinner ? 'animate-spin' : ''}`} /></button></div>
+                                {showInsightSpinner ? <p className="animate-pulse text-sm">✨ Kiko AI is generating new insights...</p> : insight && insight.widgets && insight.widgets.length > 0 ? (
                                     renderInsights(insight.widgets)
                                 ) : <p className="text-sm text-text-secondary">No AI insight available for this task.</p>}
                             </div>
@@ -607,7 +614,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
                 </main>
                 <footer className={`flex-shrink-0 p-4 sm:p-6 border-t border-border/30 flex justify-between items-center ${isCompletedView ? 'text-white' : ''}`}>
                     <div>
-                        {!isCompletedView && (
+                        {!isCompletedView ? (
                             <button
                                 type="button"
                                 onClick={() => {
@@ -620,10 +627,18 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
                             >
                                 Delete Task
                             </button>
+                        ) : (
+                             <button
+                                type="button"
+                                onClick={() => onUndoCompleteTask(task)}
+                                className="flex items-center gap-2 text-sm font-semibold text-blue-400 hover:bg-blue-500/10 px-4 py-2 rounded-lg"
+                            >
+                                <ArrowUturnLeftIcon className="w-5 h-5"/> Undo Completion
+                            </button>
                         )}
                     </div>
                     {!isCompletedView && (
-                        <button onClick={handleSaveChanges} className="flex items-center gap-2 text-sm font-semibold py-2 px-4 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors">
+                        <button onClick={handleSaveAndClose} className="flex items-center gap-2 text-sm font-semibold py-2 px-4 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors">
                             Save Changes
                         </button>
                     )}

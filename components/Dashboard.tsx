@@ -1,11 +1,11 @@
 
+
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Task, Goal, HealthData, MissionBriefing, TaskStatus } from '../types';
+import { Task, Goal, HealthData, MissionBriefing, TaskStatus, Category } from '../types';
 import { SparklesIcon, CheckCircleIcon, BrainCircuitIcon, FireIcon, ArrowDownTrayIcon } from './Icons';
 import * as Icons from './Icons';
 import { ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, RadialBarChart, RadialBar, Tooltip } from 'recharts';
-import { getCategoryColor } from '../constants';
 import { getTodaysTaskCompletion } from '../utils/taskUtils';
 
 interface DashboardProps {
@@ -15,6 +15,7 @@ interface DashboardProps {
   goals: Goal[];
   setFocusTask: (task: Task) => void;
   dailyCompletionImage: string | null;
+  categoryColors: Record<Category, string>;
 }
 
 const containerVariants = {
@@ -40,7 +41,7 @@ const MetricCard: React.FC<{ metric: { label: string; value: string; icon: strin
     );
 };
 
-const StrategicInsights: React.FC<{ briefing: MissionBriefing }> = ({ briefing }) => {
+const StrategicInsights: React.FC<{ briefing: MissionBriefing; categoryColors: Record<Category, string>; }> = ({ briefing, categoryColors }) => {
     return (
         <div className="card p-4 rounded-2xl">
             <h3 className="text-lg font-bold font-display text-accent flex items-center gap-2">
@@ -50,7 +51,7 @@ const StrategicInsights: React.FC<{ briefing: MissionBriefing }> = ({ briefing }
             <div className="space-y-2">
                 {briefing.categoryAnalysis.slice(0, 3).map(({ category, analysis }) => (
                     <div key={category} className="flex items-start gap-3 text-sm p-2 bg-bg/50 rounded-lg">
-                        <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: getCategoryColor(category as any) }} />
+                        <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: categoryColors[category as Category] || '#6B7280' }} />
                         <div>
                             <span className="font-semibold">{category}:</span>
                             <span className="text-text-secondary ml-1">{analysis}</span>
@@ -94,7 +95,7 @@ const DailyReward: React.FC<{ imageUrl: string }> = ({ imageUrl }) => {
 };
 
 
-const Dashboard: React.FC<DashboardProps> = ({ tasks, healthData, briefing, goals, setFocusTask, dailyCompletionImage }) => {
+const Dashboard: React.FC<DashboardProps> = ({ tasks, healthData, briefing, goals, setFocusTask, dailyCompletionImage, categoryColors }) => {
 
     const todaysTasks = tasks.filter(t => new Date(t.startTime).toDateString() === new Date().toDateString());
     const upcomingTask = todaysTasks.find(t => t.status !== TaskStatus.Completed && new Date(t.startTime) > new Date());
@@ -122,7 +123,7 @@ const Dashboard: React.FC<DashboardProps> = ({ tasks, healthData, briefing, goal
       
       {/* Strategic Insights */}
       <motion.div variants={itemVariants}>
-        <StrategicInsights briefing={briefing} />
+        <StrategicInsights briefing={briefing} categoryColors={categoryColors} />
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -131,7 +132,7 @@ const Dashboard: React.FC<DashboardProps> = ({ tasks, healthData, briefing, goal
             {upcomingTask && (
                 <div className="card p-4 rounded-2xl">
                     <h4 className="font-semibold mb-2">Next Up</h4>
-                    <div className="border-l-4 p-3 -ml-4" style={{borderColor: getCategoryColor(upcomingTask.category)}}>
+                    <div className="border-l-4 p-3 -ml-4" style={{borderColor: categoryColors[upcomingTask.category] || '#6B7280'}}>
                         <p className="font-bold">{upcomingTask.title}</p>
                         <p className="text-sm text-text-secondary">{new Date(upcomingTask.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} &bull; {upcomingTask.plannedDuration} min</p>
                     </div>

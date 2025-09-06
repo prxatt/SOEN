@@ -1,14 +1,15 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, RadialBarChart, RadialBar, AreaChart, Area } from 'recharts';
 import { Task, Note, Project, ActionableInsight, Goal, ChatMessage, TaskStatus, HealthData, InsightWidgetData, ChartWidget, KeyMetricWidget, TextWidget, RecipeWidget, Category, AreaChartWidget, RadialChartWidget, MapWidget, GeneratedImageWidget, WeatherWidget, Notebook } from '../types';
 import { getChatFollowUp, getAutocompleteSuggestions, generateMapsEmbedUrl } from '../services/geminiService';
 import { kikoRequest } from '../services/kikoAIService';
-import { inferHomeLocation } from '../utils/taskUtils';
+import { inferHomeLocation, getTopCategories } from '../utils/taskUtils';
 import { CheckCircleIcon, XMarkIcon, SparklesIcon, DocumentTextIcon, LinkIcon, ArrowPathIcon, PaperAirplaneIcon, PaperClipIcon, PlusIcon, VideoCameraIcon, LightBulbIcon, ChevronLeftIcon, ChevronRightIcon, PhotoIcon, MapPinIcon, ArrowDownTrayIcon, ChatBubbleLeftEllipsisIcon } from './Icons';
 import * as Icons from './Icons';
-import { DEFAULT_CATEGORIES, getCategoryColor } from '../constants';
+import { DEFAULT_CATEGORIES } from '../constants';
 
 interface EventDetailProps {
     task: Task;
@@ -23,6 +24,8 @@ interface EventDetailProps {
     redirectToKikoAIWithChat: (history: ChatMessage[]) => void;
     addNote: (title: string, content: string, notebookId: number) => void;
     categories: Category[];
+    categoryColors: Record<Category, string>;
+    onAddNewCategory: (name: string) => boolean;
     triggerInsightGeneration: (task: Task, isRegeneration: boolean) => void;
     onViewNote?: (noteId: number) => void;
     deleteTask: (taskId: number) => void;
@@ -264,13 +267,17 @@ const InsightWidget: React.FC<{
     }
 };
 
-const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebooks, projects, goals, updateTask, onComplete, onClose, redirectToKikoAIWithChat, addNote, categories, triggerInsightGeneration, onViewNote, deleteTask }) => {
+const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebooks, projects, goals, updateTask, onComplete, onClose, redirectToKikoAIWithChat, addNote, categories, categoryColors, onAddNewCategory, triggerInsightGeneration, onViewNote, deleteTask }) => {
     const [editableTask, setEditableTask] = useState(task);
     const [locationSuggestions, setLocationSuggestions] = useState<{place_name: string; address: string}[]>([]);
     const [dirtyFields, setDirtyFields] = useState<Set<keyof Task>>(new Set());
     const [isParsing, setIsParsing] = useState(false);
 
     const insight = task.insights;
+
+    const topCategories = useMemo(() => getTopCategories(allTasks, 5), [allTasks]);
+    const otherCategories = useMemo(() => categories.filter(c => !topCategories.includes(c) && c !== editableTask.category), [categories, topCategories, editableTask.category]);
+
 
     useEffect(() => {
         setEditableTask(task);
@@ -285,7 +292,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
 
     const debouncedParse = useCallback(debounce(async (currentTask: Task) => {
         const command = currentTask.title;
-        if (!command.startsWith('/')) {
+        if (!command.includes('/')) {
             setIsParsing(false);
             return;
         }
@@ -322,6 +329,21 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
         
         if (field === 'title' && typeof value === 'string' && value.includes('/')) {
             debouncedParse(newDetails);
+        }
+    };
+
+    const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = e.target.value;
+        if (value === 'CREATE_NEW') {
+            const newCategoryName = prompt('Enter new category name:');
+            if (newCategoryName && newCategoryName.trim()) {
+                const success = onAddNewCategory(newCategoryName.trim());
+                if (success) {
+                    handleFieldChange('category', newCategoryName.trim() as Category);
+                }
+            }
+        } else {
+            handleFieldChange('category', value as Category);
         }
     };
 
@@ -408,7 +430,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
     };
     
     const isCompletedView = task.status === TaskStatus.Completed;
-    const categoryColor = getCategoryColor(editableTask.category);
+    const categoryColor = categoryColors[editableTask.category] || '#6B7280';
 
     const getFieldStyle = (field: keyof Task) => {
         const isDirty = dirtyFields.has(field);
@@ -462,12 +484,12 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
                 className={`card relative rounded-2xl shadow-xl w-full max-w-4xl flex flex-col overflow-hidden max-h-[90vh]`}
                 onClick={e => e.stopPropagation()}
             >
-                <header 
-                    className={`p-4 sm:p-6 flex-shrink-0 transition-colors ${isCompletedView ? 'border-b-2' : ''}`}
-                    style={isCompletedView ? {
+                <header
+                    className="p-4 sm:p-6 flex-shrink-0 border-b-2 transition-colors"
+                    style={{
                         borderColor: categoryColor,
-                        backgroundColor: `${categoryColor}20` // ~12.5% opacity
-                    } : { borderBottomColor: categoryColor }}
+                        ...(isCompletedView && { backgroundColor: `${categoryColor}20` })
+                    }}
                 >
                     <div className="flex justify-between items-start">
                          <div className={isCompletedView ? 'text-white' : ''}>
@@ -475,8 +497,25 @@ const EventDetail: React.FC<EventDetailProps> = ({ task, allTasks, notes, notebo
                                 <p className="text-sm font-bold uppercase tracking-wider text-green-400 flex items-center gap-2"><CheckCircleIcon className="w-5 h-5"/> COMPLETED</p>
                                 :
                                 <div>
-                                    <select value={editableTask.category} onChange={(e) => handleFieldChange('category', e.target.value as Category)} className={`text-sm font-bold uppercase tracking-wider bg-transparent -ml-1 p-1 appearance-none rounded-md transition-shadow focus:outline-none`} style={{ color: categoryColor, ...getFieldStyle('category')}}>
-                                        {DEFAULT_CATEGORIES.map(cat => <option key={cat} value={cat} style={{color: 'var(--color-text)', backgroundColor: 'var(--color-bg)'}}>{cat}</option>)}
+                                    <select
+                                        value={editableTask.category}
+                                        onChange={handleCategoryChange}
+                                        className="text-sm font-bold uppercase tracking-wider bg-transparent -ml-1 p-1 appearance-none rounded-md transition-shadow focus:outline-none"
+                                        style={{
+                                            color: categoryColor,
+                                            backgroundColor: `${categoryColor}20`,
+                                            ...getFieldStyle('category')
+                                        }}
+                                    >
+                                        <optgroup label="Top Categories">
+                                            {topCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                        </optgroup>
+                                        {otherCategories.length > 0 && (
+                                            <optgroup label="Other Categories">
+                                                {otherCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                            </optgroup>
+                                        )}
+                                        <option value="CREATE_NEW" style={{ fontStyle: 'italic', color: 'var(--color-text)', backgroundColor: 'var(--color-bg)' }}>+ Create New...</option>
                                     </select>
                                 </div>
                             }

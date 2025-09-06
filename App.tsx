@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -26,7 +27,7 @@ import { syncCalendar } from './services/googleCalendarService';
 import { kikoRequest } from './services/kikoAIService';
 import { calculateStreak, getTodaysTaskCompletion, inferHomeLocation } from './utils/taskUtils';
 import { triggerHapticFeedback } from './utils/haptics';
-import { MOCKED_BRIEFING, REWARDS_CATALOG, DEFAULT_CATEGORIES } from './constants';
+import { MOCKED_BRIEFING, REWARDS_CATALOG, DEFAULT_CATEGORIES, CATEGORY_COLORS, PRESET_COLORS } from './constants';
 
 // --- MOCK DATA GENERATION ---
 const generateMockTasksForMonth = (year: number, month: number): Task[] => {
@@ -107,6 +108,8 @@ const App: React.FC = () => {
     const [selectedNote, setSelectedNote] = useState<Note | null>(null);
     const [activeNotebookId, setActiveNotebookId] = useState<number | 'all' | 'flagged' | 'archived'>('all');
     const [dailyCompletionImage, setDailyCompletionImage] = useState<string | null>(null);
+    const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+    const [categoryColors, setCategoryColors] = useState<Record<Category, string>>(CATEGORY_COLORS);
 
 
     // Derived/Generated states
@@ -140,6 +143,20 @@ const App: React.FC = () => {
         } else {
             document.documentElement.classList.remove('dark');
         }
+
+        // Restore daily reward image if it's for today
+        const savedReward = localStorage.getItem('dailyReward');
+        if (savedReward) {
+            try {
+                const { date, url } = JSON.parse(savedReward);
+                if (date === new Date().toDateString()) {
+                    setDailyCompletionImage(url);
+                }
+            } catch(e) {
+                console.error("Could not parse daily reward from localStorage", e);
+                localStorage.removeItem('dailyReward');
+            }
+        }
     }, []);
 
     // Effect to check for daily completion and generate reward image
@@ -147,16 +164,16 @@ const App: React.FC = () => {
         const todaysTasks = tasks.filter(t => new Date(t.startTime).toDateString() === new Date().toDateString());
         const allTasksCompleted = todaysTasks.length > 0 && todaysTasks.every(t => t.status === TaskStatus.Completed);
         const dayIdentifier = new Date().toDateString();
-        const hasGeneratedToday = localStorage.getItem('dailyImageGenerated') === dayIdentifier;
-        
-        if (allTasksCompleted && !hasGeneratedToday) {
-            console.log("All tasks for today completed! Generating reward image...");
+
+        // Condition to generate: all tasks are done, and we don't already have an image for today in the state.
+        if (allTasksCompleted && !dailyCompletionImage) {
             const generateImage = async () => {
                 try {
+                    showToast("Daily Reward Unlocked! Generating your image...");
                     const { data: imageUrl } = await kikoRequest('generate_daily_image', { date: new Date(), tasks: todaysTasks });
                     setDailyCompletionImage(imageUrl);
-                    localStorage.setItem('dailyImageGenerated', dayIdentifier);
-                    showToast("Daily tasks complete! Your reward image is ready on the Dashboard.");
+                    // Store object with date and URL for persistence
+                    localStorage.setItem('dailyReward', JSON.stringify({ date: dayIdentifier, url: imageUrl }));
                 } catch (error) {
                     console.error("Failed to generate daily reward image:", error);
                     showToast("Couldn't generate reward image. Kiko might be busy.");
@@ -164,7 +181,7 @@ const App: React.FC = () => {
             };
             generateImage();
         }
-    }, [tasks]);
+    }, [tasks, dailyCompletionImage]);
     
     // --- AUTH & ONBOARDING HANDLERS ---
     const handleLogin = () => {
@@ -222,6 +239,28 @@ const App: React.FC = () => {
         } else {
             showToast("Not enough Flow to unlock this!");
         }
+    };
+
+    const handleAddNewCategory = (newCategoryName: string) => {
+        if (categories.some(c => c.toLowerCase() === newCategoryName.trim().toLowerCase())) {
+            showToast(`Category "${newCategoryName}" already exists.`);
+            return false;
+        }
+        const newCategory = newCategoryName.trim() as Category;
+    
+        const existingColors = Object.values(categoryColors);
+        const availableColors = PRESET_COLORS.filter(c => !existingColors.includes(c));
+        let newColor: string;
+        if (availableColors.length > 0) {
+            newColor = availableColors[0];
+        } else {
+            newColor = `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
+        }
+    
+        setCategories(prev => [...prev, newCategory]);
+        setCategoryColors(prev => ({...prev, [newCategory]: newColor}));
+        showToast(`Category "${newCategory}" created!`);
+        return true;
     };
 
     // --- DATA HANDLERS ---
@@ -382,7 +421,6 @@ const App: React.FC = () => {
             label: 'Undo',
             onClick: () => handleUndoCompleteTask(updatedTask)
         });
-        triggerHapticFeedback('success');
     };
 
     
@@ -412,8 +450,8 @@ const App: React.FC = () => {
     // --- RENDER LOGIC ---
     const renderScreen = () => {
         switch (activeScreen) {
-            case 'Dashboard': return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} />;
-            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={DEFAULT_CATEGORIES} showToast={showToast} onCompleteTask={handleCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} />;
+            case 'Dashboard': return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} />;
+            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} />;
             case 'Notes': return <Notes notes={notes} setNotes={setNotes} notebooks={notebooks} setNotebooks={setNotebooks} addInsights={setInsights} updateNote={updateNote} addTask={(title, notebookId) => addTask({title, notebookId})} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} />;
             case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={setActiveScreen} goals={goals} setGoals={setGoals} />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;
@@ -421,7 +459,7 @@ const App: React.FC = () => {
             case 'Settings': return <Settings uiMode={uiMode} toggleUiMode={toggleUiMode} onSyncCalendar={handleSyncCalendar} onLogout={handleLogout} />;
             case 'Rewards': return <Rewards onBack={() => setActiveScreen('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
-            default: return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} />;
+            default: return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} />;
         }
     };
     

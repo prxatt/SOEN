@@ -55,6 +55,19 @@ export const getTodaysTaskCompletion = (tasks: Task[]): number => {
     return Math.round((completedTasks.length / todaysTasks.length) * 100);
 }
 
+export const getTopCategories = (tasks: Task[], count: number): Category[] => {
+    const categoryCounts = tasks.reduce((acc, task) => {
+        acc[task.category] = (acc[task.category] || 0) + 1;
+        return acc;
+    }, {} as Record<Category, number>);
+
+    return Object.entries(categoryCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, count)
+        .map(([category]) => category as Category);
+};
+
+
 export const inferHomeLocation = (tasks: Task[]): string | null => {
     const locationCounts: Record<string, number> = {};
     let sleepLocation: string | null = null;

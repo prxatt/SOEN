@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Category, TaskStatus, Project, Note } from '../types';
-import { SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, ClockIcon, LinkIcon } from './Icons';
+import { SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, ClockIcon, LinkIcon, ArrowPathIcon } from './Icons';
 import { getAutocompleteSuggestions } from '../services/geminiService';
 import { parseTaskFromString } from '../services/kikoAIService';
 import { getTopCategories } from '../utils/taskUtils';
@@ -32,7 +32,7 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
 const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedDate, projects, notes, categories, categoryColors, onAddNewCategory, allTasks, showToast }) => {
     const [taskDetails, setTaskDetails] = useState<Partial<Task>>({
         title: '',
-        category: 'Meeting', // Defaulting to a common one
+        category: 'Meeting', 
         plannedDuration: 60,
         repeat: 'none',
         isVirtual: false,
@@ -40,10 +40,8 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedD
     const [startTime, setStartTime] = useState(() => {
         const initialDate = new Date(selectedDate);
         if (initialDate.getMinutes() > 0 || initialDate.getSeconds() > 0 || initialDate.getMilliseconds() > 0) {
-            // If a specific time is passed (e.g., from calendar view), use it.
             return initialDate.toTimeString().substring(0, 5);
         }
-        // Otherwise, default to the next hour.
         const nextHour = new Date();
         nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
         return nextHour.toTimeString().substring(0, 5);
@@ -72,7 +70,7 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedD
         }
         
         const updatePayload = { ...parsedDetails };
-        delete updatePayload.title; // Don't override the title field while typing
+        delete updatePayload.title;
         setTaskDetails(prev => ({ ...prev, ...updatePayload }));
 
         if (parsedDetails.startTime instanceof Date) {
@@ -168,13 +166,13 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedD
             <motion.form 
                 layout
                 onSubmit={handleSubmit} 
-                className="card rounded-2xl shadow-xl w-full max-w-md p-6" 
+                className="bg-[#F0F2F5] dark:bg-zinc-900 rounded-3xl shadow-xl w-full max-w-md p-6" 
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-start mb-6">
                     <div>
-                        <h2 className="text-5xl font-bold font-display">New Task</h2>
-                        <p className="text-lg text-text-secondary mt-1">Use "/" for AI magic...</p>
+                        <h2 className="text-3xl font-bold font-display text-black dark:text-white">New Task</h2>
+                        <p className="text-md text-text-secondary mt-1">Use "/" for AI magic...</p>
                     </div>
                     <button type="button" onClick={onClose} aria-label="Close modal" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"><XMarkIcon className="w-6 h-6"/></button>
                 </div>
@@ -188,7 +186,7 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedD
                             value={taskDetails.title} 
                             onChange={handleTitleChange} 
                             required 
-                            className="block w-full text-lg px-4 py-3 bg-bg border-2 border-border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card"
+                            className="block w-full text-lg px-4 py-3 bg-white dark:bg-zinc-800 border-2 border-transparent rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card"
                             style={{borderColor: categoryColor}}
                             placeholder="/meeting w/ Apoorva @ 3pm for 3hr"
                         />
@@ -199,30 +197,32 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedD
                     {aiSummary && (
                         <motion.p 
                             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                            className="text-xs text-center text-text-secondary p-2 bg-bg rounded-lg border border-border"
+                            className="text-xs text-center text-text-secondary p-2 bg-white/80 dark:bg-zinc-800/50 rounded-lg"
                         >{aiSummary}</motion.p>
                     )}
                     </AnimatePresence>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        {/* Category Button */}
-                        <div className="relative p-3 bg-bg border border-border rounded-xl">
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Category</label>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className={`relative p-3 bg-white dark:bg-zinc-800 rounded-xl ${highlightedFields.includes('category') ? 'animate-highlight' : ''}`}>
+                            <label className="flex items-center gap-2 font-semibold text-text-secondary mb-1">
+                                <BriefcaseIcon className="w-4 h-4" /> Category
+                            </label>
                             <select
                                 id="task-category"
                                 value={taskDetails.category}
                                 onChange={handleCategoryChange}
-                                className={`block w-full bg-transparent font-semibold appearance-none focus:outline-none ${highlightedFields.includes('category') ? 'animate-highlight' : ''}`}
+                                className={`block w-full bg-transparent font-bold appearance-none focus:outline-none text-black dark:text-white`}
                             >
                                 <optgroup label="Top Categories">{topCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</optgroup>
                                 {otherCategories.length > 0 && <optgroup label="Other Categories">{otherCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</optgroup>}
                                 <option value="CREATE_NEW" style={{ fontStyle: 'italic' }}>+ Create New...</option>
                             </select>
                         </div>
-                        {/* Repeat Button */}
-                        <div className="relative p-3 bg-bg border border-border rounded-xl">
-                             <label className="block text-xs font-semibold text-text-secondary mb-1">Repeat</label>
-                             <select id="task-repeat" value={taskDetails.repeat || 'none'} onChange={e => setTaskDetails({...taskDetails, repeat: e.target.value as Task['repeat']})} className="block w-full bg-transparent font-semibold appearance-none focus:outline-none">
+                         <div className="relative p-3 bg-white dark:bg-zinc-800 rounded-xl">
+                             <label className="flex items-center gap-2 font-semibold text-text-secondary mb-1">
+                                <ArrowPathIcon className="w-4 h-4"/> Repeat
+                            </label>
+                             <select id="task-repeat" value={taskDetails.repeat || 'none'} onChange={e => setTaskDetails({...taskDetails, repeat: e.target.value as Task['repeat']})} className="block w-full bg-transparent font-bold appearance-none focus:outline-none text-black dark:text-white">
                                 <option value="none">Does not repeat</option>
                                 <option value="daily">Daily</option>
                                 <option value="weekly">Weekly</option>
@@ -231,42 +231,32 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedD
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 p-3 bg-bg border border-border rounded-xl">
-                        <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Start Time</label>
-                            <div className="relative">
-                                <ClockIcon className="w-5 h-5 absolute left-0 top-1/2 -translate-y-1/2 text-text-secondary"/>
-                                <input type="time" id="task-time" value={startTime} onChange={e => setStartTime(e.target.value)} required className={`block w-full pl-6 bg-transparent font-semibold focus:outline-none ${highlightedFields.includes('startTime') ? 'animate-highlight' : ''}`} />
-                            </div>
+                    <div className={`grid grid-cols-2 gap-3 p-3 bg-white dark:bg-zinc-800 rounded-xl`}>
+                        <div className={`${highlightedFields.includes('startTime') ? 'animate-highlight' : ''}`}>
+                            <label className="flex items-center gap-2 font-semibold text-text-secondary mb-1"><ClockIcon className="w-4 h-4"/> Start Time</label>
+                            <input type="time" id="task-time" value={startTime} onChange={e => setStartTime(e.target.value)} required className={`block w-full bg-transparent font-bold focus:outline-none text-black dark:text-white`} />
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Duration (min)</label>
-                            <input type="number" id="task-duration" value={taskDetails.plannedDuration} onChange={e => setTaskDetails({...taskDetails, plannedDuration: parseInt(e.target.value)})} required className={`block w-full bg-transparent font-semibold focus:outline-none ${highlightedFields.includes('plannedDuration') ? 'animate-highlight' : ''}`} />
+                        <div className={`${highlightedFields.includes('plannedDuration') ? 'animate-highlight' : ''}`}>
+                            <label className="font-semibold text-text-secondary mb-1">Duration (min)</label>
+                            <input type="number" id="task-duration" value={taskDetails.plannedDuration} onChange={e => setTaskDetails({...taskDetails, plannedDuration: parseInt(e.target.value)})} required className={`block w-full bg-transparent font-bold focus:outline-none text-black dark:text-white`} />
                         </div>
                     </div>
                     
                      <div className="space-y-3">
-                        <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Reference URL (for insights)...</label>
-                            <div className="relative">
-                                 <LinkIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"/>
-                                <input type="text" value={taskDetails.referenceUrl} onChange={e => setTaskDetails({...taskDetails, referenceUrl: e.target.value})} className="block w-full px-3 py-2 pl-10 bg-bg border border-border rounded-lg"/>
-                            </div>
-                        </div>
-
-                         <div className="flex items-center justify-between p-3 bg-bg border border-border rounded-xl">
-                             <label htmlFor="is-virtual-toggle" className="font-semibold">Virtual Event</label>
+                         <div className={`flex items-center justify-between p-3 bg-white dark:bg-zinc-800 rounded-xl ${highlightedFields.includes('isVirtual') ? 'animate-highlight' : ''}`}>
+                             <label htmlFor="is-virtual-toggle" className="font-bold text-black dark:text-white">Virtual Event</label>
                              <button type="button" role="switch" aria-checked={taskDetails.isVirtual} onClick={() => setTaskDetails({...taskDetails, isVirtual: !taskDetails.isVirtual, location: '', linkedUrl: ''})} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${taskDetails.isVirtual ? 'bg-accent' : 'bg-gray-300 dark:bg-zinc-700'}`}>
                                 <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${taskDetails.isVirtual ? 'translate-x-6' : 'translate-x-1'}`} />
                             </button>
                         </div>
 
                         <div className="relative">
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary">
-                                    {taskDetails.isVirtual ? <VideoCameraIcon className="w-5 h-5"/> : <MapPinIcon className="w-5 h-5"/>}
-                                </span>
-                                <input type="text" value={taskDetails.isVirtual ? taskDetails.linkedUrl : taskDetails.location} onChange={e => taskDetails.isVirtual ? setTaskDetails({...taskDetails, linkedUrl: e.target.value}) : handleLocationChange(e.target.value) } placeholder={taskDetails.isVirtual ? "Virtual meeting link..." : "Location..."} className={`block w-full px-3 py-2 pl-10 bg-bg border border-border rounded-lg ${highlightedFields.includes('location') || highlightedFields.includes('linkedUrl') || highlightedFields.includes('isVirtual') ? 'animate-highlight' : ''}`} />
+                            <div className={`relative p-3 bg-white dark:bg-zinc-800 rounded-xl ${highlightedFields.includes('location') || highlightedFields.includes('linkedUrl') ? 'animate-highlight' : ''}`}>
+                                 <label className="flex items-center gap-2 font-semibold text-text-secondary mb-1">
+                                     {taskDetails.isVirtual ? <VideoCameraIcon className="w-4 h-4"/> : <MapPinIcon className="w-4 h-4"/>}
+                                     {taskDetails.isVirtual ? "Meeting Link" : "Location"}
+                                </label>
+                                <input type="text" value={taskDetails.isVirtual ? taskDetails.linkedUrl : taskDetails.location} onChange={e => taskDetails.isVirtual ? setTaskDetails({...taskDetails, linkedUrl: e.target.value}) : handleLocationChange(e.target.value) } placeholder={taskDetails.isVirtual ? "https://..." : "Add a location..."} className={`block w-full bg-transparent font-bold focus:outline-none text-black dark:text-white`} />
                             </div>
                             {locationSuggestions.length > 0 && !taskDetails.isVirtual && (
                                 <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg">

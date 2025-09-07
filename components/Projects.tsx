@@ -21,7 +21,8 @@ const itemVariants = {
   visible: { y: 0, opacity: 1 },
 };
 
-const Projects: React.FC<ProjectsProps> = ({ projects, setProjects }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Projects({ projects, setProjects }: ProjectsProps) {
     
     const addProject = () => {
         const newProject: Project = {

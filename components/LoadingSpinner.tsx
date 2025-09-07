@@ -23,7 +23,8 @@ interface LoadingSpinnerProps {
     message?: string;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ message = "Loading..." }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function LoadingSpinner({ message = "Loading..." }: LoadingSpinnerProps) {
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       <motion.div

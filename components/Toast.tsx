@@ -11,7 +11,8 @@ interface ToastProps {
   };
 }
 
-const Toast: React.FC<ToastProps> = ({ message, onClose, action }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Toast({ message, onClose, action }: ToastProps) {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Note, Notebook, Insight, ActionItem } from '../types';
@@ -13,7 +14,13 @@ function debounce<T extends (...args: any[]) => any>(func: T, delay: number): (.
     };
 }
 
-const LightweightEditor: React.FC<{ content: string; onChange: (newContent: string) => void }> = ({ content, onChange }) => {
+interface LightweightEditorProps {
+  content: string;
+  onChange: (newContent: string) => void;
+}
+
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function LightweightEditor({ content, onChange }: LightweightEditorProps) {
     const editorRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -38,7 +45,13 @@ const LightweightEditor: React.FC<{ content: string; onChange: (newContent: stri
     );
 };
 
-const EditorToolbar: React.FC<{ onCommand: (cmd: string) => void; onAiCommand: (cmd: 'summarize' | 'expand' | 'findActionItems' | 'createTable' | 'generateProposal', fullNote: boolean) => void; onChat: () => void; }> = ({ onCommand, onAiCommand, onChat }) => {
+interface EditorToolbarProps {
+  onCommand: (cmd: string) => void;
+  onAiCommand: (cmd: 'summarize' | 'expand' | 'findActionItems' | 'createTable' | 'generateProposal', fullNote: boolean) => void;
+  onChat: () => void;
+}
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function EditorToolbar({ onCommand, onAiCommand, onChat }: EditorToolbarProps) {
     const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
     const aiMenuRef = useRef<HTMLDivElement>(null);
 
@@ -83,8 +96,13 @@ const EditorToolbar: React.FC<{ onCommand: (cmd: string) => void; onAiCommand: (
     )
 };
 
+interface NewNoteModalProps {
+  onClose: () => void;
+  onCreate: (type: 'blank' | 'daily_planner' | 'case_study') => void;
+}
 
-const NewNoteModal: React.FC<{onClose: () => void; onCreate: (type: 'blank' | 'daily_planner' | 'case_study') => void}> = ({ onClose, onCreate }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function NewNoteModal({ onClose, onCreate }: NewNoteModalProps) {
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in-fast p-4" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="new-note-title">
             <div className="card rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4" onClick={e => e.stopPropagation()}>
@@ -134,7 +152,8 @@ interface NotesProps {
     setActiveNotebookId: (id: number | 'all' | 'flagged' | 'archived') => void;
 }
 
-const Notes: React.FC<NotesProps> = ({ notes, setNotes, notebooks, setNotebooks, addInsights, updateNote, addTask, startChatWithContext, selectedNote, setSelectedNote, activeNotebookId, setActiveNotebookId }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Notes({ notes, setNotes, notebooks, setNotebooks, addInsights, updateNote, addTask, startChatWithContext, selectedNote, setSelectedNote, activeNotebookId, setActiveNotebookId }: NotesProps) {
     const [isNewNoteModalOpen, setIsNewNoteModalOpen] = useState(false);
     const [isLoadingAI, setIsLoadingAI] = useState(false);
     const editorContainerRef = useRef<HTMLDivElement>(null);

@@ -4,7 +4,8 @@ interface SignupProps {
     onLogin: () => void; // For MVP, signup will also just log the user in
 }
 
-const Signup: React.FC<SignupProps> = ({ onLogin }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Signup({ onLogin }: SignupProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

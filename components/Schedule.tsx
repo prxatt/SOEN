@@ -35,8 +35,14 @@ const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
     return luminance > 0.5 ? 'black' : 'white';
 };
 
+interface TaskCardProps {
+  task: Task;
+  categoryColors: Record<Category, string>;
+  onSelect: (task: Task) => void;
+}
 
-const TaskCard: React.FC<{ task: Task; categoryColors: Record<Category, string>; onSelect: (task: Task) => void;}> = ({ task, categoryColors, onSelect }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function TaskCard({ task, categoryColors, onSelect }: TaskCardProps) {
     const categoryColor = categoryColors[task.category] || '#6B7280';
     const textColor = getTextColorForBackground(categoryColor);
     const startTime = new Date(task.startTime);
@@ -61,7 +67,8 @@ const TaskCard: React.FC<{ task: Task; categoryColors: Record<Category, string>;
                               initial={{ scaleX: 0 }}
                               animate={{ scaleX: 1, transition: { duration: 0.4, ease: 'circOut' } }}
                               exit={{ scaleX: 0 }}
-                              style={{ originX: 0 }}
+                              // FIX: 'originX' is not a valid style property. Use `transformOrigin` for CSS or the `originX` prop directly (though direct props seem to have type issues in this environment).
+                              style={{ transformOrigin: '0% 50%' }}
                             />
                         )}
                         </AnimatePresence>
@@ -89,7 +96,15 @@ const TaskCard: React.FC<{ task: Task; categoryColors: Record<Category, string>;
     );
 };
 
-const TodayView: React.FC<{ selectedDate: Date; tasks: Task[]; categoryColors: Record<Category, string>; onSelectTask: (task: Task) => void; }> = ({ selectedDate, tasks, categoryColors, onSelectTask }) => {
+interface TodayViewProps {
+  selectedDate: Date;
+  tasks: Task[];
+  categoryColors: Record<Category, string>;
+  onSelectTask: (task: Task) => void;
+}
+
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function TodayView({ selectedDate, tasks, categoryColors, onSelectTask }: TodayViewProps) {
     const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
     const day = String(selectedDate.getDate()).padStart(2, '0');
     const monthNum = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -142,8 +157,16 @@ const TodayView: React.FC<{ selectedDate: Date; tasks: Task[]; categoryColors: R
     );
 };
 
+interface MiniTimelineProps {
+  tasks: Task[];
+  textColor: string;
+  date: Date;
+  onAddTask: (date: Date, hour: number) => void;
+  categoryColors: Record<Category, string>;
+}
 
-const MiniTimeline: React.FC<{ tasks: Task[]; textColor: string; date: Date; onAddTask: (date: Date, hour: number) => void; categoryColors: Record<Category, string> }> = ({ tasks, textColor, date, onAddTask, categoryColors }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors }: MiniTimelineProps) {
     const tasksByHour = useMemo(() => {
         const groups: Record<number, Task[]> = {};
         tasks.forEach(task => {
@@ -185,8 +208,15 @@ const MiniTimeline: React.FC<{ tasks: Task[]; textColor: string; date: Date; onA
     );
 };
 
+interface CalendarDayCardProps {
+  date: Date;
+  tasks: Task[];
+  categoryColors: Record<Category, string>;
+  onAddTask: (date: Date, hour: number) => void;
+}
 
-const CalendarDayCard: React.FC<{ date: Date; tasks: Task[]; categoryColors: Record<Category, string>; onAddTask: (date: Date, hour: number) => void; }> = ({ date, tasks, categoryColors, onAddTask }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDayCardProps) {
     const bgColor = tasks.length > 0 ? categoryColors[tasks[0].category] : '#374151'; // gray-700
     const textColor = getTextColorForBackground(bgColor);
 
@@ -207,8 +237,14 @@ const CalendarDayCard: React.FC<{ date: Date; tasks: Task[]; categoryColors: Rec
     );
 };
 
+interface CalendarViewProps {
+  tasks: Task[];
+  categoryColors: Record<Category, string>;
+  onAddTask: (date: Date, hour: number) => void;
+}
 
-const CalendarView: React.FC<{ tasks: Task[]; categoryColors: Record<Category, string>; onAddTask: (date: Date, hour: number) => void; }> = ({ tasks, categoryColors, onAddTask }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
     const [currentMonthDate, setCurrentMonthDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
     const listRef = useRef<HTMLDivElement>(null);
 
@@ -282,7 +318,8 @@ const CalendarView: React.FC<{ tasks: Task[]; categoryColors: Record<Category, s
 };
 
 
-const Schedule: React.FC<ScheduleProps> = (props) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Schedule(props: ScheduleProps) {
     const { tasks, setTasks, showToast, onCompleteTask, onUndoCompleteTask, categoryColors } = props;
     const [view, setView] = useState<ScheduleView>('today');
     const [selectedDate, setSelectedDate] = useState(new Date());

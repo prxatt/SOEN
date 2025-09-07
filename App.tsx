@@ -106,7 +106,8 @@ const initialNotes: Note[] = [
     { id: 102, notebookId: 2, title: 'Brand Guidelines', content: '<p>Core principles for the Surface Tension brand...</p>', createdAt: new Date(Date.now() - 86400000), archived: false, flagged: false, tags: ['branding'] },
 ];
 
-const App: React.FC = () => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function App() {
     // --- STATE MANAGEMENT ---
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);

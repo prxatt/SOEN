@@ -26,7 +26,8 @@ interface PraxisAIProps {
   showToast: (message: string) => void;
 }
 
-const ChatInterface: React.FC<PraxisAIProps> = (props) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function ChatInterface(props: PraxisAIProps) {
     const { onSendMessage, chatMessages, isAiReplying } = props;
     const [chatInput, setChatInput] = useState('');
     const [chatAttachment, setChatAttachment] = useState<ChatMessage['attachment'] & { url: string } | null>(null);
@@ -119,7 +120,8 @@ const ChatInterface: React.FC<PraxisAIProps> = (props) => {
 };
 
 
-const PraxisAI: React.FC<PraxisAIProps> = (props) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function PraxisAI(props: PraxisAIProps) {
   return (
     <div className="flex flex-col h-[calc(100vh-9.5rem)]">
       <div className="flex justify-between items-center flex-shrink-0 mb-4">

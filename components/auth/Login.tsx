@@ -4,7 +4,8 @@ interface LoginProps {
     onLogin: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Login({ onLogin }: LoginProps) {
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

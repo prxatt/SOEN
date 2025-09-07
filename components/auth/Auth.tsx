@@ -7,7 +7,8 @@ interface AuthProps {
     Logo: React.FC<React.SVGProps<SVGSVGElement>>;
 }
 
-const Auth: React.FC<AuthProps> = ({ onLogin, Logo }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Auth({ onLogin, Logo }: AuthProps) {
     const [isLoginView, setIsLoginView] = useState(true);
 
     return (

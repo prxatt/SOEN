@@ -75,8 +75,8 @@ function TaskCard({ task, categoryColors, onSelect }: TaskCardProps) {
                     </h3>
                 </div>
                 <div className="flex -space-x-2">
-                    <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop" alt="user 1" />
-                    <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop" alt="user 2" />
+                    <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format=fit=crop" alt="user 1" />
+                    <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format=fit=crop" alt="user 2" />
                 </div>
             </div>
             <div className={`mt-6 pt-4 border-t border-white/20 flex justify-between items-center`}>
@@ -101,55 +101,57 @@ interface TodayViewProps {
   tasks: Task[];
   categoryColors: Record<Category, string>;
   onSelectTask: (task: Task) => void;
+  changeDate: (amount: number) => void;
 }
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function TodayView({ selectedDate, tasks, categoryColors, onSelectTask }: TodayViewProps) {
+function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDate }: TodayViewProps) {
     const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
     const day = String(selectedDate.getDate()).padStart(2, '0');
     const monthNum = String(selectedDate.getMonth() + 1).padStart(2, '0');
     const month = selectedDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-    const [currentTime, setCurrentTime] = useState(new Date());
+    
+    const isToday = new Date().toDateString() === selectedDate.toDateString();
+    
+    const firstUpcomingTask = tasks.find(t => t.status !== TaskStatus.Completed);
+    const bgColor = firstUpcomingTask ? categoryColors[firstUpcomingTask.category] : '#374151'; // gray-700
+    const textColor = getTextColorForBackground(bgColor);
 
-    useEffect(() => {
-        const timerId = setInterval(() => setCurrentTime(new Date()), 1000 * 60); // Update every minute
-        return () => clearInterval(timerId);
-    }, []);
+    const handlePrevDay = useCallback(() => changeDate(-1), [changeDate]);
+    const handleNextDay = useCallback(() => changeDate(1), [changeDate]);
 
     return (
-        <div className="bg-[#F0F2F5] dark:bg-black rounded-3xl p-4 sm:p-6 min-h-full">
-            <div className="flex mb-8">
-                <div className="flex-grow">
-                    <h3 className="text-lg font-medium text-text-secondary">{dayOfWeek}</h3>
-                    <div className="flex items-end gap-x-2 mt-1">
-                        <p className="text-7xl font-bold font-display tracking-tighter leading-none text-black dark:text-white">{day}.{monthNum}</p>
-                        <p className="text-7xl font-bold font-display tracking-tight leading-none text-black/40 dark:text-white/40">{month}</p>
+        <div 
+          className="rounded-3xl p-4 sm:p-6 min-h-full flex"
+          style={{ backgroundColor: bgColor, color: textColor }}
+        >
+            <div className="w-1/3 flex-shrink-0 pr-4 flex flex-col justify-between">
+                <div>
+                    <div className="flex items-center justify-between">
+                         <p className="font-semibold">{dayOfWeek}</p>
+                         {isToday && <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{backgroundColor: 'rgba(0,0,0,0.2)'}}>Today</span>}
                     </div>
+                    <p className="text-7xl font-bold font-display tracking-tighter leading-none mt-1">{monthNum}.{day}</p>
+                    <p className="text-7xl font-bold font-display tracking-tight leading-none opacity-60">{month}</p>
                 </div>
-                <div className="border-l border-gray-300 dark:border-zinc-700 pl-4 flex-shrink-0 flex flex-col justify-center gap-y-4">
-                    <div className="text-right">
-                        <p className="font-semibold text-lg text-black dark:text-white">{currentTime.toLocaleTimeString([], {timeZone: 'America/New_York', hour: 'numeric', minute:'2-digit'})}</p>
-                        <p className="text-sm text-text-secondary">New York</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="font-semibold text-lg text-black dark:text-white">{currentTime.toLocaleTimeString([], {timeZone: 'Europe/London', hour: 'numeric', minute:'2-digit'})}</p>
-                        <p className="text-sm text-text-secondary">United Kingdom</p>
-                    </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={handlePrevDay} className="p-2 rounded-full transition-colors" style={{backgroundColor: 'rgba(0,0,0,0.1)'}} aria-label="Previous day">
+                        <ChevronLeftIcon className="w-6 h-6"/>
+                    </button>
+                    <button onClick={handleNextDay} className="p-2 rounded-full transition-colors" style={{backgroundColor: 'rgba(0,0,0,0.1)'}} aria-label="Next day">
+                        <ChevronRightIcon className="w-6 h-6"/>
+                    </button>
                 </div>
             </div>
 
-            <div>
-                <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-semibold text-black dark:text-white">Today's tasks</h4>
-                    <button className="px-4 py-1.5 bg-white dark:bg-zinc-800 text-black dark:text-white text-sm font-semibold rounded-full shadow-sm">Reminders</button>
-                </div>
+            <div className="w-2/3 pl-4 border-l" style={{borderColor: `${textColor === 'white' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`}}>
                 {tasks.length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-4 h-full overflow-y-auto pr-2 -mr-2">
                         {tasks.map(task => <TaskCard key={task.id} task={task} categoryColors={categoryColors} onSelect={onSelectTask} />)}
                     </div>
                 ) : (
-                     <div className="text-center py-16 text-text-secondary rounded-2xl bg-white dark:bg-zinc-800/50">
-                        <p>Nothing scheduled for today.</p>
+                     <div className="h-full flex items-center justify-center text-center rounded-2xl" style={{backgroundColor: 'rgba(0,0,0,0.1)'}}>
+                        <p className="opacity-80">Nothing scheduled for today.</p>
                      </div>
                 )}
             </div>
@@ -217,11 +219,24 @@ interface CalendarDayCardProps {
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDayCardProps) {
-    const bgColor = tasks.length > 0 ? categoryColors[tasks[0].category] : '#374151'; // gray-700
+    // Defensive programming for date and tasks
+    if (!date || isNaN(date.getTime())) {
+        return (
+            <div className="rounded-3xl p-4 flex min-h-[10rem] bg-gray-700">
+                <div className="w-full flex items-center justify-center">
+                    <p className="text-gray-400">Invalid date</p>
+                </div>
+            </div>
+        );
+    }
+
+    const safeTasks = Array.isArray(tasks) ? tasks.filter(task => task && task.category) : [];
+    const bgColor = safeTasks.length > 0 ? (categoryColors[safeTasks[0].category] || '#374151') : '#374151'; // gray-700
     const textColor = getTextColorForBackground(bgColor);
 
     return (
         <div
+            data-date={date.toISOString().split('T')[0]}
             className="rounded-3xl p-4 flex min-h-[10rem]"
             style={{ backgroundColor: bgColor, color: textColor }}
         >
@@ -231,7 +246,7 @@ function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDay
                 <p className="text-6xl font-bold font-display tracking-tight leading-none opacity-60">{date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</p>
             </div>
             <div className="w-2/3">
-                <MiniTimeline tasks={tasks} textColor={textColor} date={date} onAddTask={onAddTask} categoryColors={categoryColors}/>
+                <MiniTimeline tasks={safeTasks} textColor={textColor} date={date} onAddTask={onAddTask} categoryColors={categoryColors}/>
             </div>
         </div>
     );
@@ -247,6 +262,7 @@ interface CalendarViewProps {
 function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
     const [currentMonthDate, setCurrentMonthDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
     const listRef = useRef<HTMLDivElement>(null);
+    const [shouldScrollToToday, setShouldScrollToToday] = useState(true);
 
     const tasksByDate = useMemo(() => {
         return tasks.reduce((acc, task) => {
@@ -257,13 +273,40 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
         }, {} as Record<string, Task[]>);
     }, [tasks]);
 
-    const changeMonth = (amount: number) => {
-        setCurrentMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() + amount, 1));
-    };
+    const changeMonth = useCallback((amount: number) => {
+        setCurrentMonthDate(prev => {
+            const newDate = new Date(prev.getFullYear(), prev.getMonth() + amount, 1);
+            return newDate;
+        });
+        setShouldScrollToToday(false); // Don't auto-scroll when user manually changes months
+    }, []);
     
+    // Enhanced scroll to today functionality
     useEffect(() => {
-        listRef.current?.scrollTo(0, 0);
-    }, [currentMonthDate]);
+        const scrollToToday = () => {
+            if (listRef.current && shouldScrollToToday) {
+                const todayStr = new Date().toISOString().split('T')[0];
+                const todayElement = listRef.current.querySelector(`[data-date='${todayStr}']`) as HTMLElement;
+                if (todayElement) {
+                    // Use a small timeout to ensure the DOM is fully rendered
+                    setTimeout(() => {
+                        todayElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center',
+                            inline: 'nearest'
+                        });
+                    }, 100);
+                }
+            } else if (listRef.current && !shouldScrollToToday) {
+                // Scroll to top for manual month changes
+                listRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+
+        // Wait for animation to complete before scrolling
+        const timeoutId = setTimeout(scrollToToday, 300);
+        return () => clearTimeout(timeoutId);
+    }, [currentMonthDate, shouldScrollToToday]);
 
     const dayElements = useMemo(() => {
         const year = currentMonthDate.getFullYear();
@@ -282,37 +325,43 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
         return elements;
     }, [currentMonthDate, tasksByDate, categoryColors, onAddTask]);
 
-
+    // Enhanced header with clearer year display
     const prevMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1).toLocaleString('default', { month: 'short' }).toUpperCase();
-    const currentMonth = currentMonthDate.toLocaleString('default', { month: 'long' }).toUpperCase();
+    const currentMonthName = currentMonthDate.toLocaleString('default', { month: 'long' }).toUpperCase();
+    const currentYear = currentMonthDate.getFullYear();
     const nextMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1).toLocaleString('default', { month: 'short' }).toUpperCase();
     
     return (
-        <div className="flex flex-col h-full">
+        <div className="grid grid-rows-[auto_1fr] h-full">
             <div className="flex justify-between items-center text-xl font-bold p-2 mb-4">
                 <span className="text-text-secondary/50 font-medium">{prevMonth}</span>
-                <div className="flex items-center gap-2 text-2xl font-display">
-                    <button onClick={() => changeMonth(-1)} className="p-1 rounded-full hover:bg-card"><ChevronLeftIcon className="w-6 h-6"/></button>
-                    <span>{currentMonth}</span>
-                    <button onClick={() => changeMonth(1)} className="p-1 rounded-full hover:bg-card"><ChevronRightIcon className="w-6 h-6"/></button>
+                <div className="flex items-center gap-3 text-2xl font-display">
+                    <button onClick={() => changeMonth(-1)} className="p-1 rounded-full hover:bg-card transition-colors">
+                        <ChevronLeftIcon className="w-6 h-6"/>
+                    </button>
+                    <div className="text-center">
+                        <div className="text-2xl font-bold">{currentMonthName}</div>
+                        <div className="text-lg font-semibold text-text-secondary/70 -mt-1">{currentYear}</div>
+                    </div>
+                    <button onClick={() => changeMonth(1)} className="p-1 rounded-full hover:bg-card transition-colors">
+                        <ChevronRightIcon className="w-6 h-6"/>
+                    </button>
                 </div>
                 <span className="text-text-secondary/50 font-medium">{nextMonth}</span>
             </div>
-            <div className="relative flex-grow h-0 overflow-hidden">
-                 <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentMonthDate.toISOString()}
-                        ref={listRef}
-                        className="absolute inset-0 overflow-y-auto pr-2 -mr-2 space-y-3"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.25 }}
-                    >
-                        {dayElements}
-                    </motion.div>
-                 </AnimatePresence>
-            </div>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={`${currentMonthDate.toISOString()}-${shouldScrollToToday}`}
+                    ref={listRef}
+                    className="overflow-y-auto pr-2 -mr-2 space-y-3"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.25 }}
+                >
+                    {dayElements}
+                </motion.div>
+            </AnimatePresence>
         </div>
     );
 };
@@ -333,14 +382,25 @@ function Schedule(props: ScheduleProps) {
             .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
     }, [tasks, selectedDate]);
     
-    const changeDate = (amount: number) => {
-        const newDate = new Date(selectedDate);
-        newDate.setDate(newDate.getDate() + amount);
-        setSelectedDate(newDate);
-    };
+    // Enhanced and more reliable day navigation
+    const changeDate = useCallback((amount: number) => {
+        setSelectedDate(currentDate => {
+            const newDate = new Date(currentDate.getTime()); // Create new date from timestamp to avoid mutation
+            newDate.setDate(newDate.getDate() + amount);
+            
+            // Handle edge cases like month/year boundaries
+            if (newDate.getMonth() !== currentDate.getMonth() && Math.abs(amount) === 1) {
+                // Ensure we moved exactly one day across month boundary
+                const expectedDate = new Date(currentDate.getTime() + (amount * 24 * 60 * 60 * 1000));
+                return expectedDate;
+            }
+            
+            return newDate;
+        });
+    }, []);
 
     const handleOpenNewTaskModal = useCallback((date: Date, hour?: number) => {
-        const prefillDate = new Date(date);
+        const prefillDate = new Date(date.getTime()); // Use timestamp to avoid reference issues
         if (hour !== undefined) {
             prefillDate.setHours(hour, 0, 0, 0);
         } else {
@@ -349,15 +409,15 @@ function Schedule(props: ScheduleProps) {
         }
         setPrefillDateForModal(prefillDate);
         setIsNewTaskModalOpen(true);
-    }, [setPrefillDateForModal, setIsNewTaskModalOpen]);
+    }, []);
 
-    const handleHeaderAddTask = () => {
-        const dateForModal = view === 'month' ? new Date() : selectedDate;
+    const handleHeaderAddTask = useCallback(() => {
+        const dateForModal = view === 'month' ? new Date() : new Date(selectedDate.getTime());
         handleOpenNewTaskModal(dateForModal);
-    };
+    }, [view, selectedDate, handleOpenNewTaskModal]);
 
     return (
-        <div className="h-[calc(100vh-8rem)]">
+        <div className="h-[calc(100vh-8rem)] flex flex-col">
              <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-full">
                     <button onClick={() => setView('today')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'today' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Today</button>
@@ -375,7 +435,7 @@ function Schedule(props: ScheduleProps) {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="h-full"
+                    className="flex-grow min-h-0"
                 >
                     {view === 'today' ? (
                        <TodayView 
@@ -383,6 +443,7 @@ function Schedule(props: ScheduleProps) {
                           tasks={tasksForSelectedDate}
                           categoryColors={categoryColors}
                           onSelectTask={setSelectedTask}
+                          changeDate={changeDate}
                        />
                     ) : (
                         <CalendarView tasks={tasks} categoryColors={categoryColors} onAddTask={handleOpenNewTaskModal} />

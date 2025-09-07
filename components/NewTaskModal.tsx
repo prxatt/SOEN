@@ -70,9 +70,7 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
             showToast("Kiko is using a backup model for command parsing.");
         }
         
-        const updatePayload = { ...parsedDetails };
-        delete updatePayload.title;
-        setTaskDetails(prev => ({ ...prev, ...updatePayload }));
+        setTaskDetails(prev => ({ ...prev, ...parsedDetails }));
 
         if (parsedDetails.startTime instanceof Date) {
             const newStartTime = new Date(selectedDate);
@@ -149,7 +147,7 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
         taskStartTime.setHours(parseInt(hours), parseInt(minutes));
         
         const finalTitle = taskDetails.title.startsWith('/') 
-            ? (aiSummary ? aiSummary.split('"')[1] : taskDetails.title.substring(1).split('@')[0].trim() || "New Task")
+            ? (taskDetails.title || "New Task") // The title is now refined and in the state
             : taskDetails.title;
 
         addTask({

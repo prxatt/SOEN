@@ -5,6 +5,7 @@ import { CheckCircleIcon, XMarkIcon, SparklesIcon, DocumentTextIcon, LinkIcon, A
 import * as Icons from './Icons';
 import { ResponsiveContainer, BarChart, Bar, Cell, RadialBarChart, RadialBar, Tooltip } from 'recharts';
 import { getAutocompleteSuggestions } from '../services/geminiService';
+import { kikoRequest } from '../services/kikoAIService';
 
 interface EventDetailProps {
     task: Task;
@@ -58,7 +59,7 @@ interface EditableRowProps {
 
 function EditableRow({ icon: Icon, label, children, className = '' }: EditableRowProps) {
   return (
-    <div className={`bg-gray-100 dark:bg-zinc-900/50 p-3 rounded-xl flex items-center justify-between ${className}`}>
+    <div className={`bg-gray-100 dark:bg-zinc-900/50 p-2 rounded-xl flex items-center justify-between ${className}`}>
         <div className="flex items-center gap-3">
             <Icon className="w-5 h-5 text-text-secondary flex-shrink-0" />
             <span className="font-semibold text-text text-sm">{label}</span>
@@ -176,12 +177,41 @@ function InsightWidget({ widget }: { widget: InsightWidgetData }) {
     }
 }
 
+const PrioritySelector = ({ value, onChange }: {value: Task['priority'], onChange: (p: Task['priority']) => void}) => {
+    const priorities: Array<{ label: string, value: 'low' | 'medium' | 'high', color: string, textColor: string }> = [
+        { label: 'Low', value: 'low', color: 'bg-blue-100 dark:bg-blue-900/50', textColor: 'text-blue-600 dark:text-blue-300' },
+        { label: 'Medium', value: 'medium', color: 'bg-yellow-100 dark:bg-yellow-800/50', textColor: 'text-yellow-700 dark:text-yellow-300' },
+        { label: 'High', value: 'high', color: 'bg-red-100 dark:bg-red-900/50', textColor: 'text-red-600 dark:text-red-300' },
+    ];
+
+    return (
+        <div className="flex items-center gap-2">
+            {priorities.map(p => (
+                <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => onChange(p.value)}
+                    className={`px-3 py-1 text-sm font-semibold rounded-full transition-all ${
+                        value === p.value
+                            ? `${p.color} ${p.textColor} ring-2 ring-current`
+                            : 'bg-gray-200 dark:bg-zinc-700 text-text-secondary hover:bg-gray-300 dark:hover:bg-zinc-600'
+                    }`}
+                >
+                    {p.label}
+                </button>
+            ))}
+        </div>
+    );
+};
+
 
 function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categories, categoryColors, onAddNewCategory, projects, notes, notebooks, deleteTask, triggerInsightGeneration }: EventDetailProps) {
     const [editableTask, setEditableTask] = useState(task);
     const titleTextareaRef = useRef<HTMLTextAreaElement>(null);
     const [locationSuggestions, setLocationSuggestions] = useState<{place_name: string; address: string}[]>([]);
     const locationInputRef = useRef<HTMLInputElement>(null);
+    const [isParsing, setIsParsing] = useState(false);
+
 
     // Sync local state with task prop
     useEffect(() => { setEditableTask(task); }, [task]);
@@ -194,9 +224,38 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
             textarea.style.height = `${textarea.scrollHeight}px`; // Set to scroll height
         }
     }, [editableTask.title, task]); // Rerun on new task or title change
+    
+    const debouncedParseUpdate = useCallback(debounce(async (currentTaskState: Task) => {
+        const title = currentTaskState.title;
+        const commandStartIndex = title.indexOf('/');
+        if (commandStartIndex === -1) return;
+
+        const command = title.substring(commandStartIndex);
+        const newTitleCandidate = title.substring(0, commandStartIndex).trim();
+        
+        setIsParsing(true);
+        const { data: updatePayload } = await kikoRequest('parse_task_update', { 
+            command: command, 
+            task: { ...currentTaskState, title: newTitleCandidate } 
+        });
+        setIsParsing(false);
+        
+        if (updatePayload && Object.keys(updatePayload).length > 0) {
+            setEditableTask(prev => ({ ...prev, title: newTitleCandidate, ...updatePayload }));
+        } else {
+             setEditableTask(prev => ({...prev, title: newTitleCandidate }));
+        }
+    }, 1200), []);
+
 
     const handleFieldChange = (field: keyof Task, value: any) => {
-        setEditableTask(prev => ({ ...prev, [field]: value }));
+        setEditableTask(prev => {
+            const newState = { ...prev, [field]: value };
+            if (field === 'title' && typeof value === 'string' && value.includes('/')) {
+                debouncedParseUpdate(newState);
+            }
+            return newState;
+        });
     };
 
     const debouncedGetLocationSuggestions = useCallback(debounce(async (query: string) => {
@@ -254,7 +313,7 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in-fast" onClick={handleSave}>
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in-fast" onClick={handleSave}>
             <motion.div
                 key="edit-task-modal"
                 variants={modalVariants}
@@ -290,14 +349,17 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
                         </button>
                     </div>
                     <div className="flex justify-between items-end mt-2">
-                        <textarea
-                            ref={titleTextareaRef}
-                            value={editableTask.title}
-                            onChange={e => handleFieldChange('title', e.target.value)}
-                            className="text-5xl font-bold bg-transparent focus:outline-none w-full resize-none overflow-hidden placeholder:text-current/30 text-black dark:text-white"
-                            rows={1}
-                            placeholder="Task Title"
-                        />
+                        <div className="relative flex-grow">
+                             <textarea
+                                ref={titleTextareaRef}
+                                value={editableTask.title}
+                                onChange={e => handleFieldChange('title', e.target.value)}
+                                className="text-5xl font-bold bg-transparent focus:outline-none w-full resize-none overflow-hidden placeholder:text-current/30 text-black dark:text-white"
+                                rows={1}
+                                placeholder="Task Title"
+                            />
+                            {isParsing && <SparklesIcon className="w-5 h-5 text-accent absolute right-2 top-1/2 -translate-y-1/2 animate-pulse" />}
+                        </div>
                          <button onClick={handleGenerateInsights} className="ml-4 flex-shrink-0 p-2 text-xs text-center border border-gray-300 dark:border-zinc-600 rounded-lg w-24 h-16 flex flex-col items-center justify-center hover:border-accent transition-colors">
                             {task.isGeneratingInsights ? (
                                 <>
@@ -311,8 +373,8 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
                                 </>
                             ) : (
                                 <>
-                                    <CheckIcon className="w-5 h-5 text-text-secondary" />
-                                    <span className="text-text-secondary mt-1">No AI insight available for this task.</span>
+                                    <SparklesIcon className="w-5 h-5 text-accent" />
+                                    <span className="text-text-secondary mt-1">Get Insights</span>
                                 </>
                             )}
                         </button>
@@ -321,17 +383,17 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
                 
                 <main className="flex-grow p-6 pt-4 bg-white dark:bg-zinc-800 overflow-y-auto min-h-0">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-semibold text-text">Today's tasks</h3>
+                        <h3 className="font-semibold text-text">Task Details</h3>
                         <button onClick={onComplete} className="bg-green-500 text-white px-4 py-2 rounded-full font-semibold text-sm flex items-center gap-2 hover:bg-green-600 transition-colors">
                             <CheckCircleIcon className="w-5 h-5"/>
                             Mark as Complete
                         </button>
                     </div>
 
-                    <div className="space-y-4">
-                        <div>
-                            <h4 className="font-semibold text-sm text-text-secondary mb-2">Timing</h4>
-                            <div className="space-y-2">
+                    <div className="space-y-3">
+                         <div>
+                            <h4 className="font-semibold text-xs text-text-secondary mb-1 uppercase tracking-wider">Timing</h4>
+                            <div className="space-y-1.5">
                                 <EditableRow icon={ClockIcon} label="Start Time">
                                     <input type="time" value={new Date(editableTask.startTime).toTimeString().substring(0,5)} onChange={e => { const [h, m] = e.target.value.split(':'); const d = new Date(editableTask.startTime); d.setHours(parseInt(h), parseInt(m)); handleFieldChange('startTime', d); }} className="bg-transparent text-right font-semibold focus:outline-none" />
                                 </EditableRow>
@@ -346,8 +408,8 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
                             </div>
                         </div>
                         <div>
-                            <h4 className="font-semibold text-sm text-text-secondary mb-2">Details</h4>
-                            <div className="space-y-2">
+                            <h4 className="font-semibold text-xs text-text-secondary mb-1 uppercase tracking-wider">Details</h4>
+                            <div className="space-y-1.5">
                                 <EditableRow icon={LinkIcon} label="Notes">
                                    <input type="text" value={editableTask.notes || ""} onChange={e => handleFieldChange('notes', e.target.value)} className="w-full bg-transparent text-right font-semibold focus:outline-none truncate" placeholder="Add a quick note..."/>
                                 </EditableRow>
@@ -383,11 +445,17 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
                                         </div>
                                     )}
                                 </div>
+                                <EditableRow icon={FlagIcon} label="Priority">
+                                    <PrioritySelector
+                                        value={editableTask.priority || 'medium'}
+                                        onChange={(p) => handleFieldChange('priority', p)}
+                                    />
+                                </EditableRow>
                             </div>
                         </div>
                          <div>
-                            <h4 className="font-semibold text-sm text-text-secondary mb-2">Connections</h4>
-                            <div className="space-y-2">
+                            <h4 className="font-semibold text-xs text-text-secondary mb-1 uppercase tracking-wider">Connections</h4>
+                            <div className="space-y-1.5">
                                 <EditableRow icon={BriefcaseIcon} label="Project">
                                     <select value={editableTask.projectId || ''} onChange={e => handleFieldChange('projectId', e.target.value ? parseInt(e.target.value) : undefined)} className="bg-transparent text-right font-semibold focus:outline-none appearance-none pr-1">
                                         <option value="">None</option>

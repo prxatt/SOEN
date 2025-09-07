@@ -220,8 +220,32 @@ export const kikoRequest = async (
             break;
         }
         case 'parse_task_update': {
-            primaryAgent = () => parseUpdateCommandWithLlama3(payload.command);
-            // No simple fallback for this specialized parsing
+            const { command, task } = payload;
+            primaryAgent = async () => {
+                const parsedUpdate = await parseUpdateCommandWithLlama3(command);
+
+                // Title refinement logic for updates
+                const isTitleGeneric = task.title && (parsedUpdate.category || task.category) && task.title.toLowerCase() === (parsedUpdate.category || task.category).toLowerCase();
+                
+                if (isTitleGeneric && (parsedUpdate.location || parsedUpdate.linkedUrl || task.location || task.linkedUrl)) {
+                    const contextTask = { ...task, ...parsedUpdate }; // use updated context for refinement
+                    const context = `Category: ${contextTask.category}\nLocation: ${contextTask.location || 'N/A'}\nVirtual Meeting Link: ${contextTask.linkedUrl || 'N/A'}`;
+                    const prompt = `Based on the following task details, generate a short, descriptive, and engaging title. The current title is a generic placeholder.
+                    
+                    **Task Details:**
+                    ${context}
+
+                    Respond ONLY with the new title.`;
+
+                    try {
+                        const refinedTitle = await generateTextWithGPT4o(prompt);
+                        parsedUpdate.title = refinedTitle.replace(/"/g, '').trim();
+                    } catch (e) {
+                        console.warn("Title refinement for update failed. Using user-provided title.", e);
+                    }
+                }
+                return parsedUpdate;
+            };
             break;
         }
          // --- MUSE AGENT (Creative Text) ---

@@ -29,7 +29,8 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
 }
 
 
-const NewTaskModal: React.FC<NewTaskModalProps> = ({ onClose, addTask, selectedDate, projects, notes, categories, categoryColors, onAddNewCategory, allTasks, showToast }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categories, categoryColors, onAddNewCategory, allTasks, showToast }: NewTaskModalProps) {
     const [taskDetails, setTaskDetails] = useState<Partial<Task>>({
         title: '',
         category: 'Meeting', 

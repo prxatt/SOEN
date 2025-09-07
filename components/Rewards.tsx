@@ -13,7 +13,18 @@ interface RewardsProps {
     onPurchase: (reward: RewardItem) => void;
 }
 
-const RewardCard: React.FC<{item: RewardItem, isPurchased: boolean, isActive: boolean, canAfford: boolean, onPurchase: () => void, onApply: () => void}> = ({ item, isPurchased, isActive, canAfford, onPurchase, onApply }) => (
+interface RewardCardProps {
+  item: RewardItem;
+  isPurchased: boolean;
+  isActive: boolean;
+  canAfford: boolean;
+  onPurchase: () => void;
+  onApply: () => void;
+}
+
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function RewardCard({ item, isPurchased, isActive, canAfford, onPurchase, onApply }: RewardCardProps) {
+  return (
     <div className="card p-4 rounded-xl flex flex-col justify-between">
         <div>
             <h4 className="font-bold font-display text-lg">{item.name}</h4>
@@ -36,9 +47,11 @@ const RewardCard: React.FC<{item: RewardItem, isPurchased: boolean, isActive: bo
             )}
         </div>
     </div>
-);
+  );
+}
 
-const Rewards: React.FC<RewardsProps> = ({ onBack, praxisFlow, purchasedRewards, activeTheme, setActiveTheme, onPurchase }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Rewards({ onBack, praxisFlow, purchasedRewards, activeTheme, setActiveTheme, onPurchase }: RewardsProps) {
     const themes = REWARDS_CATALOG.filter(r => r.type === 'theme');
 
     return (

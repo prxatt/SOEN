@@ -13,7 +13,8 @@ interface FocusModeProps {
     activeFocusBackground: string;
 }
 
-const FocusMode: React.FC<FocusModeProps> = ({ task, onComplete, onClose, activeFocusBackground }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function FocusMode({ task, onComplete, onClose, activeFocusBackground }: FocusModeProps) {
     const durationSeconds = getActualDuration(task) * 60;
     const [remainingSeconds, setRemainingSeconds] = useState(durationSeconds);
     const [isPaused, setIsPaused] = useState(false);

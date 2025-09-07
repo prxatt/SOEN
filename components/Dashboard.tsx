@@ -28,7 +28,12 @@ const itemVariants = {
   visible: { y: 0, opacity: 1 },
 };
 
-const MetricCard: React.FC<{ metric: { label: string; value: string; icon: string } }> = ({ metric }) => {
+interface MetricCardProps {
+  metric: { label: string; value: string; icon: string };
+}
+
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function MetricCard({ metric }: MetricCardProps) {
     const Icon = (Icons as any)[metric.icon] || SparklesIcon;
     return (
         <div className="card p-3 rounded-lg flex items-center gap-3">
@@ -41,7 +46,13 @@ const MetricCard: React.FC<{ metric: { label: string; value: string; icon: strin
     );
 };
 
-const StrategicInsights: React.FC<{ briefing: MissionBriefing; categoryColors: Record<Category, string>; }> = ({ briefing, categoryColors }) => {
+interface StrategicInsightsProps {
+  briefing: MissionBriefing;
+  categoryColors: Record<Category, string>;
+}
+
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function StrategicInsights({ briefing, categoryColors }: StrategicInsightsProps) {
     return (
         <div className="card p-4 rounded-2xl">
             <h3 className="text-lg font-bold font-display text-accent flex items-center gap-2">
@@ -63,7 +74,12 @@ const StrategicInsights: React.FC<{ briefing: MissionBriefing; categoryColors: R
     );
 };
 
-const DailyReward: React.FC<{ imageUrl: string }> = ({ imageUrl }) => {
+interface DailyRewardProps {
+  imageUrl: string;
+}
+
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function DailyReward({ imageUrl }: DailyRewardProps) {
     const handleDownload = () => {
         const link = document.createElement('a');
         link.href = imageUrl;
@@ -95,7 +111,8 @@ const DailyReward: React.FC<{ imageUrl: string }> = ({ imageUrl }) => {
 };
 
 
-const Dashboard: React.FC<DashboardProps> = ({ tasks, healthData, briefing, goals, setFocusTask, dailyCompletionImage, categoryColors }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Dashboard({ tasks, healthData, briefing, goals, setFocusTask, dailyCompletionImage, categoryColors }: DashboardProps) {
 
     const todaysTasks = tasks.filter(t => new Date(t.startTime).toDateString() === new Date().toDateString());
     const upcomingTask = todaysTasks.find(t => t.status !== TaskStatus.Completed && new Date(t.startTime) > new Date());

@@ -8,23 +8,34 @@ interface NavigationProps {
   setScreen: (screen: Screen) => void;
 }
 
-const NavIcon: React.FC<{ Icon: React.FC<React.SVGProps<SVGSVGElement>>; label: Screen; isActive: boolean; onClick: () => void; imageUrl?: string; }> = ({ Icon, label, isActive, onClick, imageUrl }) => (
-  <motion.button
-    onClick={onClick}
-    whileTap={{ scale: 0.9 }}
-    className={`flex flex-col items-center justify-center w-full pt-2 pb-1 transition-colors duration-200 ease-in-out ${
-      isActive ? 'text-accent' : 'text-text-secondary hover:text-text'
-    }`}
-    aria-label={label}
-  >
-    {imageUrl ? (
-      <img src={imageUrl} alt="Profile" className={`h-6 w-6 rounded-full object-cover ring-2 ${isActive ? 'ring-accent' : 'ring-transparent'}`} />
-    ) : (
-      <Icon className="h-6 w-6" />
-    )}
-    <span className={`text-xs mt-1 ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
-  </motion.button>
-);
+interface NavIconProps {
+  Icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  label: Screen;
+  isActive: boolean;
+  onClick: () => void;
+  imageUrl?: string;
+}
+
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function NavIcon({ Icon, label, isActive, onClick, imageUrl }: NavIconProps) {
+  return (
+    <motion.button
+      onClick={onClick}
+      whileTap={{ scale: 0.9 }}
+      className={`flex flex-col items-center justify-center w-full pt-2 pb-1 transition-colors duration-200 ease-in-out ${
+        isActive ? 'text-accent' : 'text-text-secondary hover:text-text'
+      }`}
+      aria-label={label}
+    >
+      {imageUrl ? (
+        <img src={imageUrl} alt="Profile" className={`h-6 w-6 rounded-full object-cover ring-2 ${isActive ? 'ring-accent' : 'ring-transparent'}`} />
+      ) : (
+        <Icon className="h-6 w-6" />
+      )}
+      <span className={`text-xs mt-1 ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
+    </motion.button>
+  );
+}
 
 const NAV_ITEMS: { label: Screen; icon: React.FC<React.SVGProps<SVGSVGElement>>; imageUrl?: string }[] = [
   { label: 'Dashboard', icon: HomeIcon },
@@ -33,7 +44,8 @@ const NAV_ITEMS: { label: Screen; icon: React.FC<React.SVGProps<SVGSVGElement>>;
   { label: 'Profile', icon: UserCircleIcon, imageUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop' },
 ];
 
-const Navigation: React.FC<NavigationProps> = ({ activeScreen, setScreen }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Navigation({ activeScreen, setScreen }: NavigationProps) {
   const navItemsLeft = NAV_ITEMS.slice(0, 2);
   const navItemsRight = NAV_ITEMS.slice(2);
   

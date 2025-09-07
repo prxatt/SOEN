@@ -9,7 +9,13 @@ interface ProfileProps {
     setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
 }
 
-const GoalsHub: React.FC<{goals: Goal[], setGoals: React.Dispatch<React.SetStateAction<Goal[]>>}> = ({ goals, setGoals }) => {
+interface GoalsHubProps {
+  goals: Goal[];
+  setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
+}
+
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function GoalsHub({ goals, setGoals }: GoalsHubProps) {
     const updateGoalText = (id: number, text: string) => setGoals(prev => prev.map(g => g.id === id ? {...g, text} : g));
     const toggleGoalStatus = (id: number) => setGoals(prev => prev.map(g => g.id === id ? {...g, status: g.status === 'active' ? 'completed' : 'active'} : g));
     const addGoal = (term: GoalTerm) => setGoals(prev => [...prev, { id: Date.now(), term, text: 'New Goal', status: 'active' }]);
@@ -42,7 +48,8 @@ const GoalsHub: React.FC<{goals: Goal[], setGoals: React.Dispatch<React.SetState
 };
 
 
-const Profile: React.FC<ProfileProps> = ({ praxisFlow, setScreen, goals, setGoals }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Profile({ praxisFlow, setScreen, goals, setGoals }: ProfileProps) {
   return (
     <div className="h-full overflow-y-auto pb-4">
         <div className="flex items-center gap-6">

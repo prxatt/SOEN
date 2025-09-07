@@ -15,7 +15,8 @@ const modalVariants = {
     exit: { opacity: 0, scale: 0.95, y: -20 },
 };
 
-const Onboarding: React.FC<OnboardingProps> = ({ goals, setGoals, onComplete }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
     const [step, setStep] = useState(0);
     const [longTermGoal, setLongTermGoal] = useState('');
     const [userHobbies, setUserHobbies] = useState('');
@@ -100,7 +101,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ goals, setGoals, onComplete }) 
                              <input 
                                 type="text"
                                 value={steps[step].value}
-                                onChange={(e) => steps[step].setter(e.target.value)}
+                                onChange={(e) => (steps[step].setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)}
                                 placeholder={steps[step].placeholder}
                                 className="w-full text-center bg-bg border border-border rounded-lg shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent"
                             />

@@ -9,8 +9,17 @@ interface SettingsProps {
     onLogout: () => void;
 }
 
-const SettingsRow: React.FC<{icon: React.ReactNode, title: string, subtitle: string, onClick?: () => void, action?: React.ReactNode}> = 
-({ icon, title, subtitle, onClick, action }) => (
+interface SettingsRowProps {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  onClick?: () => void;
+  action?: React.ReactNode;
+}
+
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function SettingsRow({ icon, title, subtitle, onClick, action }: SettingsRowProps) {
+  return (
     <button onClick={onClick} disabled={!onClick} className="w-full flex items-center justify-between text-left p-4 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:cursor-default disabled:hover:bg-transparent">
         <div className="flex items-center gap-4">
             <div className="p-2 bg-bg rounded-full">
@@ -25,10 +34,11 @@ const SettingsRow: React.FC<{icon: React.ReactNode, title: string, subtitle: str
             {action || (onClick && <ChevronRightIcon className="w-5 h-5 text-text-secondary"/>)}
         </div>
     </button>
-);
+  );
+}
 
-
-const Settings: React.FC<SettingsProps> = ({ uiMode, toggleUiMode, onSyncCalendar, onLogout }) => {
+// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout }: SettingsProps) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="h-full overflow-y-auto pb-4">
       <div className="mb-6">

@@ -1,6 +1,7 @@
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Project, Note, Notebook, Goal, Category, TaskStatus, ScheduleView, ChatMessage } from '../types';
 import { PlusCircleIcon, ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, CalendarIcon, CheckCircleIcon, ArrowUturnLeftIcon, PlusIcon } from './Icons';
 import EventDetail from './EventDetail';
@@ -118,8 +119,8 @@ function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDa
     const bgColor = firstUpcomingTask ? categoryColors[firstUpcomingTask.category] : '#374151'; // gray-700
     const textColor = getTextColorForBackground(bgColor);
 
-    const handlePrevDay = useCallback(() => changeDate(-1), [changeDate]);
-    const handleNextDay = useCallback(() => changeDate(1), [changeDate]);
+    const handlePrevDay = () => changeDate(-1);
+    const handleNextDay = () => changeDate(1);
 
     return (
         <div 
@@ -316,11 +317,27 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
             const newDate = new Date(prev.getFullYear(), prev.getMonth() + amount, 1);
             return newDate;
         });
-        setIsInitialLoad(false);
     }, [isAnimating]);
 
     const handleAnimationComplete = () => {
         setIsAnimating(false);
+        // This logic now reliably runs after the initial render animation is complete.
+        if (isInitialLoad && listRef.current) {
+            const today = new Date();
+            // Only scroll if the calendar is showing the current month.
+            if (currentMonthDate.getFullYear() === today.getFullYear() && currentMonthDate.getMonth() === today.getMonth()) {
+                const todayStr = today.toISOString().split('T')[0];
+                const todayElement = listRef.current.querySelector(`[data-date='${todayStr}']`) as HTMLElement;
+                if (todayElement) {
+                    todayElement.scrollIntoView({
+                        behavior: 'auto', // Instant scroll on first load
+                        block: 'center',
+                    });
+                }
+            }
+            // Ensure this logic only runs once on the very first load.
+            setIsInitialLoad(false);
+        }
     };
     
     const dayElements = useMemo(() => {
@@ -354,41 +371,6 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
         }
         return elements;
     }, [currentMonthDate, tasksByDate, categoryColors, onAddTask]);
-
-    useEffect(() => {
-        // This effect is specifically for the initial load to scroll to today's date.
-        // It runs only once when isInitialLoad is true and dayElements have been populated.
-        if (isInitialLoad && dayElements.length > 0 && listRef.current) {
-            let attempts = 0;
-            const maxAttempts = 10;
-            const interval = 100;
-
-            const tryScroll = () => {
-                if (attempts >= maxAttempts) {
-                    console.warn("Could not find today's element to scroll to after multiple attempts.");
-                    setIsInitialLoad(false); // Stop trying
-                    return;
-                }
-                const todayStr = new Date().toISOString().split('T')[0];
-                const todayElement = listRef.current?.querySelector(`[data-date='${todayStr}']`) as HTMLElement;
-                
-                if (todayElement) {
-                    todayElement.scrollIntoView({ 
-                        behavior: 'auto', // Use 'auto' for an instant jump on initial load
-                        block: 'center',
-                        inline: 'nearest'
-                    });
-                    setIsInitialLoad(false); // Success, stop trying
-                } else {
-                    attempts++;
-                    setTimeout(tryScroll, interval);
-                }
-            };
-            
-            // Use a small timeout to ensure the DOM is painted after React's render phase.
-            setTimeout(tryScroll, 50);
-        }
-    }, [isInitialLoad, dayElements]);
 
     useEffect(() => {
         // This effect handles scrolling to the top when navigating between months.
@@ -470,30 +452,13 @@ function Schedule(props: ScheduleProps) {
             .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
     }, [tasks, selectedDate]);
     
-    // Bulletproof and completely reliable day navigation with immutable state
-    const changeDate = useCallback((amount: number) => {
+    const changeDate = (amount: number) => {
         setSelectedDate(currentDate => {
-            // Create completely new date instance to avoid any mutation issues
-            const currentYear = currentDate.getFullYear();
-            const currentMonth = currentDate.getMonth();
-            const currentDay = currentDate.getDate();
-            
-            // Calculate new date using timestamp arithmetic for reliability
-            const currentTimestamp = new Date(currentYear, currentMonth, currentDay).getTime();
-            const oneDayInMs = 24 * 60 * 60 * 1000;
-            const newTimestamp = currentTimestamp + (amount * oneDayInMs);
-            
-            const newDate = new Date(newTimestamp);
-            
-            // Verify the date is valid
-            if (isNaN(newDate.getTime())) {
-                console.warn('Invalid date calculation, falling back to current date');
-                return new Date(currentDate);
-            }
-            
+            const newDate = new Date(currentDate);
+            newDate.setDate(newDate.getDate() + amount);
             return newDate;
         });
-    }, []);
+    };
 
     const handleOpenNewTaskModal = useCallback((date: Date, hour?: number) => {
         const prefillDate = new Date(date.getTime()); // Use timestamp to avoid reference issues
@@ -568,7 +533,7 @@ function Schedule(props: ScheduleProps) {
                             setSelectedTask(null);
                         }}
                         onUndoCompleteTask={(task) => {
-                            onUndoCompleteTask(task);
+                            props.onUndoCompleteTask(task);
                             setSelectedTask(null);
                         }}
                         onClose={() => setSelectedTask(null)}

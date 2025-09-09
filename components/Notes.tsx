@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Note, Notebook, Insight, ActionItem } from '../types';
@@ -315,7 +314,8 @@ function Notes({ notes, setNotes, notebooks, setNotebooks, addInsights, updateNo
         if (selectedNote) {
             const newTags = selectedNote.tags.filter(tag => tag !== tagToRemove);
             const updatedNote = { ...selectedNote, tags: newTags };
-            updateNote(updatedNote);
+            setSelectedNote(updatedNote); // Immediate UI update
+            updateNote(updatedNote); // Update parent state
         }
     };
 

@@ -235,6 +235,11 @@ export const kikoRequest = async (
                     **Task Details:**
                     ${context}
 
+                    **Examples:**
+                    - Details: Category: Meeting, Location: Google Meet: abc-def-ghi -> Title: "Sync on Google Meet"
+                    - Details: Category: Workout, Location: 24 Hour Fitness, San Francisco -> Title: "Workout at 24 Hour Fitness"
+                    - Details: Category: Learning, Location: N/A -> Title: "Learning Session" (No change if not enough context)
+
                     Respond ONLY with the new title.`;
 
                     try {

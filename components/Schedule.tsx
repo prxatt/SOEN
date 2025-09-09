@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Task, Project, Note, Notebook, Goal, Category, TaskStatus, ScheduleView, ChatMessage } from '../types';
@@ -217,10 +218,9 @@ interface CalendarDayCardProps {
   onAddTask: (date: Date, hour: number) => void;
 }
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDayCardProps) {
     // Defensive programming for date and tasks
-    if (!date || isNaN(date.getTime())) {
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
         return (
             <div className="rounded-3xl p-4 flex min-h-[10rem] bg-gray-700">
                 <div className="w-full flex items-center justify-center">
@@ -230,20 +230,40 @@ function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDay
         );
     }
 
-    const safeTasks = Array.isArray(tasks) ? tasks.filter(task => task && task.category) : [];
-    const bgColor = safeTasks.length > 0 ? (categoryColors[safeTasks[0].category] || '#374151') : '#374151'; // gray-700
+    let dayOfWeek, day, month;
+    try {
+        dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+        day = String(date.getDate()).padStart(2, '0');
+        month = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    } catch (e) {
+        console.error("Error formatting date in CalendarDayCard:", e);
+        return (
+             <div className="rounded-3xl p-4 flex min-h-[10rem] bg-red-800 text-white">
+                <div className="w-full flex items-center justify-center">
+                    <p>Date Error</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Filter malformed task data
+    const safeTasks = Array.isArray(tasks)
+        ? tasks.filter(task => task && task.category && task.startTime && !isNaN(new Date(task.startTime).getTime()))
+        : [];
+        
+    const bgColor = safeTasks.length > 0 ? (categoryColors[safeTasks[0].category] || '#374151') : '#374151';
     const textColor = getTextColorForBackground(bgColor);
 
     return (
         <div
-            data-date={date.toISOString().split('T')[0]}
+            data-date={date.toISOString().split('T')[0]} // Unique key for scrolling
             className="rounded-3xl p-4 flex min-h-[10rem]"
             style={{ backgroundColor: bgColor, color: textColor }}
         >
             <div className="w-1/3 flex-shrink-0 pr-4">
-                <p className="font-semibold">{date.toLocaleDateString('en-US', { weekday: 'long' })}</p>
-                <p className="text-6xl font-bold font-display tracking-tighter leading-none mt-1">{String(date.getDate()).padStart(2, '0')}</p>
-                <p className="text-6xl font-bold font-display tracking-tight leading-none opacity-60">{date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</p>
+                <p className="font-semibold">{dayOfWeek}</p>
+                <p className="text-6xl font-bold font-display tracking-tighter leading-none mt-1">{day}</p>
+                <p className="text-6xl font-bold font-display tracking-tight leading-none opacity-60">{month}</p>
             </div>
             <div className="w-2/3">
                 <MiniTimeline tasks={safeTasks} textColor={textColor} date={date} onAddTask={onAddTask} categoryColors={categoryColors}/>
@@ -258,92 +278,160 @@ interface CalendarViewProps {
   onAddTask: (date: Date, hour: number) => void;
 }
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
     const [currentMonthDate, setCurrentMonthDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
     const listRef = useRef<HTMLDivElement>(null);
-    const [shouldScrollToToday, setShouldScrollToToday] = useState(true);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [animationDirection, setAnimationDirection] = useState(1); // 1 for next, -1 for prev
 
     const tasksByDate = useMemo(() => {
-        return tasks.reduce((acc, task) => {
-            const dateStr = new Date(task.startTime).toDateString();
-            if (!acc[dateStr]) acc[dateStr] = [];
-            acc[dateStr].push(task);
-            return acc;
-        }, {} as Record<string, Task[]>);
+        try {
+            if (!Array.isArray(tasks)) {
+                console.warn("tasksByDate: tasks prop is not an array.");
+                return {};
+            }
+            return tasks.reduce((acc, task) => {
+                if (task && task.startTime) {
+                    const taskDate = new Date(task.startTime);
+                    if (!isNaN(taskDate.getTime())) {
+                        const dateStr = taskDate.toDateString();
+                        if (!acc[dateStr]) acc[dateStr] = [];
+                        acc[dateStr].push(task);
+                    }
+                }
+                return acc;
+            }, {} as Record<string, Task[]>);
+        } catch (error) {
+            console.error("Error processing tasks in tasksByDate:", error);
+            return {};
+        }
     }, [tasks]);
 
     const changeMonth = useCallback((amount: number) => {
+        if (isAnimating) return;
+        setAnimationDirection(amount > 0 ? 1 : -1);
+        setIsAnimating(true);
         setCurrentMonthDate(prev => {
             const newDate = new Date(prev.getFullYear(), prev.getMonth() + amount, 1);
             return newDate;
         });
-        setShouldScrollToToday(false); // Don't auto-scroll when user manually changes months
-    }, []);
+        setIsInitialLoad(false);
+    }, [isAnimating]);
+
+    const handleAnimationComplete = () => {
+        setIsAnimating(false);
+    };
     
-    // Enhanced scroll to today functionality
-    useEffect(() => {
-        const scrollToToday = () => {
-            if (listRef.current && shouldScrollToToday) {
-                const todayStr = new Date().toISOString().split('T')[0];
-                const todayElement = listRef.current.querySelector(`[data-date='${todayStr}']`) as HTMLElement;
-                if (todayElement) {
-                    // Use a small timeout to ensure the DOM is fully rendered
-                    setTimeout(() => {
-                        todayElement.scrollIntoView({ 
-                            behavior: 'smooth', 
-                            block: 'center',
-                            inline: 'nearest'
-                        });
-                    }, 100);
-                }
-            } else if (listRef.current && !shouldScrollToToday) {
-                // Scroll to top for manual month changes
-                listRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        };
-
-        // Wait for animation to complete before scrolling
-        const timeoutId = setTimeout(scrollToToday, 300);
-        return () => clearTimeout(timeoutId);
-    }, [currentMonthDate, shouldScrollToToday]);
-
     const dayElements = useMemo(() => {
         const year = currentMonthDate.getFullYear();
         const month = currentMonthDate.getMonth();
+
+        if (isNaN(year) || isNaN(month) || month < 0 || month > 11) {
+            console.error("Invalid year or month provided to CalendarView:", { year, month });
+            return [<div key="error">Error rendering calendar days.</div>];
+        }
+
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         
         const elements: JSX.Element[] = [];
         for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(year, month, day);
-            const dateStr = date.toDateString();
-            const dailyTasks = (tasksByDate[dateStr] || []).sort((a,b) => a.startTime.getTime() - b.startTime.getTime());
-            elements.push(
-                <CalendarDayCard key={dateStr} date={date} tasks={dailyTasks} categoryColors={categoryColors} onAddTask={onAddTask}/>
-            );
+            try {
+                const date = new Date(year, month, day);
+                if (isNaN(date.getTime())) {
+                    throw new Error(`Invalid date created for day ${day}`);
+                }
+                const dateStr = date.toDateString();
+                const dailyTasks = (tasksByDate[dateStr] || []).sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+                const uniqueKey = `${year}-${month}-${day}`;
+                elements.push(
+                    <CalendarDayCard key={uniqueKey} date={date} tasks={dailyTasks} categoryColors={categoryColors} onAddTask={onAddTask}/>
+                );
+            } catch (error) {
+                console.error(`Failed to generate day card for ${year}-${month}-${day}:`, error);
+                elements.push(<div key={`error-${day}`} className="p-4 bg-red-900 text-white rounded-xl">Error loading day {day}.</div>);
+            }
         }
         return elements;
     }, [currentMonthDate, tasksByDate, categoryColors, onAddTask]);
 
-    // Enhanced header with clearer year display
-    const prevMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1).toLocaleString('default', { month: 'short' }).toUpperCase();
-    const currentMonthName = currentMonthDate.toLocaleString('default', { month: 'long' }).toUpperCase();
-    const currentYear = currentMonthDate.getFullYear();
-    const nextMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1).toLocaleString('default', { month: 'short' }).toUpperCase();
+    useEffect(() => {
+        // This effect is specifically for the initial load to scroll to today's date.
+        // It runs only once when isInitialLoad is true and dayElements have been populated.
+        if (isInitialLoad && dayElements.length > 0 && listRef.current) {
+            let attempts = 0;
+            const maxAttempts = 10;
+            const interval = 100;
+
+            const tryScroll = () => {
+                if (attempts >= maxAttempts) {
+                    console.warn("Could not find today's element to scroll to after multiple attempts.");
+                    setIsInitialLoad(false); // Stop trying
+                    return;
+                }
+                const todayStr = new Date().toISOString().split('T')[0];
+                const todayElement = listRef.current?.querySelector(`[data-date='${todayStr}']`) as HTMLElement;
+                
+                if (todayElement) {
+                    todayElement.scrollIntoView({ 
+                        behavior: 'auto', // Use 'auto' for an instant jump on initial load
+                        block: 'center',
+                        inline: 'nearest'
+                    });
+                    setIsInitialLoad(false); // Success, stop trying
+                } else {
+                    attempts++;
+                    setTimeout(tryScroll, interval);
+                }
+            };
+            
+            // Use a small timeout to ensure the DOM is painted after React's render phase.
+            setTimeout(tryScroll, 50);
+        }
+    }, [isInitialLoad, dayElements]);
+
+    useEffect(() => {
+        // This effect handles scrolling to the top when navigating between months.
+        if (!isInitialLoad && listRef.current) {
+            listRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [currentMonthDate, isInitialLoad]);
+
+    let prevMonth = '...';
+    let currentMonthName = 'Loading';
+    let currentYear = new Date().getFullYear();
+    let nextMonth = '...';
+
+    try {
+        prevMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1).toLocaleString('default', { month: 'short' }).toUpperCase();
+        currentMonthName = currentMonthDate.toLocaleString('default', { month: 'long' }).toUpperCase();
+        currentYear = currentMonthDate.getFullYear();
+        nextMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1).toLocaleString('default', { month: 'short' }).toUpperCase();
+    } catch(e) {
+        console.error("Error formatting header dates:", e);
+    }
     
+    if (dayElements.length === 0 && !isAnimating) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-text-secondary min-h-[300px]">
+                <p>No tasks to display for this month.</p>
+            </div>
+        );
+    }
+
     return (
         <div className="grid grid-rows-[auto_1fr] h-full">
             <div className="flex justify-between items-center text-xl font-bold p-2 mb-4">
                 <span className="text-text-secondary/50 font-medium">{prevMonth}</span>
                 <div className="flex items-center gap-3 text-2xl font-display">
-                    <button onClick={() => changeMonth(-1)} className="p-1 rounded-full hover:bg-card transition-colors">
+                    <button onClick={() => changeMonth(-1)} disabled={isAnimating} className="p-1 rounded-full hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-wait">
                         <ChevronLeftIcon className="w-6 h-6"/>
                     </button>
                     <div className="text-center">
                         <div className="text-2xl font-bold">{currentMonthName}</div>
                         <div className="text-lg font-semibold text-text-secondary/70 -mt-1">{currentYear}</div>
                     </div>
-                    <button onClick={() => changeMonth(1)} className="p-1 rounded-full hover:bg-card transition-colors">
+                    <button onClick={() => changeMonth(1)} disabled={isAnimating} className="p-1 rounded-full hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-wait">
                         <ChevronRightIcon className="w-6 h-6"/>
                     </button>
                 </div>
@@ -351,13 +439,14 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
             </div>
             <AnimatePresence mode="wait">
                 <motion.div
-                    key={`${currentMonthDate.toISOString()}-${shouldScrollToToday}`}
+                    key={currentMonthDate.toISOString()}
                     ref={listRef}
                     className="overflow-y-auto pr-2 -mr-2 space-y-3"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.25 }}
+                    initial={{ opacity: 0, y: 30 * animationDirection }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -30 * animationDirection }}
+                    transition={{ duration: 0.4, ease: 'easeInOut' }}
+                    onAnimationComplete={handleAnimationComplete}
                 >
                     {dayElements}
                 </motion.div>
@@ -365,7 +454,6 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
         </div>
     );
 };
-
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function Schedule(props: ScheduleProps) {
@@ -382,17 +470,25 @@ function Schedule(props: ScheduleProps) {
             .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
     }, [tasks, selectedDate]);
     
-    // Enhanced and more reliable day navigation
+    // Bulletproof and completely reliable day navigation with immutable state
     const changeDate = useCallback((amount: number) => {
         setSelectedDate(currentDate => {
-            const newDate = new Date(currentDate.getTime()); // Create new date from timestamp to avoid mutation
-            newDate.setDate(newDate.getDate() + amount);
+            // Create completely new date instance to avoid any mutation issues
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth();
+            const currentDay = currentDate.getDate();
             
-            // Handle edge cases like month/year boundaries
-            if (newDate.getMonth() !== currentDate.getMonth() && Math.abs(amount) === 1) {
-                // Ensure we moved exactly one day across month boundary
-                const expectedDate = new Date(currentDate.getTime() + (amount * 24 * 60 * 60 * 1000));
-                return expectedDate;
+            // Calculate new date using timestamp arithmetic for reliability
+            const currentTimestamp = new Date(currentYear, currentMonth, currentDay).getTime();
+            const oneDayInMs = 24 * 60 * 60 * 1000;
+            const newTimestamp = currentTimestamp + (amount * oneDayInMs);
+            
+            const newDate = new Date(newTimestamp);
+            
+            // Verify the date is valid
+            if (isNaN(newDate.getTime())) {
+                console.warn('Invalid date calculation, falling back to current date');
+                return new Date(currentDate);
             }
             
             return newDate;

@@ -20,6 +20,15 @@ interface NewTaskModalProps {
   showToast: (message: string) => void;
 }
 
+const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
+    if (!hexColor.startsWith('#')) return 'black';
+    const r = parseInt(hexColor.slice(1, 3), 16);
+    const g = parseInt(hexColor.slice(3, 5), 16);
+    const b = parseInt(hexColor.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? 'black' : 'white';
+};
+
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
     let timeout: ReturnType<typeof setTimeout> | null = null;
     return (...args: Parameters<F>): void => {
@@ -28,8 +37,7 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
     };
 }
 
-
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+// Main component function
 function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categories, categoryColors, onAddNewCategory, allTasks, showToast }: NewTaskModalProps) {
     const [taskDetails, setTaskDetails] = useState<Partial<Task>>({
         title: '',
@@ -95,7 +103,6 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
         setIsParsing(false);
     }, 700), [showToast, selectedDate]);
 
-
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newTitle = e.target.value;
         setTaskDetails(prev => ({...prev, title: newTitle}));
@@ -159,117 +166,311 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
     };
     
     const categoryColor = categoryColors[taskDetails.category!] || '#A855F7';
+    const textColor = getTextColorForBackground(categoryColor);
+    
+    // Format selected date for display
+    const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    const monthNum = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const month = selectedDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
 
     return (
-         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast" onClick={onClose}>
-            <motion.form 
-                layout
-                onSubmit={handleSubmit} 
-                className="bg-[#F0F2F5] dark:bg-zinc-900 rounded-3xl shadow-xl w-full max-w-md p-6" 
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="w-full max-w-2xl"
                 onClick={e => e.stopPropagation()}
             >
-                <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <h2 className="text-3xl font-bold font-display text-black dark:text-white">New Task</h2>
-                        <p className="text-md text-text-secondary mt-1">Use "/" for AI magic...</p>
+                {/* Main Card with Category Color Background */}
+                <div 
+                    className="rounded-3xl p-6 shadow-2xl"
+                    style={{ backgroundColor: categoryColor, color: textColor }}
+                >
+                    {/* Header Section */}
+                    <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-center gap-4">
+                            {/* Date Display - Matching Today View Style */}
+                            <div className="flex flex-col">
+                                <p className="font-semibold opacity-80">{dayOfWeek}</p>
+                                <p className="text-4xl font-bold font-display tracking-tighter leading-none">{monthNum}.{day}</p>
+                                <p className="text-4xl font-bold font-display tracking-tight leading-none opacity-60">{month}</p>
+                            </div>
+                            
+                            <div className="border-l border-current/20 pl-4">
+                                <h2 className="text-3xl font-bold font-display">New Task</h2>
+                                <p className="opacity-70 mt-1">Use "/" for AI magic...</p>
+                            </div>
+                        </div>
+                        
+                        <button 
+                            type="button" 
+                            onClick={onClose} 
+                            className="p-2 rounded-full transition-colors" 
+                            style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+                            aria-label="Close modal"
+                        >
+                            <XMarkIcon className="w-6 h-6"/>
+                        </button>
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Close modal" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"><XMarkIcon className="w-6 h-6"/></button>
-                </div>
-                
-                <div className="space-y-4">
-                    <div className="relative">
-                        <input 
-                            ref={titleInputRef} 
-                            type="text" 
-                            id="task-title" 
-                            value={taskDetails.title} 
-                            onChange={handleTitleChange} 
-                            required 
-                            className="block w-full text-lg px-4 py-3 bg-white dark:bg-zinc-800 border-2 border-transparent rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card"
-                            style={{borderColor: categoryColor}}
-                            placeholder="/meeting w/ Apoorva @ 3pm for 3hr"
-                        />
-                        {isParsing && <SparklesIcon className="w-5 h-5 text-accent absolute right-3 top-1/2 -translate-y-1/2 animate-pulse" />}
-                    </div>
-                     
-                    <AnimatePresence>
-                    {aiSummary && (
-                        <motion.p 
-                            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                            className="text-xs text-center text-text-secondary p-2 bg-white/80 dark:bg-zinc-800/50 rounded-lg"
-                        >{aiSummary}</motion.p>
-                    )}
-                    </AnimatePresence>
 
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div className={`relative p-3 bg-white dark:bg-zinc-800 rounded-xl ${highlightedFields.includes('category') ? 'animate-highlight' : ''}`}>
-                            <label className="flex items-center gap-2 font-semibold text-text-secondary mb-1">
-                                <BriefcaseIcon className="w-4 h-4" /> Category
-                            </label>
-                            <select
-                                id="task-category"
-                                value={taskDetails.category}
-                                onChange={handleCategoryChange}
-                                className={`block w-full bg-transparent font-bold appearance-none focus:outline-none text-black dark:text-white`}
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Title Input - Prominent */}
+                        <div className="relative">
+                            <input 
+                                ref={titleInputRef} 
+                                type="text" 
+                                value={taskDetails.title} 
+                                onChange={handleTitleChange} 
+                                required 
+                                className="w-full text-2xl font-bold px-6 py-4 rounded-3xl border-2 border-current/20 focus:border-current/40 focus:outline-none transition-colors"
+                                style={{ 
+                                    backgroundColor: 'rgba(0,0,0,0.1)',
+                                    color: textColor,
+                                }}
+                                placeholder="/meeting w/ Apoorva @ 3pm for 3hr"
+                            />
+                            {isParsing && (
+                                <SparklesIcon 
+                                    className="w-6 h-6 absolute right-4 top-1/2 -translate-y-1/2 animate-pulse" 
+                                    style={{ color: textColor, opacity: 0.7 }}
+                                />
+                            )}
+                        </div>
+
+                        {/* AI Summary */}
+                        <AnimatePresence>
+                            {aiSummary && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: -10 }} 
+                                    animate={{ opacity: 1, y: 0 }} 
+                                    exit={{ opacity: 0, y: -10 }}
+                                    className="px-4 py-3 rounded-2xl text-center font-medium"
+                                    style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}
+                                >
+                                    {aiSummary}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Main Form Fields in Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Category & Repeat Row */}
+                            <div 
+                                className={`p-4 rounded-3xl transition-all duration-300 ${highlightedFields.includes('category') ? 'ring-2 ring-current' : ''}`}
+                                style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
                             >
-                                <optgroup label="Top Categories">{topCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</optgroup>
-                                {otherCategories.length > 0 && <optgroup label="Other Categories">{otherCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</optgroup>}
-                                <option value="CREATE_NEW" style={{ fontStyle: 'italic' }}>+ Create New...</option>
-                            </select>
-                        </div>
-                         <div className="relative p-3 bg-white dark:bg-zinc-800 rounded-xl">
-                             <label className="flex items-center gap-2 font-semibold text-text-secondary mb-1">
-                                <ArrowPathIcon className="w-4 h-4"/> Repeat
-                            </label>
-                             <select id="task-repeat" value={taskDetails.repeat || 'none'} onChange={e => setTaskDetails({...taskDetails, repeat: e.target.value as Task['repeat']})} className="block w-full bg-transparent font-bold appearance-none focus:outline-none text-black dark:text-white">
-                                <option value="none">Does not repeat</option>
-                                <option value="daily">Daily</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="monthly">Monthly</option>
-                            </select>
-                        </div>
-                    </div>
+                                <label className="flex items-center gap-2 font-semibold opacity-70 mb-2">
+                                    <BriefcaseIcon className="w-5 h-5" /> Category
+                                </label>
+                                <select
+                                    value={taskDetails.category}
+                                    onChange={handleCategoryChange}
+                                    className="w-full bg-transparent text-xl font-bold focus:outline-none appearance-none"
+                                    style={{ color: textColor }}
+                                >
+                                    <optgroup label="Top Categories">
+                                        {topCategories.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </optgroup>
+                                    {otherCategories.length > 0 && (
+                                        <optgroup label="Other Categories">
+                                            {otherCategories.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                    <option value="CREATE_NEW" style={{ fontStyle: 'italic' }}>+ Create New...</option>
+                                </select>
+                            </div>
 
-                    <div className={`grid grid-cols-2 gap-3 p-3 bg-white dark:bg-zinc-800 rounded-xl`}>
-                        <div className={`${highlightedFields.includes('startTime') ? 'animate-highlight' : ''}`}>
-                            <label className="flex items-center gap-2 font-semibold text-text-secondary mb-1"><ClockIcon className="w-4 h-4"/> Start Time</label>
-                            <input type="time" id="task-time" value={startTime} onChange={e => setStartTime(e.target.value)} required className={`block w-full bg-transparent font-bold focus:outline-none text-black dark:text-white`} />
+                            <div 
+                                className="p-4 rounded-3xl"
+                                style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+                            >
+                                <label className="flex items-center gap-2 font-semibold opacity-70 mb-2">
+                                    <ArrowPathIcon className="w-5 h-5"/> Repeat
+                                </label>
+                                <select 
+                                    value={taskDetails.repeat || 'none'} 
+                                    onChange={e => setTaskDetails({...taskDetails, repeat: e.target.value as Task['repeat']})} 
+                                    className="w-full bg-transparent text-xl font-bold focus:outline-none appearance-none"
+                                    style={{ color: textColor }}
+                                >
+                                    <option value="none">Does not repeat</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </div>
                         </div>
-                        <div className={`${highlightedFields.includes('plannedDuration') ? 'animate-highlight' : ''}`}>
-                            <label className="font-semibold text-text-secondary mb-1">Duration (min)</label>
-                            <input type="number" id="task-duration" value={taskDetails.plannedDuration} onChange={e => setTaskDetails({...taskDetails, plannedDuration: parseInt(e.target.value)})} required className={`block w-full bg-transparent font-bold focus:outline-none text-black dark:text-white`} />
+
+                        {/* Time & Duration Row */}
+                        <div 
+                            className="p-4 rounded-3xl grid grid-cols-2 gap-4"
+                            style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+                        >
+                            <div className={`${highlightedFields.includes('startTime') ? 'animate-pulse' : ''}`}>
+                                <label className="flex items-center gap-2 font-semibold opacity-70 mb-2">
+                                    <ClockIcon className="w-5 h-5"/> Start Time
+                                </label>
+                                <input 
+                                    type="time" 
+                                    value={startTime} 
+                                    onChange={e => setStartTime(e.target.value)} 
+                                    required 
+                                    className="w-full bg-transparent text-xl font-bold focus:outline-none"
+                                    style={{ color: textColor }}
+                                />
+                            </div>
+                            
+                            <div className={`${highlightedFields.includes('plannedDuration') ? 'animate-pulse' : ''}`}>
+                                <label className="font-semibold opacity-70 mb-2 block">Duration (min)</label>
+                                <input 
+                                    type="number" 
+                                    value={taskDetails.plannedDuration} 
+                                    onChange={e => setTaskDetails({...taskDetails, plannedDuration: parseInt(e.target.value)})} 
+                                    required 
+                                    className="w-full bg-transparent text-xl font-bold focus:outline-none"
+                                    style={{ color: textColor }}
+                                />
+                            </div>
                         </div>
-                    </div>
-                    
-                     <div className="space-y-3">
-                         <div className={`flex items-center justify-between p-3 bg-white dark:bg-zinc-800 rounded-xl ${highlightedFields.includes('isVirtual') ? 'animate-highlight' : ''}`}>
-                             <label htmlFor="is-virtual-toggle" className="font-bold text-black dark:text-white">Virtual Event</label>
-                             <button type="button" role="switch" aria-checked={taskDetails.isVirtual} onClick={() => setTaskDetails({...taskDetails, isVirtual: !taskDetails.isVirtual, location: '', linkedUrl: ''})} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${taskDetails.isVirtual ? 'bg-accent' : 'bg-gray-300 dark:bg-zinc-700'}`}>
-                                <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${taskDetails.isVirtual ? 'translate-x-6' : 'translate-x-1'}`} />
+
+                        {/* Virtual Toggle */}
+                        <div 
+                            className={`flex items-center justify-between p-4 rounded-3xl ${highlightedFields.includes('isVirtual') ? 'ring-2 ring-current' : ''}`}
+                            style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+                        >
+                            <label className="text-xl font-bold">Virtual Event</label>
+                            <button 
+                                type="button" 
+                                onClick={() => setTaskDetails({...taskDetails, isVirtual: !taskDetails.isVirtual, location: '', linkedUrl: ''})} 
+                                className="relative inline-flex items-center h-8 rounded-full w-14 transition-colors"
+                                style={{ 
+                                    backgroundColor: taskDetails.isVirtual ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'
+                                }}
+                            >
+                                <span 
+                                    className="inline-block w-6 h-6 transform bg-current rounded-full transition-transform"
+                                    style={{
+                                        transform: taskDetails.isVirtual ? 'translateX(1.75rem)' : 'translateX(0.25rem)',
+                                        opacity: 0.9
+                                    }}
+                                />
                             </button>
                         </div>
 
-                        <div className="relative">
-                            <div className={`relative p-3 bg-white dark:bg-zinc-800 rounded-xl ${highlightedFields.includes('location') || highlightedFields.includes('linkedUrl') ? 'animate-highlight' : ''}`}>
-                                 <label className="flex items-center gap-2 font-semibold text-text-secondary mb-1">
-                                     {taskDetails.isVirtual ? <VideoCameraIcon className="w-4 h-4"/> : <MapPinIcon className="w-4 h-4"/>}
-                                     {taskDetails.isVirtual ? "Meeting Link" : "Location"}
+                        {/* Location/URL Input - Conditional */}
+                        {!taskDetails.isVirtual ? (
+                            <div 
+                                className={`p-4 rounded-3xl relative ${highlightedFields.includes('location') ? 'ring-2 ring-current' : ''}`}
+                                style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+                            >
+                                <label className="flex items-center gap-2 font-semibold opacity-70 mb-2">
+                                    <MapPinIcon className="w-5 h-5"/> Location
                                 </label>
-                                <input type="text" value={taskDetails.isVirtual ? taskDetails.linkedUrl : taskDetails.location} onChange={e => taskDetails.isVirtual ? setTaskDetails({...taskDetails, linkedUrl: e.target.value}) : handleLocationChange(e.target.value) } placeholder={taskDetails.isVirtual ? "https://..." : "Add a location..."} className={`block w-full bg-transparent font-bold focus:outline-none text-black dark:text-white`} />
+                                <input 
+                                    type="text" 
+                                    value={taskDetails.location || ''} 
+                                    onChange={e => handleLocationChange(e.target.value)} 
+                                    className="w-full bg-transparent text-xl font-bold focus:outline-none"
+                                    style={{ color: textColor }}
+                                    placeholder="Where will this take place?"
+                                />
+                                {locationSuggestions.length > 0 && (
+                                    <div 
+                                        className="absolute top-full left-0 right-0 mt-2 rounded-2xl overflow-hidden shadow-lg z-10"
+                                        style={{ backgroundColor: categoryColor }}
+                                    >
+                                        {locationSuggestions.map((suggestion, index) => (
+                                            <button 
+                                                key={index} 
+                                                type="button" 
+                                                onClick={() => handleLocationSuggestionClick(suggestion)} 
+                                                className="w-full text-left p-3 transition-colors"
+                                                style={{ 
+                                                    backgroundColor: 'rgba(0,0,0,0.05)',
+                                                    borderBottom: index < locationSuggestions.length - 1 ? '1px solid rgba(0,0,0,0.1)' : 'none'
+                                                }}
+                                            >
+                                                <div className="font-medium">{suggestion.place_name}</div>
+                                                <div className="text-sm opacity-70">{suggestion.address}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            {locationSuggestions.length > 0 && !taskDetails.isVirtual && (
-                                <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg">
-                                    {locationSuggestions.map(s => <div key={s.address} onClick={() => handleLocationSuggestionClick(s)} className="p-2 hover:bg-accent/10 cursor-pointer text-sm"><strong>{s.place_name}</strong><br/><span className="text-xs text-text-secondary">{s.address}</span></div>)}
-                                </div>
-                            )}
-                        </div>
-                     </div>
-                </div>
+                        ) : (
+                            <div 
+                                className={`p-4 rounded-3xl ${highlightedFields.includes('linkedUrl') ? 'ring-2 ring-current' : ''}`}
+                                style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+                            >
+                                <label className="flex items-center gap-2 font-semibold opacity-70 mb-2">
+                                    <LinkIcon className="w-5 h-5"/> Meeting Link
+                                </label>
+                                <input 
+                                    type="url" 
+                                    value={taskDetails.linkedUrl || ''} 
+                                    onChange={e => setTaskDetails({...taskDetails, linkedUrl: e.target.value})} 
+                                    className="w-full bg-transparent text-xl font-bold focus:outline-none"
+                                    style={{ color: textColor }}
+                                    placeholder="https://zoom.us/j/..."
+                                />
+                            </div>
+                        )}
 
-                <button type="submit" className="w-full mt-6 py-3 px-4 text-white font-bold rounded-xl shadow-md transition-colors" style={{backgroundColor: categoryColor}}>Add Task</button>
-            </motion.form>
-         </div>
-    )
+                        {/* Notes */}
+                        <div 
+                            className="p-4 rounded-3xl"
+                            style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+                        >
+                            <label className="flex items-center gap-2 font-semibold opacity-70 mb-2">
+                                <DocumentTextIcon className="w-5 h-5"/> Notes
+                            </label>
+                            <textarea 
+                                value={taskDetails.notes || ''} 
+                                onChange={e => setTaskDetails({...taskDetails, notes: e.target.value})} 
+                                rows={3} 
+                                className="w-full bg-transparent text-lg focus:outline-none resize-none"
+                                style={{ color: textColor }}
+                                placeholder="Additional details or context..."
+                            />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3 pt-4">
+                            <button 
+                                type="button" 
+                                onClick={onClose} 
+                                className="flex-1 py-4 px-6 rounded-3xl text-xl font-bold transition-colors"
+                                style={{ 
+                                    backgroundColor: 'rgba(0,0,0,0.2)',
+                                    color: textColor 
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                type="submit" 
+                                className="flex-1 py-4 px-6 rounded-3xl text-xl font-bold transition-colors"
+                                style={{ 
+                                    backgroundColor: 'rgba(255,255,255,0.2)',
+                                    color: textColor 
+                                }}
+                            >
+                                Create Task
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </motion.div>
+        </div>
+    );
 }
 
+// Add the default export
 export default NewTaskModal;

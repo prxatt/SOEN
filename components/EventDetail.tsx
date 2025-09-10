@@ -216,7 +216,8 @@ function EventDetail({
     notes, 
     notebooks, 
     deleteTask, 
-    triggerInsightGeneration 
+    triggerInsightGeneration,
+    redirectToKikoAIWithChat
 }: EventDetailProps) {
     const [editableTask, setEditableTask] = useState(task);
     const titleInputRef = useRef<HTMLInputElement>(null);
@@ -319,6 +320,13 @@ function EventDetail({
         triggerInsightGeneration(task, !!task.insights);
     };
 
+    const handleDiscussWithKiko = () => {
+        const prompt = `Let's discuss my upcoming task: "${task.title}". Based on its details (Category: ${task.category}, Duration: ${task.plannedDuration} mins), can you give me some key points to focus on or potential challenges to watch out for?`;
+        const initialChat: ChatMessage[] = [{ role: 'user', text: prompt }];
+        redirectToKikoAIWithChat(initialChat);
+        onClose(); // Close the modal after redirecting
+    };
+
     // Get category color and text color
     const categoryColor = categoryColors[editableTask.category!] || '#A855F7';
     const textColor = getTextColorForBackground(categoryColor);
@@ -369,6 +377,14 @@ function EventDetail({
                                         ) : (
                                             <SparklesIcon className="w-4 h-4" />
                                         )}
+                                    </button>
+                                     <button 
+                                        onClick={handleDiscussWithKiko}
+                                        className="p-1.5 rounded-lg transition-colors text-sm"
+                                        style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+                                        aria-label="Discuss task with Kiko"
+                                    >
+                                        <ChatBubbleLeftEllipsisIcon className="w-4 h-4" />
                                     </button>
                                 </div>
                                 <p className="opacity-70 text-sm">Use "/" for AI magic...</p>

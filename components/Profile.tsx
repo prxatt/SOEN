@@ -1,12 +1,18 @@
 import React from 'react';
-import { GiftIcon, Cog6ToothIcon, ChevronRightIcon, LinkIcon, FlagIcon, CheckCircleIcon, PlusCircleIcon } from './Icons';
+import { motion } from 'framer-motion';
+import { GiftIcon, Cog6ToothIcon, ChevronRightIcon, LinkIcon, FlagIcon, CheckCircleIcon, PlusCircleIcon, SparklesIcon, CheckIcon } from './Icons';
 import type { Screen, Goal, GoalTerm } from '../types';
+import { REWARDS_CATALOG } from '../constants';
 
 interface ProfileProps {
     praxisFlow: number;
     setScreen: (screen: Screen) => void;
     goals: Goal[];
     setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
+    // FIX: Add missing props to handle focus background selection.
+    activeFocusBackground: string;
+    setActiveFocusBackground: (bgValue: string) => void;
+    purchasedRewards: string[];
 }
 
 interface GoalsHubProps {
@@ -14,23 +20,33 @@ interface GoalsHubProps {
   setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
 }
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
+const getFocusBgPreview = (value: string) => {
+    switch(value) {
+        case 'synthwave': return 'linear-gradient(135deg, #f5317f, #5b21b6)';
+        case 'lofi': return 'linear-gradient(135deg, #4f46e5, #1e293b)';
+        case 'solarpunk': return 'linear-gradient(135deg, #4ade80, #059669)';
+        default: return 'linear-gradient(135deg, #6b7280, #374151)';
+    }
+};
+
 function GoalsHub({ goals, setGoals }: GoalsHubProps) {
     const updateGoalText = (id: number, text: string) => setGoals(prev => prev.map(g => g.id === id ? {...g, text} : g));
     const toggleGoalStatus = (id: number) => setGoals(prev => prev.map(g => g.id === id ? {...g, status: g.status === 'active' ? 'completed' : 'active'} : g));
     const addGoal = (term: GoalTerm) => setGoals(prev => [...prev, { id: Date.now(), term, text: 'New Goal', status: 'active' }]);
+
     const GoalItem: React.FC<{goal: Goal}> = ({ goal }) => (
         <div className="flex items-center gap-3 p-3 bg-bg/50 rounded-lg transition-colors duration-200">
             <button onClick={() => toggleGoalStatus(goal.id)} aria-label={`Mark goal as ${goal.status === 'completed' ? 'active' : 'completed'}`} className="flex-shrink-0">
-                {goal.status === 'completed' ? <CheckCircleIcon className="w-6 h-6 text-green-500" /> : <div className="w-6 h-6 rounded-full border-2 border-gray-400 dark:border-white/30 hover:border-accent transition-colors" />}
+                {goal.status === 'completed' ? <CheckCircleIcon className="w-6 h-6 text-green-500" /> : <div className="w-6 h-6 rounded-full border-2 border-text-secondary/50 hover:border-accent transition-colors" />}
             </button>
             <input type="text" value={goal.text} onChange={(e) => updateGoalText(goal.id, e.target.value)} aria-label="Goal text" className={`flex-grow bg-transparent focus:outline-none focus:ring-1 focus:ring-accent rounded-sm px-1 text-sm ${goal.status === 'completed' ? 'line-through text-text-secondary' : ''}`} />
         </div>
     );
+
     const GoalTermCard: React.FC<{term: GoalTerm, title: string}> = ({ term, title }) => (
-        <div className="card p-4 rounded-xl flex flex-col bg-bg">
-            <h4 className="font-semibold mb-3 text-text">{title}</h4>
-            <div className="space-y-2 flex-grow">
+        <div className="card p-4 rounded-2xl flex flex-col">
+            <h4 className="font-bold mb-3 text-text">{title}</h4>
+            <div className="space-y-2 flex-grow min-h-[10rem]">
                 {goals.filter(g => g.term === term).map(goal => <GoalItem key={goal.id} goal={goal}/>)}
             </div>
             <button onClick={() => addGoal(term)} className="mt-3 flex items-center justify-center gap-2 w-full text-sm font-semibold p-2 rounded-lg text-text-secondary hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
@@ -38,6 +54,7 @@ function GoalsHub({ goals, setGoals }: GoalsHubProps) {
             </button>
         </div>
     );
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <GoalTermCard term="short" title="Short-Term (This Quarter)" />
@@ -47,68 +64,114 @@ function GoalsHub({ goals, setGoals }: GoalsHubProps) {
     );
 };
 
-
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function Profile({ praxisFlow, setScreen, goals, setGoals }: ProfileProps) {
+function Profile({ praxisFlow, setScreen, goals, setGoals, activeFocusBackground, setActiveFocusBackground, purchasedRewards }: ProfileProps) {
+  const focusBackgrounds = REWARDS_CATALOG.filter(r => r.type === 'focus_background' && purchasedRewards.includes(r.id));
   return (
-    <div className="h-full overflow-y-auto pb-4">
-        <div className="flex items-center gap-6">
-            <div className="relative w-24 h-24 flex-shrink-0">
-                <img 
-                    src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop" 
-                    alt="Pratt" 
-                    className="w-24 h-24 rounded-full object-cover"
-                />
-                <button className="absolute bottom-0 right-0 p-1.5 bg-accent text-white rounded-full hover:bg-accent-hover transition-colors ring-4 ring-bg" aria-label="Edit Profile Picture">
-                    <Cog6ToothIcon className="w-4 h-4"/>
-                </button>
-            </div>
-            <div>
-                <h2 className="text-3xl font-bold font-display">Pratt</h2>
-                <p className="text-md text-text-secondary">Founder, Surface Tension (Edit)</p>
-            </div>
-        </div>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="h-full overflow-y-auto pb-4">
+        <h2 className="text-3xl font-bold font-display mb-6">Profile</h2>
 
-        <div className="mt-4 text-sm text-text-secondary space-y-2">
-            <a href="#" className="flex items-center gap-2 hover:text-accent"><LinkIcon className="w-4 h-4" /> surfacetension.io (Edit)</a>
-            <a href="#" className="flex items-center gap-2 hover:text-accent"><LinkIcon className="w-4 h-4" /> Add personal link...</a>
-        </div>
-
-
-      <div className="space-y-6 mt-8">
-        <div className="card p-4 rounded-2xl shadow-sm">
-            <h3 className="font-semibold mb-3 text-lg">Praxis Flow & Rewards</h3>
-            <div className="flex justify-between items-center bg-bg p-4 rounded-lg">
-                <div>
-                    <p className="text-sm text-text-secondary">Your Balance</p>
-                    <p className="text-2xl font-bold font-display">{praxisFlow} Flow</p>
-                </div>
-                <button onClick={() => setScreen('Rewards')} className="flex items-center gap-2 font-semibold text-white bg-accent hover:bg-accent-hover px-4 py-2 rounded-lg transition-colors">
-                    <GiftIcon className="w-5 h-5" />
-                    <span>Rewards Hub</span>
-                </button>
-            </div>
-        </div>
-
-        <div className="card p-4 rounded-2xl shadow-sm">
-            <h3 className="font-semibold mb-3 text-lg flex items-center gap-2"><FlagIcon className="w-5 h-5"/> Goals Hub</h3>
-            <GoalsHub goals={goals} setGoals={setGoals} />
-        </div>
-        
-        <div className="card p-2 rounded-2xl shadow-sm">
-             <button onClick={() => setScreen('Settings')} className="w-full flex items-center justify-between text-left p-4 rounded-lg transition-colors">
-                <div className="flex items-center gap-4">
-                    <Cog6ToothIcon className="w-6 h-6 text-text-secondary"/>
+        <div className="space-y-8">
+            <motion.div 
+                className="card p-6 rounded-2xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: 0.1 } }}
+            >
+                <div className="flex items-center gap-6">
+                    <div className="relative w-24 h-24 flex-shrink-0">
+                        <img 
+                            src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop" 
+                            alt="Pratt" 
+                            className="w-24 h-24 rounded-full object-cover ring-2 ring-border"
+                        />
+                    </div>
                     <div>
-                        <h4 className="font-semibold text-lg">Settings & Integrations</h4>
-                        <p className="text-sm text-text-secondary">Preferences, calendar sync, and account</p>
+                        <h2 className="text-3xl font-bold font-display">Pratt</h2>
+                        <p className="text-md text-text-secondary">Founder, Surface Tension</p>
+                        <div className="mt-2 text-sm text-text-secondary space-y-1">
+                            <a href="#" className="flex items-center gap-2 hover:text-accent transition-colors"><LinkIcon className="w-4 h-4" /> surfacetension.io</a>
+                        </div>
                     </div>
                 </div>
-                <ChevronRightIcon className="w-6 h-6 text-text-secondary"/>
-            </button>
+            </motion.div>
+
+            <motion.div 
+                className="card p-6 rounded-2xl shadow-sm"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
+            >
+                <h3 className="font-bold mb-4 text-xl font-display">Praxis Flow & Rewards</h3>
+                <div className="flex flex-col sm:flex-row justify-between items-center bg-bg p-4 rounded-xl">
+                    <div className="text-center sm:text-left mb-4 sm:mb-0">
+                        <p className="text-sm text-text-secondary">Your Balance</p>
+                        <p className="text-4xl font-bold font-display flex items-center gap-2">
+                            <SparklesIcon className="w-7 h-7 text-accent"/>
+                            {praxisFlow} Flow
+                        </p>
+                    </div>
+                    <button onClick={() => setScreen('Rewards')} className="flex items-center gap-2 font-semibold text-white bg-accent hover:bg-accent-hover px-6 py-3 rounded-lg transition-colors text-base">
+                        <GiftIcon className="w-5 h-5" />
+                        <span>Rewards Hub</span>
+                    </button>
+                </div>
+            </motion.div>
+
+            <motion.div 
+                className="card p-6 rounded-2xl shadow-sm"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: 0.3 } }}
+            >
+                <h3 className="font-bold mb-4 text-xl font-display flex items-center gap-2"><FlagIcon className="w-5 h-5"/> Goals Hub</h3>
+                <GoalsHub goals={goals} setGoals={setGoals} />
+            </motion.div>
+
+            {/* FIX: Add Focus Background selector section */}
+            <motion.div
+                className="card p-6 rounded-2xl shadow-sm"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: 0.4 } }}
+            >
+                <h3 className="font-bold mb-4 text-xl font-display">Focus Background</h3>
+                <p className="text-sm text-text-secondary mb-4">Select your active background for Focus Mode sessions. Unlock more in the Rewards Hub.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {focusBackgrounds.map(bg => (
+                        <button 
+                            key={bg.id}
+                            onClick={() => setActiveFocusBackground(bg.value)}
+                            className={`aspect-video rounded-lg relative overflow-hidden transition-all duration-200 ${activeFocusBackground === bg.value ? 'ring-2 ring-accent ring-offset-2 ring-offset-card' : 'hover:scale-105'}`}
+                            style={{
+                                background: getFocusBgPreview(bg.value),
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                            }}
+                        >
+                            <div className="absolute inset-0 bg-black/30"></div>
+                            <span className="absolute bottom-2 left-2 text-white font-semibold text-sm z-10">{bg.name}</span>
+                            {activeFocusBackground === bg.value && (
+                                <div className="absolute top-2 right-2 bg-accent text-white rounded-full p-0.5 z-10">
+                                    <CheckIcon className="w-4 h-4" />
+                                </div>
+                            )}
+                        </button>
+                    ))}
+                </div>
+            </motion.div>
+            
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: 0.5 } }}
+            >
+                 <button onClick={() => setScreen('Settings')} className="w-full flex items-center justify-between text-left p-6 rounded-2xl transition-colors card hover:bg-accent/10">
+                    <div className="flex items-center gap-4">
+                        <Cog6ToothIcon className="w-8 h-8 text-text-secondary"/>
+                        <div>
+                            <h4 className="font-bold text-lg">Settings & Integrations</h4>
+                            <p className="text-sm text-text-secondary">Preferences, calendar sync, and account</p>
+                        </div>
+                    </div>
+                    <ChevronRightIcon className="w-6 h-6 text-text-secondary"/>
+                </button>
+            </motion.div>
         </div>
-        
-      </div>
     </div>
   );
 };

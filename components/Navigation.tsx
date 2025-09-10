@@ -50,8 +50,9 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
   const navItemsRight = NAV_ITEMS.slice(2);
   
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-20 bg-bg/80 dark:bg-bg/90 backdrop-blur-lg border-t border-border z-50">
-      <div className="max-w-6xl mx-auto flex justify-between items-center h-full px-2">
+    <nav className="fixed bottom-0 left-0 right-0 h-16 bg-transparent backdrop-blur-lg z-50">
+      <div className="absolute inset-0 bg-bg/50 dark:bg-bg/70 border-t border-border/50"></div>
+      <div className="relative max-w-6xl mx-auto flex justify-between items-center h-full px-2">
         <div className="flex justify-around w-2/5">
             {navItemsLeft.map(({ label, icon }) => (
             <NavIcon
@@ -68,7 +69,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
             <motion.button
                 onClick={() => setScreen('Kiko')}
                 whileTap={{ scale: 0.9 }}
-                className={`relative -top-6 flex items-center justify-center h-16 w-16 rounded-full bg-accent shadow-lg shadow-accent/30 transform transition-transform duration-200 ${activeScreen === 'Kiko' ? 'scale-110' : 'hover:scale-105'}`}
+                className={`relative -top-4 flex items-center justify-center h-14 w-14 rounded-full bg-accent shadow-lg shadow-accent/30 transform transition-transform duration-200 ${activeScreen === 'Kiko' ? 'scale-110' : 'hover:scale-105'}`}
                 aria-label="Kiko"
             >
                 <KikoIcon className="h-8 w-8 text-white" />

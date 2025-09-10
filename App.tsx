@@ -137,7 +137,7 @@ function App() {
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [isAiReplying, setIsAiReplying] = useState(false);
     const [praxisFlow, setPraxisFlow] = useState(500);
-    const [purchasedRewards, setPurchasedRewards] = useState<string[]>(['theme-obsidian']);
+    const [purchasedRewards, setPurchasedRewards] = useState<string[]>(['theme-obsidian', 'focus-synthwave']);
     const [focusTask, setFocusTask] = useState<Task | null>(null);
     const [activeFocusBackground, setActiveFocusBackground] = useState<string>('synthwave');
     const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -181,6 +181,9 @@ function App() {
         } else {
             document.documentElement.classList.remove('dark');
         }
+
+        const savedFocusBg = localStorage.getItem('praxis-focus-bg') || 'synthwave';
+        setActiveFocusBackground(savedFocusBg);
 
         // Restore daily reward image if it's for today
         const savedReward = localStorage.getItem('dailyReward');
@@ -297,6 +300,18 @@ function App() {
             showToast("Theme not purchased yet!");
         }
     };
+
+    // FIX: Add handler for setting active focus background
+    const handleSetActiveFocusBackground = (bgValue: string) => {
+        const reward = REWARDS_CATALOG.find(r => r.value === bgValue && r.type === 'focus_background');
+        if (reward && purchasedRewards.includes(reward.id)) {
+            setActiveFocusBackground(bgValue);
+            localStorage.setItem('praxis-focus-bg', bgValue);
+            showToast(`Focus background set to ${reward.name}`);
+        } else {
+            showToast("Focus background not purchased yet!");
+        }
+    };
     
     const handlePurchaseReward = (reward: RewardItem) => {
         if (praxisFlow >= reward.cost && !purchasedRewards.includes(reward.id)) {
@@ -305,6 +320,9 @@ function App() {
             showToast(`Unlocked ${reward.name}!`);
             if (reward.type === 'theme') {
                 handleSetActiveTheme(reward.value);
+            // FIX: Add logic to apply focus background on purchase
+            } else if (reward.type === 'focus_background') {
+                handleSetActiveFocusBackground(reward.value);
             }
         } else if (purchasedRewards.includes(reward.id)) {
             showToast("You already own this item.");
@@ -587,11 +605,13 @@ function App() {
             case 'Dashboard': return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} />;
             case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
             case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
-            case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={setActiveScreen} goals={goals} setGoals={setGoals} />;
+            // FIX: Pass the correct props to the Profile component.
+            case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={setActiveScreen} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;
             case 'Kiko': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} projects={projects} healthData={healthData} addTask={(title) => addTask({title})} addNote={addNote} startChatWithContext={startChatWithContext} searchHistory={[]} setSearchHistory={()=>{}} visionHistory={[]} setVisionHistory={()=>{}} applyInsight={()=>{}} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} showToast={showToast} />;
             case 'Settings': return <Settings uiMode={uiMode} toggleUiMode={toggleUiMode} onSyncCalendar={handleSyncCalendar} onLogout={handleLogout} />;
-            case 'Rewards': return <Rewards onBack={() => setActiveScreen('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} />;
+            // FIX: Pass the correct handler for setActiveFocusBackground.
+            case 'Rewards': return <Rewards onBack={() => setActiveScreen('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
             default: return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} />;
         }
@@ -607,7 +627,7 @@ function App() {
                  <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
             ) : (
                 <>
-                    <main className="max-w-6xl mx-auto px-4 pt-6 pb-24">
+                    <main className="max-w-6xl mx-auto px-4 pt-6 pb-20">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeScreen}

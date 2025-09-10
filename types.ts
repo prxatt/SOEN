@@ -278,7 +278,7 @@ export interface RewardItem {
     name: string;
     description: string;
     cost: number;
-    type: 'theme' | 'feature';
+    type: 'theme' | 'feature' | 'focus_background';
     value: string;
 }
 

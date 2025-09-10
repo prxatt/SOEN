@@ -91,6 +91,31 @@ export const REWARDS_CATALOG: RewardItem[] = [
         cost: 200,
         type: 'theme',
         value: 'oceanic'
+    },
+    // New Focus Backgrounds
+    {
+        id: 'focus-synthwave',
+        name: 'Synthwave Sunset',
+        description: 'A vibrant, retro-futuristic animated background for deep focus sessions.',
+        cost: 100,
+        type: 'focus_background',
+        value: 'synthwave'
+    },
+    {
+        id: 'focus-lofi',
+        name: 'Lofi Rain',
+        description: 'A calming, atmospheric background for relaxed and steady work.',
+        cost: 100,
+        type: 'focus_background',
+        value: 'lofi'
+    },
+    {
+        id: 'focus-solarpunk',
+        name: 'Solarpunk Garden',
+        description: 'An optimistic and bright animated background for creative work.',
+        cost: 150,
+        type: 'focus_background',
+        value: 'solarpunk'
     }
 ];
 

@@ -150,16 +150,19 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!taskDetails.title) return;
+        const finalTitle = taskDetails.title?.startsWith('/') 
+            ? (taskDetails.title || "New Task") // Use AI-parsed title if available
+            : taskDetails.title;
+
+        if (!finalTitle) {
+            showToast("Please enter a title for the task.");
+            return;
+        }
 
         const [hours, minutes] = startTime.split(':');
         const taskStartTime = new Date(selectedDate);
         taskStartTime.setHours(parseInt(hours), parseInt(minutes));
         
-        const finalTitle = taskDetails.title.startsWith('/') 
-            ? (taskDetails.title || "New Task")
-            : taskDetails.title;
-
         addTask({
             ...taskDetails,
             title: finalTitle,

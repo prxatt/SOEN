@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Project, Note, Notebook, Goal, Category, TaskStatus, ScheduleView, ChatMessage } from '../types';
@@ -26,6 +24,7 @@ interface ScheduleProps {
     addTask: (task: Partial<Task> & { title: string }) => void;
     onTaskSwap: (draggedId: number, targetId: number) => void;
     onAddNewCategory: (name: string) => boolean;
+    initialDate?: Date;
 }
 
 const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
@@ -56,7 +55,7 @@ function TaskCard({ task, categoryColors, onSelect }: TaskCardProps) {
             layoutId={`task-card-${task.id}`}
             onClick={() => onSelect(task)}
             animate={{ opacity: isCompleted ? 0.6 : 1 }}
-            className="p-4 rounded-3xl cursor-pointer text-white"
+            className="p-4 rounded-3xl cursor-pointer text-white flex-shrink-0"
             style={{ backgroundColor: categoryColor }}
         >
             <div className="flex justify-between items-start">
@@ -77,8 +76,8 @@ function TaskCard({ task, categoryColors, onSelect }: TaskCardProps) {
                     </h3>
                 </div>
                 <div className="flex -space-x-2">
-                    <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format=fit=crop" alt="user 1" />
-                    <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format=fit=crop" alt="user 2" />
+                    <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop" alt="user 1" />
+                    <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop" alt="user 2" />
                 </div>
             </div>
             <div className={`mt-6 pt-4 border-t border-white/20 flex justify-between items-center`}>
@@ -124,7 +123,7 @@ function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDa
 
     return (
         <div 
-          className="rounded-3xl p-4 sm:p-6 min-h-full flex"
+          className="rounded-3xl p-4 sm:p-6 h-full flex"
           style={{ backgroundColor: bgColor, color: textColor }}
         >
             <div className="w-1/3 flex-shrink-0 pr-4 flex flex-col justify-between">
@@ -146,10 +145,12 @@ function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDa
                 </div>
             </div>
 
-            <div className="w-2/3 pl-4 border-l" style={{borderColor: `${textColor === 'white' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`}}>
+            <div className="w-2/3 pl-4 border-l min-h-0" style={{borderColor: `${textColor === 'white' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`}}>
                 {tasks.length > 0 ? (
-                    <div className="space-y-4 h-full overflow-y-auto pr-2 -mr-2">
-                        {tasks.map(task => <TaskCard key={task.id} task={task} categoryColors={categoryColors} onSelect={onSelectTask} />)}
+                    <div className="h-full overflow-y-auto pr-2 -mr-2">
+                        <div className="space-y-4">
+                            {tasks.map(task => <TaskCard key={task.id} task={task} categoryColors={categoryColors} onSelect={onSelectTask} />)}
+                        </div>
                     </div>
                 ) : (
                      <div className="h-full flex items-center justify-center text-center rounded-2xl" style={{backgroundColor: 'rgba(0,0,0,0.1)'}}>
@@ -223,7 +224,7 @@ function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDay
     // Defensive programming for date and tasks
     if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
         return (
-            <div className="rounded-3xl p-4 flex min-h-[10rem] bg-gray-700">
+            <div className="rounded-3xl p-4 flex min-h-[10rem] bg-gray-700 flex-shrink-0">
                 <div className="w-full flex items-center justify-center">
                     <p className="text-gray-400">Invalid date</p>
                 </div>
@@ -239,7 +240,7 @@ function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDay
     } catch (e) {
         console.error("Error formatting date in CalendarDayCard:", e);
         return (
-             <div className="rounded-3xl p-4 flex min-h-[10rem] bg-red-800 text-white">
+             <div className="rounded-3xl p-4 flex min-h-[10rem] bg-red-800 text-white flex-shrink-0">
                 <div className="w-full flex items-center justify-center">
                     <p>Date Error</p>
                 </div>
@@ -258,7 +259,7 @@ function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDay
     return (
         <div
             data-date={date.toISOString().split('T')[0]} // Unique key for scrolling
-            className="rounded-3xl p-4 flex min-h-[10rem]"
+            className="rounded-3xl p-4 flex min-h-[10rem] flex-shrink-0"
             style={{ backgroundColor: bgColor, color: textColor }}
         >
             <div className="w-1/3 flex-shrink-0 pr-4">
@@ -366,7 +367,7 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
                 );
             } catch (error) {
                 console.error(`Failed to generate day card for ${year}-${month}-${day}:`, error);
-                elements.push(<div key={`error-${day}`} className="p-4 bg-red-900 text-white rounded-xl">Error loading day {day}.</div>);
+                elements.push(<div key={`error-${day}`} className="p-4 bg-red-900 text-white rounded-xl flex-shrink-0">Error loading day {day}.</div>);
             }
         }
         return elements;
@@ -402,8 +403,8 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
     }
 
     return (
-        <div className="grid grid-rows-[auto_1fr] h-full">
-            <div className="flex justify-between items-center text-xl font-bold p-2 mb-4">
+        <div className="flex flex-col h-full">
+            <div className="flex justify-between items-center text-xl font-bold p-2 mb-4 flex-shrink-0">
                 <span className="text-text-secondary/50 font-medium">{prevMonth}</span>
                 <div className="flex items-center gap-3 text-2xl font-display">
                     <button onClick={() => changeMonth(-1)} disabled={isAnimating} className="p-1 rounded-full hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-wait">
@@ -419,32 +420,43 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
                 </div>
                 <span className="text-text-secondary/50 font-medium">{nextMonth}</span>
             </div>
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={currentMonthDate.toISOString()}
-                    ref={listRef}
-                    className="overflow-y-auto pr-2 -mr-2 space-y-3"
-                    initial={{ opacity: 0, y: 30 * animationDirection }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -30 * animationDirection }}
-                    transition={{ duration: 0.4, ease: 'easeInOut' }}
-                    onAnimationComplete={handleAnimationComplete}
-                >
-                    {dayElements}
-                </motion.div>
-            </AnimatePresence>
+            <div className="flex-1 min-h-0">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={currentMonthDate.toISOString()}
+                        ref={listRef}
+                        className="h-full overflow-y-auto pr-2 -mr-2"
+                        initial={{ opacity: 0, y: 30 * animationDirection }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -30 * animationDirection }}
+                        transition={{ duration: 0.4, ease: 'easeInOut' }}
+                        onAnimationComplete={handleAnimationComplete}
+                    >
+                        <div className="space-y-3">
+                            {dayElements}
+                        </div>
+                    </motion.div>
+                </AnimatePresence>
+            </div>
         </div>
     );
 };
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function Schedule(props: ScheduleProps) {
-    const { tasks, setTasks, showToast, onCompleteTask, onUndoCompleteTask, categoryColors } = props;
+    const { tasks, setTasks, showToast, onCompleteTask, onUndoCompleteTask, categoryColors, initialDate } = props;
     const [view, setView] = useState<ScheduleView>('today');
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(initialDate || new Date());
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
     const [prefillDateForModal, setPrefillDateForModal] = useState<Date>(new Date());
+
+    useEffect(() => {
+        if (initialDate) {
+            setSelectedDate(new Date(initialDate));
+            setView('today');
+        }
+    }, [initialDate]);
 
     const tasksForSelectedDate = useMemo(() => {
         return tasks
@@ -478,8 +490,8 @@ function Schedule(props: ScheduleProps) {
     }, [view, selectedDate, handleOpenNewTaskModal]);
 
     return (
-        <div className="h-[calc(100vh-8rem)] flex flex-col">
-             <div className="flex justify-between items-center mb-6">
+        <div className="h-full max-h-[90vh] flex flex-col overflow-hidden">
+             <div className="flex justify-between items-center mb-6 flex-shrink-0">
                 <div className="flex items-center gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-full">
                     <button onClick={() => setView('today')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'today' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Today</button>
                     <button onClick={() => setView('month')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'month' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Calendar</button>
@@ -489,28 +501,30 @@ function Schedule(props: ScheduleProps) {
                 </button>
             </div>
 
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={view}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex-grow min-h-0"
-                >
-                    {view === 'today' ? (
-                       <TodayView 
-                          selectedDate={selectedDate}
-                          tasks={tasksForSelectedDate}
-                          categoryColors={categoryColors}
-                          onSelectTask={setSelectedTask}
-                          changeDate={changeDate}
-                       />
-                    ) : (
-                        <CalendarView tasks={tasks} categoryColors={categoryColors} onAddTask={handleOpenNewTaskModal} />
-                    )}
-                </motion.div>
-            </AnimatePresence>
+            <div className="flex-1 min-h-0">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={view}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="h-full"
+                    >
+                        {view === 'today' ? (
+                           <TodayView 
+                              selectedDate={selectedDate}
+                              tasks={tasksForSelectedDate}
+                              categoryColors={categoryColors}
+                              onSelectTask={setSelectedTask}
+                              changeDate={changeDate}
+                           />
+                        ) : (
+                            <CalendarView tasks={tasks} categoryColors={categoryColors} onAddTask={handleOpenNewTaskModal} />
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
 
              <AnimatePresence>
                 {selectedTask && (

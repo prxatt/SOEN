@@ -1,30 +1,15 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Note, Notebook } from '../types';
+import Draggable from 'react-draggable';
+import { Note, Notebook, Task, NoteView, NoteAttachment, Category } from '../types';
 import { kikoRequest } from '../services/kikoAIService';
 import { PRESET_COLORS } from '../constants';
 import { 
-    PlusIcon, 
-    TrashIcon, 
-    SparklesIcon, 
-    ArchiveBoxIcon, 
-    FlagIcon, 
-    XMarkIcon, 
-    DocumentPlusIcon, 
-    DocumentIcon, 
-    PhotoIcon, 
-    DocumentTextIcon, 
-    ChevronLeftIcon,
-    ChevronRightIcon,
-    EllipsisVerticalIcon,
-    StarIcon,
-    MagnifyingGlassIcon,
-    BookOpenIcon,
-    PencilIcon,
-    LightBulbIcon,
-    ArrowsPointingOutIcon,
-    ArrowsPointingInIcon,
-    ArrowUturnLeftIcon,
+    PlusIcon, TrashIcon, SparklesIcon, XMarkIcon, 
+    DocumentIcon, KikoIcon, ChevronDownIcon, BookOpenIcon, StarIcon, LightBulbIcon,
+    BoldIcon, ItalicIcon, UnderlineIcon, PencilIcon, EllipsisVerticalIcon,
+    MagnifyingGlassIcon, LinkIcon, Squares2X2Icon, Bars3Icon, ViewColumnsIcon, PaperClipIcon, CheckCircleIcon,
+    SortAscendingIcon, SortDescendingIcon
 } from './Icons';
 
 // --- UTILITY FUNCTIONS ---
@@ -46,48 +31,12 @@ const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
     return luminance > 0.6 ? 'black' : 'white';
 };
 
-// --- EDITOR COMPONENT ---
-
-function LightweightEditor({ content, onChange, textColor, editable = true }: {
-  content: string;
-  onChange: (newContent: string) => void;
-  textColor: string;
-  editable?: boolean;
-}) {
-    const editorRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const editor = editorRef.current;
-        if (editor && editor.innerHTML !== content) {
-            editor.innerHTML = content;
-        }
-    }, [content]);
-
-    const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-        if (editable) {
-            onChange(e.currentTarget.innerHTML);
-        }
-    };
-    
-    return (
-      <div
-        ref={editorRef}
-        contentEditable={editable}
-        onInput={handleInput}
-        className={`w-full h-full p-6 focus:outline-none overflow-y-auto prose prose-lg prose-headings:font-display prose-headings:tracking-tight dark:prose-invert max-w-none ${!editable ? 'cursor-not-allowed' : ''}`}
-        style={{ color: textColor, '--tw-prose-body': textColor, '--tw-prose-headings': textColor, '--tw-prose-bold': textColor, '--tw-prose-links': textColor, '--tw-prose-bullets': textColor } as React.CSSProperties}
-        aria-label="Note content"
-      />
-    );
-}
-
 // --- PROPS INTERFACE ---
 
 interface NotesProps {
     notes: Note[];
     notebooks: Notebook[];
-    setNotebooks: React.Dispatch<React.SetStateAction<Notebook[]>>;
-    updateNote: (note: Note) => void;
+    updateNote: (note: Note, options?: { silent?: boolean }) => void;
     addNote: (title: string, content: string, notebookId: number) => Note;
     deleteNote: (noteId: number) => void;
     restoreNote: (noteId: number) => void;
@@ -96,766 +45,1036 @@ interface NotesProps {
     showToast: (message: string, action?: { label: string; onClick: () => void; }) => void;
     selectedNote: Note | null;
     setSelectedNote: (note: Note | null) => void;
-    activeNotebookId: number | 'all' | 'flagged' | 'archived' | 'trash';
-    setActiveNotebookId: (id: number | 'all' | 'flagged' | 'archived' | 'trash') => void;
+    activeNotebookId: number | 'all' | 'flagged' | 'trash';
+    setActiveNotebookId: (id: number | 'all' | 'flagged' | 'trash') => void;
     lastDeletedNote: Note | null;
+    tasks: Task[];
+    addNotebook: (title: string, color: string) => Notebook;
+    updateNotebook: (notebook: Notebook) => void;
+    deleteNotebook: (notebookId: number) => void;
+    restoreNotebook: (notebookId: number) => void;
+    navigateToScheduleDate: (date: Date) => void;
+    categoryColors: Record<Category, string>;
 }
 
 // --- MAIN COMPONENT ---
 
-function Notes({ 
-    notes, notebooks, setNotebooks, 
-    updateNote, addNote, deleteNote, showToast,
-    selectedNote, setSelectedNote, 
-    activeNotebookId, setActiveNotebookId,
-    lastDeletedNote, restoreNote, permanentlyDeleteNote
-}: NotesProps) {
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [sortMethod, setSortMethod] = useState<'updatedAt-newest' | 'updatedAt-oldest' | 'createdAt-newest' | 'createdAt-oldest' | 'title-az' | 'title-za'>('updatedAt-newest');
-    const [isNotebookModalOpen, setIsNotebookModalOpen] = useState(false);
-    const [editingNotebook, setEditingNotebook] = useState<Notebook | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isParsingTitle, setIsParsingTitle] = useState(false);
-    const [notebookToDelete, setNotebookToDelete] = useState<Notebook | null>(null);
-    const [noteToDeletePermanently, setNoteToDeletePermanently] = useState<Note | null>(null);
-    const [isFullScreen, setIsFullScreen] = useState(false);
-    const [summary, setSummary] = useState<string | null>(null);
-    const [isSummarizing, setIsSummarizing] = useState(false);
-    const [isTagging, setIsTagging] = useState(false);
-    const [isEditorMenuOpen, setIsEditorMenuOpen] = useState(false);
-    const editorMenuRef = useRef<HTMLDivElement>(null);
+function Notes(props: NotesProps) {
+    const { 
+        notebooks, addNote, showToast, selectedNote, setSelectedNote, activeNotebookId, setActiveNotebookId
+    } = props;
+    
+    const [displayMode, setDisplayMode] = useState<'notes' | 'notebooks'>('notes');
+    const [selectedNoteIds, setSelectedNoteIds] = useState<number[]>([]);
+    
+    const handleSelectNote = (note: Note) => {
+        if (note.deletedAt || selectedNoteIds.length > 0) return;
+        setSelectedNote(note);
+    };
 
+    const handleToggleSelectNote = (noteId: number) => {
+        setSelectedNoteIds(prev => 
+            prev.includes(noteId)
+            ? prev.filter(id => id !== noteId)
+            : [...prev, noteId]
+        );
+    };
+    
+    const handleMoveNotes = (notebookId: number) => {
+        const targetNotebook = notebooks.find(nb => nb.id === notebookId);
+        if (!targetNotebook) return;
 
-    // --- NOTEBOOK & NOTE FILTERING/SORTING ---
-
-    const filteredAndSortedNotes = useMemo(() => {
-        let filtered;
-
-        if (activeNotebookId === 'all') filtered = notes.filter(n => !n.archived && !n.deletedAt);
-        else if (activeNotebookId === 'flagged') filtered = notes.filter(n => n.flagged && !n.archived && !n.deletedAt);
-        else if (activeNotebookId === 'archived') filtered = notes.filter(n => n.archived && !n.deletedAt);
-        else if (activeNotebookId === 'trash') filtered = notes.filter(n => !!n.deletedAt);
-        else filtered = notes.filter(n => n.notebookId === activeNotebookId && !n.archived && !n.deletedAt);
-        
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(note => 
-                note.title.toLowerCase().includes(query) ||
-                (note.content && note.content.replace(/<[^>]*>?/gm, '').toLowerCase().includes(query)) ||
-                note.tags.some(tag => tag.toLowerCase().includes(query))
-            );
-        }
-        
-        return filtered.sort((a, b) => {
-            switch (sortMethod) {
-                case 'updatedAt-oldest':
-                    return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
-                case 'createdAt-newest':
-                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                case 'createdAt-oldest':
-                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                case 'title-az':
-                    return a.title.localeCompare(b.title);
-                case 'title-za':
-                    return b.title.localeCompare(a.title);
-                case 'updatedAt-newest':
-                default:
-                    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        selectedNoteIds.forEach(noteId => {
+            const noteToMove = props.notes.find(n => n.id === noteId);
+            if (noteToMove) {
+                props.updateNote({ ...noteToMove, notebookId });
             }
         });
-    }, [notes, activeNotebookId, searchQuery, sortMethod]);
+        showToast(`Moved ${selectedNoteIds.length} notes to "${targetNotebook.title}"`);
+        setSelectedNoteIds([]);
+    };
 
+    const handleCreateNewNote = () => {
+        let targetNotebookId: number;
+        if (typeof activeNotebookId === 'number') {
+            targetNotebookId = activeNotebookId;
+        } else {
+            targetNotebookId = notebooks[0]?.id;
+        }
+        
+        if (!targetNotebookId) {
+            showToast("Please create a notebook first.");
+            setDisplayMode('notebooks');
+            return;
+        }
+        
+        const newNote = addNote('New Note', '<p>Start writing...</p>', targetNotebookId);
+        handleSelectNote(newNote);
+    };
+
+    const handleBackFromEditor = () => setSelectedNote(null);
+    const viewingNotebook = useMemo(() => typeof activeNotebookId === 'number' ? notebooks.find(n => n.id === activeNotebookId) : null, [activeNotebookId, notebooks]);
+    
+    // Deselect notes if view changes
     useEffect(() => {
-        if (filteredAndSortedNotes.length > 0 && (!selectedNote || !filteredAndSortedNotes.find(n => n.id === selectedNote.id))) {
-            setSelectedNote(filteredAndSortedNotes[0]);
-        } else if (filteredAndSortedNotes.length === 0) {
-            setSelectedNote(null);
-        }
-    }, [filteredAndSortedNotes, selectedNote, setSelectedNote]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (editorMenuRef.current && !editorMenuRef.current.contains(event.target as Node)) {
-                setIsEditorMenuOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [editorMenuRef]);
-
-    // --- NOTEBOOK CRUD ---
-
-    const handleSaveNotebook = (title: string, color: string) => {
-        if (!title.trim()) {
-            showToast("Notebook title cannot be empty.");
-            return;
-        }
-        if (editingNotebook) { // Editing existing notebook
-            setNotebooks(prev => prev.map(nb => nb.id === editingNotebook.id ? { ...nb, title, color } : nb));
-            showToast(`Notebook "${title}" updated.`);
-        } else { // Creating new notebook
-            const newNotebook: Notebook = { id: Date.now(), title, color };
-            setNotebooks(prev => [...prev, newNotebook]);
-            setActiveNotebookId(newNotebook.id);
-            showToast(`Notebook "${title}" created.`);
-        }
-        setIsNotebookModalOpen(false);
-        setEditingNotebook(null);
-    };
-
-    const handleDeleteNotebook = (notebookId: number) => {
-        const notebook = notebooks.find(nb => nb.id === notebookId);
-        if (notebook) {
-            setNotebookToDelete(notebook);
-        }
-    };
-    
-    const confirmDeleteNotebook = () => {
-        if (!notebookToDelete) return;
-        
-        setNotebooks(prev => prev.filter(nb => nb.id !== notebookToDelete.id));
-        const notesInNotebook = notes.filter(n => n.notebookId === notebookToDelete.id);
-        notesInNotebook.forEach(note => deleteNote(note.id)); // Move notes to trash instead of deleting
-        
-        showToast(`Notebook "${notebookToDelete.title}" deleted.`);
-        if (activeNotebookId === notebookToDelete.id) {
-            setActiveNotebookId('all');
-        }
-        
-        setNotebookToDelete(null);
-    };
-
-    // --- NOTE CRUD & ACTIONS ---
-
-    const handleCreateNote = () => {
-        const currentNotebookId = (typeof activeNotebookId === 'number') ? activeNotebookId : notebooks[0]?.id;
-        if (!currentNotebookId) {
-            showToast("Create a notebook before adding notes.", { label: "New Notebook", onClick: () => setIsNotebookModalOpen(true) });
-            return;
-        }
-        const newNote = addNote('Untitled Note', '<p></p>', currentNotebookId);
-        setSelectedNote(newNote);
-    };
-    
-    const debouncedUpdateNote = useCallback(debounce(updateNote, 500), [updateNote]);
-
-    const handleNoteChange = (field: 'title' | 'content', value: string) => {
-        if (selectedNote) {
-            const updated = { ...selectedNote, [field]: value, updatedAt: new Date() };
-            setSelectedNote(updated);
-            debouncedUpdateNote(updated);
-            if (field === 'title' && value.includes('/tags')) {
-                handleAiTitleParse(value);
-            }
-        }
-    };
-
-    const handleAiTitleParse = useCallback(debounce(async (title: string) => {
-        if (!selectedNote) return;
-        setIsParsingTitle(true);
-        try {
-            const {data: tags} = await kikoRequest('generate_note_tags', { title, content: selectedNote.content });
-            if (tags && tags.length > 0) {
-                const newTitle = title.replace(/\/tags/g, '').trim();
-                const updatedNote = { ...selectedNote, title: newTitle, tags: [...new Set([...selectedNote.tags, ...tags])] };
-                updateNote(updatedNote); // Update immediately, not debounced
-                setSelectedNote(updatedNote);
-                showToast(`Added tags: ${tags.join(', ')}`);
-            }
-        } catch (e) {
-            console.error("Error generating tags:", e);
-            showToast("Kiko couldn't generate tags for this note.");
-        } finally {
-            setIsParsingTitle(false);
-        }
-    }, 1500), [selectedNote, updateNote, showToast]);
-    
-    const handleToggleFlag = () => {
-        if (selectedNote) updateNote({ ...selectedNote, flagged: !selectedNote.flagged });
-    };
-
-    const handleToggleArchive = () => {
-        if (selectedNote) {
-            const isArchiving = !selectedNote.archived;
-            const updated = { ...selectedNote, archived: isArchiving };
-            updateNote(updated);
-    
-            if (isArchiving) {
-                setSelectedNote(null); // Deselect after archiving
-            } else {
-                // When un-archiving, switch to its notebook and select it
-                setActiveNotebookId(updated.notebookId);
-                setSelectedNote(updated);
-            }
-            showToast(isArchiving ? "Note archived." : "Note restored from archive.");
-        }
-    };
-
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0] && selectedNote) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const updatedNote = { ...selectedNote, attachment: { name: file.name, url: reader.result as string, mimeType: file.type } };
-                updateNote(updatedNote);
-                setSelectedNote(updatedNote);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleSummarize = async () => {
-        if (!selectedNote || !selectedNote.content) {
-            showToast("Note is empty, nothing to summarize.");
-            return;
-        }
-        setIsSummarizing(true);
-        try {
-            const contentToSummarize = selectedNote.content.replace(/<[^>]*>?/gm, ''); // Strip HTML
-            const { data: summaryText } = await kikoRequest('generate_note_text', { instruction: 'summarize', text: contentToSummarize });
-            setSummary(summaryText);
-        } catch (e) {
-            console.error("Error generating summary:", e);
-            showToast("Kiko couldn't generate a summary for this note.");
-        } finally {
-            setIsSummarizing(false);
-        }
-    };
-
-    const handleAutoTag = async () => {
-        if (!selectedNote) return;
-        setIsTagging(true);
-        try {
-            const { data: newTags } = await kikoRequest('generate_note_tags', { title: selectedNote.title, content: selectedNote.content });
-            if (newTags && newTags.length > 0) {
-                const updatedTags = [...new Set([...(selectedNote.tags || []), ...newTags])];
-                const updatedNote = { ...selectedNote, tags: updatedTags };
-                updateNote(updatedNote);
-                setSelectedNote(updatedNote);
-                showToast(`Added tags: ${newTags.join(', ')}`);
-            } else {
-                showToast("No new tags were found.");
-            }
-        } catch (e) {
-            console.error("Error generating tags:", e);
-            showToast("Kiko couldn't generate tags for this note.");
-        } finally {
-            setIsTagging(false);
-        }
-    };
-
-    const handleRemoveTag = (tagToRemove: string) => {
-        if (selectedNote) {
-            const updatedTags = selectedNote.tags.filter(t => t !== tagToRemove);
-            const updatedNote = { ...selectedNote, tags: updatedTags };
-            updateNote(updatedNote);
-            setSelectedNote(updatedNote);
-        }
-    };
-
-    const selectedNotebook = notebooks.find(nb => nb.id === selectedNote?.notebookId);
-    const editorColor = selectedNotebook?.color || '#374151';
-    const editorTextColor = getTextColorForBackground(editorColor);
-    const isNoteInTrash = selectedNote && !!selectedNote.deletedAt;
+        setSelectedNoteIds([]);
+    }, [activeNotebookId, displayMode]);
 
     return (
-        <div 
-            className={`transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-40' : 'h-[calc(100vh-8rem)] rounded-3xl bg-card shadow-lg'} flex overflow-hidden`}
-            style={{ backgroundColor: isFullScreen ? editorColor : undefined }}
-        >
-            <AnimatePresence>
-                {isNotebookModalOpen && (
-                    <NotebookModal 
-                        onClose={() => { setIsNotebookModalOpen(false); setEditingNotebook(null); }}
-                        onSave={handleSaveNotebook}
-                        notebook={editingNotebook}
-                    />
-                )}
-            </AnimatePresence>
-            
-            <AnimatePresence>
-                {notebookToDelete && (
-                    <ConfirmationModal
-                        title={`Delete "${notebookToDelete.title}"?`}
-                        message="This will permanently delete the notebook and move all its notes to the trash. This action cannot be undone."
-                        onConfirm={confirmDeleteNotebook}
-                        onCancel={() => setNotebookToDelete(null)}
-                    />
-                )}
-            </AnimatePresence>
-
-             <AnimatePresence>
-                {noteToDeletePermanently && (
-                    <ConfirmationModal
-                        title={`Delete "${noteToDeletePermanently.title}" forever?`}
-                        message="This action is irreversible and the note cannot be recovered."
-                        onConfirm={() => {
-                            permanentlyDeleteNote(noteToDeletePermanently.id);
-                            setNoteToDeletePermanently(null);
-                        }}
-                        onCancel={() => setNoteToDeletePermanently(null)}
-                    />
-                )}
-            </AnimatePresence>
-            
-            <AnimatePresence>
-                {summary && !isSummarizing && (
-                    <SummaryModal summary={summary} onClose={() => setSummary(null)} showToast={showToast} />
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {!isSidebarCollapsed && !isFullScreen && (
-                    <motion.aside 
-                        initial={{ width: 0, opacity: 0, padding: 0 }}
-                        animate={{ width: 280, opacity: 1, padding: '0.5rem' }}
-                        exit={{ width: 0, opacity: 0, padding: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="flex-shrink-0 border-r border-border flex flex-col bg-bg/50"
+        <div className="h-[calc(100vh-8.5rem)] flex flex-col relative">
+            <AnimatePresence mode="wait">
+                {selectedNote ? (
+                    <motion.div
+                        key="editor-view"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex flex-col h-full"
                     >
-                        <div className="p-2 flex items-center justify-between border-b border-border mb-1">
-                            <h3 className="font-bold font-display text-lg flex items-center gap-2">
-                                <BookOpenIcon className="w-5 h-5"/> Notebooks
-                            </h3>
-                            <button onClick={() => setIsSidebarCollapsed(true)} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10" title="Collapse sidebar">
-                                <ChevronLeftIcon className="w-5 h-5"/>
-                            </button>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto space-y-1">
-                            <SidebarItem id="all" icon={<DocumentTextIcon className="w-5 h-5"/>} title="All Notes" count={notes.filter(n => !n.archived && !n.deletedAt).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
-                            <SidebarItem id="flagged" icon={<StarIcon className="w-5 h-5"/>} title="Starred" count={notes.filter(n => n.flagged && !n.archived && !n.deletedAt).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
-                            <div className="h-px bg-border my-2 mx-2"></div>
-                            {notebooks.map(nb => (
-                                <SidebarItem 
-                                    key={nb.id} id={nb.id} icon={<div className="w-3 h-3 rounded-full flex-shrink-0" style={{backgroundColor: nb.color}}/>} 
-                                    title={nb.title} count={notes.filter(n => n.notebookId === nb.id && !n.archived && !n.deletedAt).length}
-                                    activeId={activeNotebookId} onClick={(id) => { setActiveNotebookId(id); setIsSidebarCollapsed(true); }} 
-                                    onEdit={() => { setEditingNotebook(nb); setIsNotebookModalOpen(true); }}
-                                    onDelete={() => handleDeleteNotebook(nb.id)}
-                                />
-                            ))}
-                            <div className="h-px bg-border my-2 mx-2"></div>
-                             <SidebarItem id="archived" icon={<ArchiveBoxIcon className="w-5 h-5"/>} title="Archived" count={notes.filter(n => n.archived && !n.deletedAt).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
-                             <SidebarItem id="trash" icon={<TrashIcon className="w-5 h-5"/>} title="Trash" count={notes.filter(n => !!n.deletedAt).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
-                        </div>
-
-                        <div className="p-2 border-t border-border mt-1">
-                            <button onClick={() => { setEditingNotebook(null); setIsNotebookModalOpen(true); }} className="w-full flex items-center justify-center gap-2 text-sm font-semibold p-2 rounded-lg text-text-secondary hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
-                                <PlusIcon className="w-5 h-5"/> New Notebook
-                            </button>
-                        </div>
-                    </motion.aside>
-                )}
-            </AnimatePresence>
-
-            <main className="flex-1 flex min-w-0">
-                <AnimatePresence>
-                    {!isFullScreen && (
-                        <motion.section 
-                            initial={{ width: 0, opacity: 0, padding: 0 }}
-                            animate={{ width: 350, opacity: 1 }}
-                            exit={{ width: 0, opacity: 0, padding: 0 }}
-                            transition={{ duration: 0.3, ease: 'easeInOut' }}
-                            className="w-[350px] flex-shrink-0 border-r border-border flex flex-col bg-card"
-                        >
-                            <div className="p-4 border-b border-border flex flex-col gap-3">
-                                <div className="flex items-center justify-between">
-                                    {isSidebarCollapsed && (
-                                        <button onClick={() => setIsSidebarCollapsed(false)} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10" title="Expand sidebar">
-                                            <ChevronRightIcon className="w-5 h-5"/>
-                                        </button>
-                                    )}
-                                    <h2 className="font-bold font-display text-lg">Notes</h2>
-                                    <button onClick={handleCreateNote} className="p-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors" title="New note">
-                                        <DocumentPlusIcon className="w-5 h-5"/>
-                                    </button>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="relative flex-grow">
-                                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-secondary"/>
-                                        <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-bg border border-border rounded-lg text-sm focus:ring-2 focus:ring-accent" />
-                                    </div>
-                                    <select value={sortMethod} onChange={e => setSortMethod(e.target.value as any)} className="bg-bg border border-border rounded-lg text-sm p-2 focus:ring-2 focus:ring-accent appearance-none">
-                                        <option value="updatedAt-newest">Modified: Newest</option>
-                                        <option value="updatedAt-oldest">Modified: Oldest</option>
-                                        <option value="createdAt-newest">Created: Newest</option>
-                                        <option value="createdAt-oldest">Created: Oldest</option>
-                                        <option value="title-az">Title: A-Z</option>
-                                        <option value="title-za">Title: Z-A</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-2">
+                         <NoteEditorView
+                            key={selectedNote.id}
+                            note={selectedNote}
+                            onBack={handleBackFromEditor}
+                            {...props}
+                        />
+                    </motion.div>
+                ) : (
+                    <motion.div key="main-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col h-full">
+                        <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                            <div className="flex items-center gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-full">
+                                <button onClick={() => { setActiveNotebookId('all'); setDisplayMode('notes'); }} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${displayMode === 'notes' && activeNotebookId === 'all' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>All Notes</button>
+                                <button onClick={() => setDisplayMode('notebooks')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${displayMode === 'notebooks' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Notebooks</button>
                                 <AnimatePresence>
-                                    {filteredAndSortedNotes.map(note => (
-                                        <NoteListItem 
-                                            key={note.id} 
-                                            note={note} 
-                                            isSelected={selectedNote?.id === note.id} 
-                                            onClick={() => setSelectedNote(note)} 
-                                            notebooks={notebooks}
-                                            setIsFullScreen={setIsFullScreen}
-                                        />
-                                    ))}
+                                {viewingNotebook && displayMode === 'notes' && (
+                                    <motion.div initial={{width:0, opacity: 0}} animate={{width:'auto', opacity: 1}} exit={{width:0, opacity: 0}}>
+                                        <div className={`px-4 py-1.5 rounded-full text-sm font-semibold bg-black text-white whitespace-nowrap`}>{viewingNotebook.title}</div>
+                                    </motion.div>
+                                )}
                                 </AnimatePresence>
                             </div>
-                        </motion.section>
-                    )}
-                </AnimatePresence>
-                
-                <section className="flex-1 flex flex-col min-w-0 bg-bg">
-                    {selectedNote ? (
-                        <motion.div 
-                            key={selectedNote.id}
-                            layoutId={`editor-card-${selectedNote.id}`}
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            className={`flex-1 flex flex-col transition-all duration-300 ${isFullScreen ? 'p-4 sm:p-8 m-auto max-w-4xl w-full h-full' : 'p-6 rounded-3xl m-3'}`}
-                            style={{ backgroundColor: isFullScreen ? 'rgba(0,0,0,0.1)' : editorColor }}
-                        >
-                             {isNoteInTrash && (
-                                <div className="flex items-center justify-between gap-4 p-3 rounded-xl mb-4" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                                    <p className="text-sm font-semibold">This note is in the trash.</p>
-                                    <div className="flex items-center gap-2">
-                                        <button 
-                                            onClick={() => restoreNote(selectedNote.id)} 
-                                            className="px-3 py-1.5 text-sm font-semibold rounded-lg hover:bg-black/20"
-                                        >
-                                            Restore
-                                        </button>
-                                        <button 
-                                            onClick={() => setNoteToDeletePermanently(selectedNote)} 
-                                            className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-red-500/80 hover:bg-red-500 text-white"
-                                        >
-                                            Delete Forever
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex-shrink-0 flex items-start justify-between gap-4 mb-4">
-                                <div className="flex-1 relative">
-                                    <input 
-                                        type="text" 
-                                        value={selectedNote.title} 
-                                        onChange={e => handleNoteChange('title', e.target.value)} 
-                                        readOnly={isNoteInTrash}
-                                        className="text-3xl font-bold font-display bg-transparent w-full focus:outline-none placeholder:opacity-50"
-                                        style={{ color: editorTextColor }}
-                                        placeholder="Note title..."
-                                    />
-                                    {isParsingTitle && <SparklesIcon className="w-5 h-5 absolute right-0 top-1/2 -translate-y-1/2 animate-pulse" style={{ color: editorTextColor }}/>}
-                                </div>
-                                {!isNoteInTrash && (
-                                    <div className="flex items-center gap-1">
-                                        <EditorIconButton onClick={handleToggleFlag} title={selectedNote.flagged ? 'Unstar' : 'Star'} textColor={editorTextColor} active={selectedNote.flagged}><StarIcon className="w-5 h-5"/></EditorIconButton>
-                                        <EditorIconButton onClick={handleSummarize} title="Summarize Note" textColor={editorTextColor} disabled={isSummarizing}><LightBulbIcon className={`w-5 h-5 ${isSummarizing ? 'animate-pulse' : ''}`}/></EditorIconButton>
-                                        <EditorIconButton onClick={handleAutoTag} title="Auto-tag Note" textColor={editorTextColor} disabled={isTagging}><SparklesIcon className={`w-5 h-5 ${isTagging ? 'animate-pulse' : ''}`}/></EditorIconButton>
-                                        <EditorIconButton onClick={() => setIsFullScreen(p => !p)} title={isFullScreen ? "Exit Full Screen" : "Full Screen"} textColor={editorTextColor}>{isFullScreen ? <ArrowsPointingInIcon className="w-5 h-5"/> : <ArrowsPointingOutIcon className="w-5 h-5"/>}</EditorIconButton>
-                                        
-                                        <div className="relative" ref={editorMenuRef}>
-                                            <EditorIconButton onClick={() => setIsEditorMenuOpen(p => !p)} title="More options" textColor={editorTextColor}><EllipsisVerticalIcon className="w-5 h-5"/></EditorIconButton>
-                                            <AnimatePresence>
-                                                {isEditorMenuOpen && (
-                                                    <motion.div 
-                                                        initial={{opacity: 0, y: -10}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -10}} 
-                                                        className="absolute right-0 top-12 w-48 bg-card border border-border rounded-lg shadow-xl z-20 p-1"
-                                                    >
-                                                        <MenuItem icon={<ArchiveBoxIcon className="w-4 h-4"/>} label={selectedNote.archived ? 'Unarchive' : 'Archive'} onClick={handleToggleArchive} />
-                                                        <MenuItem icon={<PhotoIcon className="w-4 h-4"/>} label="Attach File" onClick={() => fileInputRef.current?.click()} />
-                                                        <MenuItem icon={<ArrowUturnLeftIcon className="w-4 h-4"/>} label="Undo Delete" onClick={() => { if (lastDeletedNote) restoreNote(lastDeletedNote.id); }} disabled={!lastDeletedNote} />
-                                                        <div className="h-px bg-border my-1 mx-1"></div>
-                                                        <MenuItem icon={<TrashIcon className="w-4 h-4"/>} label="Move to Trash" onClick={() => deleteNote(selectedNote.id)} destructive />
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-                                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,application/pdf" />
-                                    </div>
-                                )}
-                            </div>
-                            
-                            {selectedNote.tags && selectedNote.tags.length > 0 && (
-                                <TagsDisplay tags={selectedNote.tags} onRemove={handleRemoveTag} textColor={editorTextColor} />
-                            )}
-
-                            {selectedNote.attachment && (
-                                <AttachmentPreview
-                                    attachment={selectedNote.attachment}
-                                    onRemove={() => {
-                                        if (selectedNote) {
-                                            const updated = { ...selectedNote, attachment: undefined };
-                                            updateNote(updated);
-                                            setSelectedNote(updated);
-                                        }
-                                    }}
-                                    textColor={editorTextColor}
-                                />
-                            )}
-                            
-                            <div className="flex-1 bg-black/10 rounded-2xl overflow-hidden mt-4">
-                                <LightweightEditor key={selectedNote.id} content={selectedNote.content || ''} onChange={v => handleNoteChange('content', v)} textColor={editorTextColor} editable={!isNoteInTrash} />
-                            </div>
-                        </motion.div>
-                    ) : (
-                        <div className="flex-1 flex items-center justify-center text-center p-8">
-                             <div>
-                                <DocumentIcon className="w-16 h-16 text-text-secondary/30 mx-auto mb-4"/>
-                                <h3 className="text-lg font-semibold text-text-secondary mb-2">Select a note</h3>
-                                <p className="text-text-secondary/70 mb-6">Choose a note from the list or create a new one to begin.</p>
-                                <button onClick={handleCreateNote} className="inline-flex items-center gap-2 px-5 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors shadow-lg">
-                                    <DocumentPlusIcon className="w-5 h-5"/> Create New Note
-                                </button>
-                            </div>
                         </div>
-                    )}
-                </section>
-            </main>
+
+                        <div className="flex-1 min-h-0">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={displayMode === 'notes' ? `notes-view-${activeNotebookId}` : 'notebooks-view'}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="h-full"
+                                >
+                                    {displayMode === 'notes' ? (
+                                        <NoteListView {...props} onSelectNote={handleSelectNote} selectedNoteIds={selectedNoteIds} onToggleSelectNote={handleToggleSelectNote} />
+                                    ) : (
+                                        <NotebookListView 
+                                            {...props} 
+                                            onSelectNotebook={(nb) => {
+                                                setActiveNotebookId(nb.id);
+                                                setDisplayMode('notes');
+                                            }} 
+                                        />
+                                    )}
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            {!selectedNote && (
+                 <motion.button 
+                    onClick={handleCreateNewNote}
+                    className="absolute bottom-4 right-4 w-14 h-14 bg-accent rounded-full flex items-center justify-center text-white shadow-lg shadow-accent/30"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    aria-label="Create new note"
+                >
+                    <PlusIcon className="w-8 h-8"/>
+                </motion.button>
+            )}
+             <MultiSelectActionBar 
+                selectedCount={selectedNoteIds.length}
+                notebooks={notebooks}
+                onMove={handleMoveNotes}
+                onCancel={() => setSelectedNoteIds([])}
+            />
         </div>
     );
 }
 
-// --- SUB-COMPONENTS ---
+// --- NOTEBOOK EDIT MODAL ---
+interface NotebookEditModalProps {
+    notebook?: Notebook;
+    onSave: (title: string, color: string) => void;
+    onClose: () => void;
+}
 
-const MenuItem = ({ icon, label, onClick, disabled = false, destructive = false }: {
-    icon: React.ReactNode;
-    label: string;
-    onClick: () => void;
-    disabled?: boolean;
-    destructive?: boolean;
-}) => (
-    <button 
-        onClick={() => { if (!disabled) onClick(); }}
-        disabled={disabled}
-        className={`w-full text-left flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors 
-            ${destructive ? 'text-red-500' : ''} 
-            ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-black/5 dark:hover:bg-white/10'}`
+function NotebookEditModal({ notebook, onSave, onClose }: NotebookEditModalProps) {
+    const [title, setTitle] = useState(notebook?.title || '');
+    const [color, setColor] = useState(notebook?.color || PRESET_COLORS[0]);
+    const isCreating = !notebook;
+
+    const handleSave = () => {
+        if (title.trim()) {
+            onSave(title.trim(), color);
+            onClose();
         }
-    >
-        {icon}
-        <span>{label}</span>
-    </button>
-);
-
-const SidebarItem = ({ id, icon, title, count, activeId, onClick, onEdit, onDelete }: {
-    id: number | 'all' | 'flagged' | 'archived' | 'trash';
-    icon: React.ReactNode;
-    title: string;
-    count?: number;
-    activeId: any;
-    onClick: (id: any) => void;
-    onEdit?: () => void;
-    onDelete?: () => void;
-}) => {
-    const [isHovered, setIsHovered] = useState(false);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (ref.current && !ref.current.contains(event.target as Node)) {
-                setIsMenuOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [ref]);
-
-    return (
-        <button 
-            onClick={() => onClick(id)} 
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            className={`flex items-center justify-between w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 group relative ${activeId === id ? 'bg-accent text-white shadow-md' : 'hover:bg-black/5 dark:hover:bg-white/10 text-text'}`}
-        >
-            <span className="flex items-center gap-3 truncate">
-                {icon}
-                <span className="font-bold text-sm">{title}</span>
-            </span>
-            <div className="flex items-center gap-1">
-                {typeof id === 'number' && (isHovered || isMenuOpen) && (
-                    <motion.div initial={{opacity: 0, scale: 0.8}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0}}>
-                        <EllipsisVerticalIcon onClick={(e) => { e.stopPropagation(); setIsMenuOpen(p => !p); }} className="w-5 h-5 p-0.5 rounded-md hover:bg-black/10 dark:hover:bg-white/20"/>
-                    </motion.div>
-                )}
-                 {count !== undefined && (
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full transition-colors ${activeId === id ? 'bg-white/20' : 'bg-black/5 dark:bg-white/10'}`}>
-                        {count}
-                    </span>
-                )}
-            </div>
-            <AnimatePresence>
-                {isMenuOpen && typeof id === 'number' && (
-                    <motion.div ref={ref} initial={{opacity: 0, y: -10}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -10}} className="absolute right-0 top-10 w-32 bg-card border border-border rounded-lg shadow-xl z-10 p-1">
-                        <button onClick={(e) => { e.stopPropagation(); onEdit?.(); setIsMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-black/5 dark:hover:bg-white/10"><PencilIcon className="w-4 h-4"/> Edit</button>
-                        <button onClick={(e) => { e.stopPropagation(); onDelete?.(); setIsMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-red-500"><TrashIcon className="w-4 h-4"/> Delete</button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </button>
-    );
-};
-
-const NoteListItem = ({ note, isSelected, onClick, notebooks, setIsFullScreen }: { 
-    note: Note; 
-    isSelected: boolean; 
-    onClick: () => void; 
-    notebooks: Notebook[];
-    setIsFullScreen: (isFull: boolean) => void;
-}) => {
-    const notebook = notebooks.find(nb => nb.id === note.notebookId);
-    const ref = useRef<HTMLButtonElement>(null);
-
-    useEffect(() => {
-        if (isSelected) {
-            ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-    }, [isSelected]);
-
-    const handleDoubleClick = () => {
-        onClick(); // Select the note first
-        setIsFullScreen(true);
     };
 
     return (
-        <motion.button 
-            ref={ref}
-            layout
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClick}
-            onDoubleClick={handleDoubleClick}
-            className={`block w-full text-left p-3 rounded-xl transition-all duration-200 ${isSelected ? 'bg-accent/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+        <motion.div 
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onClose}
         >
-            <div className="flex items-start justify-between gap-2 mb-1">
-                <h4 className="font-semibold text-text truncate pr-4">{note.title}</h4>
-                {note.flagged && <StarIcon className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"/>}
-            </div>
-            <p className="text-sm text-text-secondary line-clamp-2 mb-2">
-                {(note.content || '').replace(/<[^>]*>?/gm, '')}
-            </p>
-            <div className="flex items-center justify-between text-xs text-text-secondary">
-                <span>{new Date(note.updatedAt).toLocaleDateString()}</span>
-                {notebook && <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{backgroundColor: notebook.color}}></div><span>{notebook.title}</span></div>}
-            </div>
-        </motion.button>
-    );
-};
-
-const EditorIconButton = ({ onClick, title, textColor, active = false, disabled = false, children }: { onClick: (e: React.MouseEvent) => void; title: string; textColor: string; active?: boolean; disabled?: boolean; children: React.ReactNode; }) => (
-    <button 
-        onClick={onClick} 
-        title={title} 
-        disabled={disabled}
-        className={`p-2 rounded-lg transition-colors ${active ? 'bg-black/20 text-amber-300' : 'hover:bg-black/10'} disabled:opacity-50 disabled:cursor-not-allowed`} 
-        style={{ color: active ? undefined : textColor }}
-    >
-        {children}
-    </button>
-);
-
-const AttachmentPreview = ({ attachment, onRemove, textColor }: {
-    attachment: Note['attachment'];
-    onRemove: () => void;
-    textColor: string;
-}) => {
-    if (!attachment) return null;
-    const isImage = attachment.mimeType.startsWith('image/');
-    const handleRemoveClick = (e: React.MouseEvent) => {
-        e.preventDefault(); e.stopPropagation(); onRemove();
-    };
-    return (
-        <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1, y:0}} className="relative group p-3 bg-black/10 rounded-2xl mt-4">
-            <a href={attachment.url} target="_blank" rel="noopener noreferrer" download={!isImage ? attachment.name : undefined} className="block cursor-pointer" title={`Open ${attachment.name} in new tab`}>
-                {isImage ? (
-                    <img src={attachment.url} alt={attachment.name} className="max-h-48 rounded-lg object-contain mx-auto" />
-                ) : (
-                    <div className="flex items-center gap-3 p-2 rounded-lg">
-                        <DocumentIcon className="w-8 h-8 flex-shrink-0 opacity-70" style={{color: textColor}}/>
-                        <div className="truncate"><p className="font-semibold truncate">{attachment.name}</p><p className="text-xs opacity-70">Click to open or download</p></div>
+            <motion.div 
+                initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} 
+                onClick={e => e.stopPropagation()} 
+                className="bg-card p-6 rounded-2xl w-full max-w-sm border border-border"
+            >
+                <h3 className="font-bold text-lg mb-4">{isCreating ? 'Create Notebook' : 'Edit Notebook'}</h3>
+                <div className="space-y-4">
+                    <input 
+                        type="text" 
+                        value={title} 
+                        onChange={e => setTitle(e.target.value)} 
+                        placeholder="Notebook Name"
+                        className="w-full bg-bg p-2 rounded-lg border border-border"
+                    />
+                    <div className="grid grid-cols-7 gap-2">
+                        {PRESET_COLORS.map(c => (
+                            <button 
+                                key={c} 
+                                onClick={() => setColor(c)}
+                                className={`w-full aspect-square rounded-full transition-transform hover:scale-110 ${color === c ? 'ring-2 ring-offset-2 ring-offset-card ring-accent' : ''}`}
+                                style={{ backgroundColor: c }}
+                                aria-label={`Select color ${c}`}
+                            />
+                        ))}
                     </div>
-                )}
-            </a>
-            <button onClick={handleRemoveClick} title="Remove attachment" className="absolute top-1 right-1 p-1 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"><XMarkIcon className="w-4 h-4 text-white" /></button>
+                </div>
+                <div className="flex gap-2 mt-6">
+                    <button onClick={onClose} className="flex-1 p-2 rounded-lg bg-bg hover:bg-border/50 transition-colors">Cancel</button>
+                    <button onClick={handleSave} className="flex-1 p-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors">Save</button>
+                </div>
+            </motion.div>
         </motion.div>
     );
-};
+}
 
-const TagsDisplay = ({ tags, onRemove, textColor }: { tags: string[], onRemove: (tag: string) => void, textColor: string }) => (
-    <div className="flex flex-wrap gap-2 mt-3">
-        {tags.map(tag => (
-            <motion.div 
-                key={tag} layout
-                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
-                className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full text-xs font-semibold"
-                style={{ backgroundColor: 'rgba(0,0,0,0.15)', color: textColor }}
-            >
-                <span>{tag}</span>
-                <button onClick={() => onRemove(tag)} className="p-0.5 rounded-full hover:bg-black/20"><XMarkIcon className="w-3 h-3"/></button>
-            </motion.div>
-        ))}
+// --- NOTEBOOKS LIST VIEW ---
+interface NotebookListViewProps extends NotesProps {
+    onSelectNotebook: (notebook: Notebook) => void;
+}
+
+function NotebookListView({ notes, notebooks, addNotebook, updateNotebook, deleteNotebook, onSelectNotebook }: NotebookListViewProps) {
+    const [editingNotebook, setEditingNotebook] = useState<Notebook | null>(null);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    return (
+        <div className="flex-1 overflow-y-auto pr-2 -mr-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <motion.div
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center text-text-secondary hover:bg-card hover:border-accent transition-all cursor-pointer min-h-[150px]"
+                    onClick={() => setIsCreateModalOpen(true)}
+                >
+                    <PlusIcon className="w-8 h-8 mb-2" />
+                    <span className="font-semibold">New Notebook</span>
+                </motion.div>
+
+                {notebooks.map(notebook => (
+                    <motion.div 
+                        layout
+                        key={notebook.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-2xl p-4 flex flex-col justify-between min-h-[150px] relative group overflow-hidden"
+                        style={{
+                           background: `linear-gradient(135deg, ${notebook.color} 0%, rgba(0,0,0,0.3) 100%), ${notebook.color}`
+                        }}
+                    >
+                        <div 
+                            className="absolute inset-0 bg-no-repeat opacity-10" 
+                            style={{ 
+                                backgroundImage: `radial-gradient(circle at 100% 0%, ${getTextColorForBackground(notebook.color)} 0%, transparent 30%)`
+                            }}
+                        />
+                        <div className="absolute top-2 right-2 z-10">
+                             <Menu target={<button className="p-2 rounded-full bg-black/20 text-white opacity-50 group-hover:opacity-100 transition-opacity"><EllipsisVerticalIcon className="w-5 h-5"/></button>}>
+                                <MenuItem label="Edit" onClick={() => setEditingNotebook(notebook)} />
+                                <MenuItem label="Delete" onClick={() => deleteNotebook(notebook.id)} className="text-red-500"/>
+                            </Menu>
+                        </div>
+                        <button className="text-left w-full h-full relative" onClick={() => onSelectNotebook(notebook)}>
+                            <BookOpenIcon className="absolute bottom-2 right-2 w-16 h-16 opacity-20 transform -rotate-12"/>
+                            <h3 className="font-bold font-display text-2xl" style={{ color: getTextColorForBackground(notebook.color) }}>
+                                {notebook.title}
+                            </h3>
+                            <p className="text-sm font-medium" style={{ color: getTextColorForBackground(notebook.color), opacity: 0.8 }}>
+                                {notes.filter(n => n.notebookId === notebook.id && !n.deletedAt).length} notes
+                            </p>
+                        </button>
+                    </motion.div>
+                ))}
+            </div>
+            
+            <AnimatePresence>
+                {editingNotebook && (
+                    <NotebookEditModal
+                        notebook={editingNotebook}
+                        onClose={() => setEditingNotebook(null)}
+                        onSave={(title, color) => updateNotebook({ ...editingNotebook, title, color })}
+                    />
+                )}
+                {isCreateModalOpen && (
+                    <NotebookEditModal
+                        onClose={() => setIsCreateModalOpen(false)}
+                        onSave={(title, color) => addNotebook(title, color)}
+                    />
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+// --- ALL NOTES VIEW ---
+
+interface NoteListViewProps extends NotesProps {
+    onSelectNote: (note: Note) => void;
+    selectedNoteIds: number[];
+    onToggleSelectNote: (noteId: number) => void;
+}
+
+type SortByType = 'updatedAt' | 'title' | 'notebookId';
+type SortDirType = 'asc' | 'desc';
+
+function NoteListView(props: NoteListViewProps) {
+    const { notes, activeNotebookId, setActiveNotebookId, notebooks, updateNote } = props;
+    const [searchQuery, setSearchQuery] = useState("");
+    
+    const [view, setView] = useState<NoteView>(() => (localStorage.getItem('praxis-note-view') as NoteView) || 'grid');
+    const [sortBy, setSortBy] = useState<SortByType>('updatedAt');
+    const [sortDir, setSortDir] = useState<SortDirType>('desc');
+    
+    useEffect(() => {
+        localStorage.setItem('praxis-note-view', view);
+    }, [view]);
+
+    const filteredNotes = useMemo(() => {
+        let tempNotes = notes.filter(n => {
+            if (typeof activeNotebookId === 'number') return n.notebookId === activeNotebookId && !n.deletedAt;
+            if (activeNotebookId === 'all') return !n.deletedAt;
+            if (activeNotebookId === 'flagged') return n.flagged && !n.deletedAt;
+            if (activeNotebookId === 'trash') return !!n.deletedAt;
+            return false;
+        });
+
+        if (searchQuery) {
+            const lowercasedQuery = searchQuery.toLowerCase();
+            tempNotes = tempNotes.filter(n =>
+                n.title.toLowerCase().includes(lowercasedQuery) ||
+                (n.content || '').replace(/<[^>]+>/g, ' ').toLowerCase().includes(lowercasedQuery) ||
+                n.tags.some(tag => tag.toLowerCase().includes(lowercasedQuery))
+            );
+        }
+
+        tempNotes.sort((a, b) => {
+            let compare = 0;
+            switch (sortBy) {
+                case 'title':
+                    compare = a.title.localeCompare(b.title);
+                    break;
+                case 'notebookId': {
+                    const titleA = notebooks.find(nb => nb.id === a.notebookId)?.title || '';
+                    const titleB = notebooks.find(nb => nb.id === b.notebookId)?.title || '';
+                    compare = titleA.localeCompare(titleB);
+                    break;
+                }
+                case 'updatedAt':
+                default:
+                    compare = new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+                    break;
+            }
+            return sortDir === 'asc' ? compare : -compare;
+        });
+
+        return tempNotes;
+    }, [notes, activeNotebookId, searchQuery, sortBy, sortDir, notebooks]);
+
+    const viewOptions: { id: NoteView; icon: React.FC<any> }[] = [
+        { id: 'grid', icon: Squares2X2Icon },
+        { id: 'list', icon: Bars3Icon },
+        { id: 'board', icon: ViewColumnsIcon },
+    ];
+    
+    const renderContent = () => {
+         if (filteredNotes.length === 0) {
+            return (
+                <div className="h-full flex flex-col items-center justify-center text-text-secondary text-center flex-1">
+                    <DocumentIcon className="w-16 h-16 opacity-30 mb-4"/>
+                    <h3 className="font-bold text-lg text-text">No Notes Found</h3>
+                    <p>Try a different search or filter.</p>
+                 </div>
+            );
+        }
+        
+        switch(view) {
+            case 'grid': return <GridView notes={filteredNotes} {...props} />;
+            case 'list': return <CalendarStyleListView notes={filteredNotes} {...props} />;
+            case 'board': return <BoardView notes={filteredNotes} {...props} />;
+            default: return <GridView notes={filteredNotes} {...props} />;
+        }
+    }
+
+    return (
+        <div className="flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+                <div className="relative flex-1">
+                    <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"/>
+                    <input type="text" placeholder="Search notes..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-lg pl-10 pr-12 py-2 focus:ring-2 focus:ring-accent focus:outline-none"/>
+                    <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                        <Menu target={
+                            <button className="p-2 rounded-lg bg-zinc-200/0 dark:bg-zinc-800/0 hover:bg-black/5 dark:hover:bg-white/10">
+                                {sortDir === 'asc' ? <SortAscendingIcon className="w-5 h-5"/> : <SortDescendingIcon className="w-5 h-5"/>}
+                            </button>
+                        }>
+                            <MenuItem label="Last Modified" onClick={() => { setSortBy('updatedAt'); setSortDir('desc'); }} />
+                            <MenuItem label="Title A-Z" onClick={() => { setSortBy('title'); setSortDir('asc'); }} />
+                            <MenuItem label="Notebook" onClick={() => { setSortBy('notebookId'); setSortDir('asc'); }} />
+                        </Menu>
+                    </div>
+                </div>
+                 <div className="flex items-center gap-1 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg">
+                     {viewOptions.map(option => (
+                        <button key={option.id} onClick={() => setView(option.id)} className={`p-1.5 rounded-md ${view === option.id ? 'bg-bg shadow-sm' : ''}`}>
+                            <option.icon className="w-5 h-5"/>
+                        </button>
+                     ))}
+                </div>
+                
+                 {typeof activeNotebookId !== 'number' && (
+                    <>
+                        <div className="flex items-center gap-1 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg">
+                            <button 
+                                onClick={() => setActiveNotebookId(activeNotebookId === 'flagged' ? 'all' : 'flagged')} 
+                                className={`p-1.5 rounded-md transition-colors ${activeNotebookId==='flagged' ? 'bg-bg shadow-sm ring-1 ring-amber-400' : ''}`}
+                                aria-label="Filter flagged notes"
+                            >
+                                <StarIcon className={`w-5 h-5 transition-colors ${activeNotebookId === 'flagged' ? 'text-amber-400 fill-amber-400' : ''}`}/>
+                            </button>
+                        </div>
+                        <button onClick={() => setActiveNotebookId('trash')} className={`p-2 rounded-lg ${activeNotebookId==='trash' ? 'bg-accent text-white' : 'bg-zinc-200 dark:bg-zinc-800'}`}><TrashIcon className="w-5 h-5"/></button>
+                    </>
+                 )}
+            </div>
+
+            <div className="flex-1 min-h-0">
+                {renderContent()}
+            </div>
+        </div>
+    );
+}
+
+// --- MULTI-VIEW COMPONENTS ---
+
+const GridView = (props: { notes: Note[] } & NoteListViewProps) => (
+    <div className="h-full overflow-y-auto pr-2 -mr-4 pb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" style={{alignItems: 'start'}}>
+            {props.notes.map(note => {
+                const notebook = props.notebooks.find(nb => nb.id === note.notebookId);
+                return <NoteCard key={note.id} note={note} notebook={notebook} {...props} />;
+            })}
+        </div>
     </div>
 );
 
-const SummaryModal = ({ summary, onClose, showToast }: { summary: string, onClose: () => void, showToast: (msg: string) => void }) => {
-    const handleCopy = () => {
-        navigator.clipboard.writeText(summary);
-        showToast("Summary copied to clipboard!");
-    };
+const CalendarStyleListView = ({ notes, ...props }: { notes: Note[] } & NoteListViewProps) => {
+    const notesByDate = useMemo(() => {
+        return notes.reduce((acc, note) => {
+            const dateStr = new Date(note.updatedAt).toDateString();
+            if (!acc[dateStr]) acc[dateStr] = [];
+            acc[dateStr].push(note);
+            return acc;
+        }, {} as Record<string, Note[]>);
+    }, [notes]);
+    
+    const sortedDates = useMemo(() => Object.keys(notesByDate).sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [notesByDate]);
+
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl p-6 border border-border" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-accent/20 rounded-full text-accent"><LightBulbIcon className="w-6 h-6"/></div>
-                    <h2 className="text-xl font-bold font-display text-text">Kiko's Summary</h2>
-                </div>
-                <div className="max-h-[50vh] overflow-y-auto pr-2 text-text-secondary prose dark:prose-invert">
-                    <p>{summary}</p>
-                </div>
-                <div className="flex justify-end gap-2 mt-6">
-                    <button onClick={handleCopy} className="px-4 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10">Copy</button>
-                    <button onClick={onClose} className="px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover">Close</button>
-                </div>
-            </motion.div>
-        </motion.div>
+        <div className="h-full overflow-y-auto pr-2 -mr-4 pb-4 space-y-3">
+            {sortedDates.map(dateStr => (
+                <NoteDayCard key={dateStr} date={new Date(dateStr)} notes={notesByDate[dateStr]} {...props} />
+            ))}
+        </div>
     );
 };
 
-const NotebookModal = ({ onClose, onSave, notebook }: { onClose: () => void; onSave: (title: string, color: string) => void; notebook: Notebook | null; }) => {
-    const [title, setTitle] = useState(notebook?.title || '');
-    const [color, setColor] = useState(notebook?.color || PRESET_COLORS[0]);
-    const [hexInput, setHexInput] = useState(notebook?.color || PRESET_COLORS[0]);
-    useEffect(() => { setHexInput(color); }, [color]);
-    const handleHexInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value; setHexInput(value);
-        if (/^#[0-9A-F]{6}$/i.test(value)) { setColor(value); }
-    };
+const NoteTagScroller = ({ notes, textColor }: { notes: Note[]; textColor: string }) => {
+    const tags = useMemo(() => {
+        const allTags = notes.flatMap(note => note.tags);
+        return [...new Set(allTags)];
+    }, [notes]);
+
+    if (tags.length === 0) return null;
+
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-                <h2 className="text-xl font-bold font-display mb-6">{notebook ? 'Edit Notebook' : 'New Notebook'}</h2>
-                <div className="space-y-5">
-                    <div><label className="block text-sm font-medium text-text-secondary mb-1">Title</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Notebook Title" className="w-full p-2 bg-bg border border-border rounded-lg" /></div>
-                    <div><label className="block text-sm font-medium text-text-secondary mb-2">Color</label><div className="grid grid-cols-7 gap-2 mb-3">{PRESET_COLORS.map(c => (<button key={c} type="button" onClick={() => setColor(c)} className={`w-full aspect-square rounded-full transition-transform hover:scale-110 ${color === c ? 'ring-2 ring-offset-2 ring-offset-card ring-accent' : ''}`} style={{ backgroundColor: c }} aria-label={`Select color ${c}`}/>))}</div>
-                        <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full border border-border flex-shrink-0" style={{ backgroundColor: /^#[0-9A-F]{6}$/i.test(hexInput) ? hexInput : 'transparent' }}></div><input type="text" value={hexInput} onChange={handleHexInputChange} className="w-full p-2 bg-bg border border-border rounded-lg font-mono text-sm" placeholder="#A855F7"/></div>
+        <div className="flex h-full gap-2 -mr-4 overflow-x-auto pb-2">
+            {tags.map(tag => (
+                <div key={tag} className="flex-shrink-0 px-3 py-1 text-xs font-semibold rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.2)'}}>
+                    #{tag}
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const NoteDayCard = ({ date, notes, ...props }: { date: Date; notes: Note[] } & NoteListViewProps) => {
+    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    
+    const bgColor = notes.length > 0 ? (props.notebooks.find(nb => nb.id === notes[0].notebookId)?.color || '#374151') : '#374151';
+    const textColor = getTextColorForBackground(bgColor);
+
+    const linkedTasksForDay = useMemo(() => {
+        return notes
+            .map(note => {
+                const task = props.tasks.find(t => t.linkedNoteId === note.id);
+                return task ? { note, task } : null;
+            })
+            .filter((item): item is { note: Note; task: Task } => item !== null);
+    }, [notes, props.tasks]);
+
+
+    return (
+         <div 
+            className="rounded-3xl flex min-h-[10rem] overflow-hidden"
+            style={{ backgroundColor: bgColor, color: textColor }}
+        >
+            <div className="w-2/3 p-4 flex flex-col">
+                <div className="flex-grow space-y-1 overflow-y-auto -mr-2 pr-2" style={{ maxHeight: '16rem' }}>
+                    {notes.map(note => (
+                        <CompactNoteCard key={note.id} note={note} {...props} />
+                    ))}
+                </div>
+                <div className="pt-3 mt-auto">
+                    <NoteTagScroller notes={notes} textColor={textColor} />
+                </div>
+            </div>
+            <button 
+                onClick={() => props.navigateToScheduleDate(date)} 
+                className="w-1/3 flex-shrink-0 text-right rounded-2xl transition-colors p-4 flex flex-col justify-between"
+            >
+                <div>
+                    <p className="font-semibold">{dayOfWeek}</p>
+                    <p className="text-6xl font-bold font-display tracking-tighter leading-none mt-1">{day}</p>
+                    <p className="text-6xl font-bold font-display tracking-tight leading-none opacity-60">{month}</p>
+                </div>
+
+                {linkedTasksForDay.length > 0 && (
+                    <div className="mt-auto space-y-2 text-left">
+                        {linkedTasksForDay.map(({ note, task }) => (
+                            <div key={task.id} className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                                <div className="flex items-center gap-1.5 text-xs font-semibold opacity-90 mb-1">
+                                    <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                                    Linked Task
+                                </div>
+                                <p className="font-bold text-base">{task.title}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </button>
+        </div>
+    );
+};
+
+const CompactNoteCard = ({ note, selectedNoteIds, onToggleSelectNote, onSelectNote, updateNote }: { note: Note } & Omit<NoteListViewProps, 'notes'>) => {
+    const isSelectionMode = selectedNoteIds.length > 0;
+    const isSelected = selectedNoteIds.includes(note.id);
+    const longPressTimeout = useRef<number | null>(null);
+
+    const handlePointerDown = () => {
+        if (isSelectionMode) return;
+        longPressTimeout.current = window.setTimeout(() => onToggleSelectNote(note.id), 500);
+    };
+
+    const clearLongPress = () => {
+        if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
+    };
+
+    const handleClick = () => {
+        if (isSelectionMode) {
+            onToggleSelectNote(note.id);
+        } else {
+            onSelectNote(note);
+        }
+    };
+    
+    const contentSnippet = (note.content || '').replace(/<[^>]+>/g, ' ');
+
+    return (
+        <div 
+            onClick={handleClick} 
+            onPointerDown={handlePointerDown}
+            onPointerUp={clearLongPress}
+            onPointerLeave={clearLongPress}
+            className={`p-2 cursor-pointer transition-all duration-200 relative group ${isSelected ? 'ring-2 ring-current rounded-lg' : ''}`}
+        >
+            <AnimatePresence>
+            {isSelected && (
+                 <motion.div initial={{scale:0}} animate={{scale:1}} exit={{scale:0}} className="absolute top-0 right-0 w-5 h-5 bg-white rounded-full flex items-center justify-center z-10">
+                    <CheckCircleIcon className="w-5 h-5 text-green-500"/>
+                 </motion.div>
+            )}
+            </AnimatePresence>
+             <div className="flex justify-between items-start gap-2">
+                <h5 className="font-bold font-display text-xl break-word transition-transform duration-200 group-hover:scale-[1.02] origin-left">{note.title}</h5>
+                 <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        updateNote({ ...note, flagged: !note.flagged }, { silent: true });
+                    }}
+                    className="p-1.5 -mr-1.5 flex-shrink-0"
+                    aria-label={note.flagged ? "Unflag note" : "Flag note"}
+                >
+                    <StarIcon className={`w-5 h-5 transition-colors ${note.flagged ? 'text-amber-400 fill-amber-400' : 'opacity-70'}`} />
+                </button>
+            </div>
+            <p className="text-sm opacity-80 line-clamp-2 mt-1">{contentSnippet}</p>
+        </div>
+    );
+};
+
+
+const BoardView = (props: { notes: Note[] } & NoteListViewProps) => {
+    const boardNotes = useMemo(() => props.notes.filter(n => !n.deletedAt), [props.notes]);
+    const notebookColumnRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
+    const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: any, note: Note) => {
+        const noteRect = (event.target as HTMLElement).getBoundingClientRect();
+        const noteCenter = {
+            x: noteRect.left + noteRect.width / 2,
+            y: noteRect.top + noteRect.height / 2
+        };
+
+        for (const notebookIdStr in notebookColumnRefs.current) {
+            const notebookId = parseInt(notebookIdStr, 10);
+            const columnEl = notebookColumnRefs.current[notebookId];
+            if (columnEl && notebookId !== note.notebookId) {
+                const columnRect = columnEl.getBoundingClientRect();
+                if (
+                    noteCenter.x > columnRect.left && noteCenter.x < columnRect.right &&
+                    noteCenter.y > columnRect.top && noteCenter.y < columnRect.bottom
+                ) {
+                    props.updateNote({ ...note, notebookId: notebookId });
+                    break;
+                }
+            }
+        }
+    };
+
+    return (
+        <div className="flex h-full overflow-x-auto pb-4 gap-4">
+            {props.notebooks.map(notebook => (
+                <div 
+                    key={notebook.id} 
+                    ref={el => { notebookColumnRefs.current[notebook.id] = el; }}
+                    className="w-80 flex-shrink-0 flex flex-col"
+                >
+                    <div className="flex items-center gap-2 p-2 mb-2">
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: notebook.color }} />
+                        <h3 className="font-bold truncate">{notebook.title}</h3>
+                        <span className="text-sm text-text-secondary">{boardNotes.filter(n => n.notebookId === notebook.id).length || 0}</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-3 pr-2 -mr-2 rounded-xl bg-bg/50 p-2">
+                        {boardNotes
+                            .filter(note => note.notebookId === notebook.id)
+                            .map(note => (
+                                <NoteCard 
+                                    key={note.id} 
+                                    note={note} 
+                                    notebook={notebook} 
+                                    isDraggable={true}
+                                    onDragEnd={(event, info) => handleDragEnd(event, info, note)}
+                                    {...props} 
+                                />
+                        ))}
                     </div>
                 </div>
-                <div className="flex justify-end gap-2 mt-8"><button onClick={onClose} className="px-4 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10">Cancel</button><button onClick={() => onSave(title, color)} className="px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover">Save</button></div>
-            </motion.div>
-        </motion.div>
+            ))}
+        </div>
     );
 };
 
-const ConfirmationModal = ({ title, message, onConfirm, onCancel }: { title: string; message: string; onConfirm: () => void; onCancel: () => void; }) => (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onCancel}>
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold font-display mb-2 text-red-500">{title}</h2>
-            <p className="text-text-secondary mb-6">{message}</p>
-            <div className="flex justify-center gap-3"><button onClick={onCancel} className="px-6 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 font-semibold">Cancel</button><button onClick={onConfirm} className="px-6 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold">Delete</button></div>
+
+// --- NOTE CARD (FOR GRID & BOARD) ---
+
+interface NoteCardProps extends NoteListViewProps {
+    note: Note;
+    notebook?: Notebook;
+    isDraggable?: boolean;
+    onDragEnd?: (event: MouseEvent | TouchEvent | PointerEvent, info: any) => void;
+}
+
+function NoteCard({ note, notebook, tasks, onSelectNote, selectedNoteIds, onToggleSelectNote, updateNote, isDraggable, onDragEnd }: NoteCardProps) {
+    const bgColor = notebook?.color || '#374151';
+    const textColor = getTextColorForBackground(bgColor);
+    const linkedTask = useMemo(() => tasks.find(t => t.linkedNoteId === note.id), [tasks, note.id]);
+    const isSelectionMode = selectedNoteIds.length > 0;
+    const isSelected = selectedNoteIds.includes(note.id);
+    const longPressTimeout = useRef<number | null>(null);
+
+    const handlePointerDown = () => {
+        if (isSelectionMode) return;
+        longPressTimeout.current = window.setTimeout(() => {
+            onToggleSelectNote(note.id);
+        }, 500);
+    };
+
+    const clearLongPress = () => {
+        if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
+    };
+
+    const handleClick = () => {
+        if (isSelectionMode) {
+            onToggleSelectNote(note.id);
+        } else {
+            onSelectNote(note);
+        }
+    };
+    
+    const cardContent = (
+         <div
+            className={`rounded-2xl p-4 flex flex-col gap-3 break-inside-avoid relative transition-all duration-200 ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${isSelected ? 'ring-2 ring-white/80' : ''}`}
+        >
+             <button 
+                onClick={(e) => {
+                    e.stopPropagation();
+                    updateNote({ ...note, flagged: !note.flagged }, { silent: true });
+                }}
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors z-10"
+                aria-label={note.flagged ? "Unflag note" : "Flag note"}
+            >
+                <StarIcon className={`w-5 h-5 transition-colors ${note.flagged ? 'text-amber-400 fill-amber-400' : 'text-white/70'}`} />
+            </button>
+             <AnimatePresence>
+            {isSelected && (
+                 <motion.div initial={{scale:0}} animate={{scale:1}} exit={{scale:0}} className="absolute -top-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center z-10">
+                    <CheckCircleIcon className="w-6 h-6 text-green-500"/>
+                 </motion.div>
+            )}
+            </AnimatePresence>
+            <h4 className="font-bold text-lg break-word pr-8">{note.title}</h4>
+            <div className={`text-sm opacity-80 break-word flex-grow`}>
+                <div dangerouslySetInnerHTML={{ __html: (note.content || '').replace(/<[^>]+>/g, ' ').substring(0, 200) + (note.content.length > 200 ? '...' : '') }} />
+            </div>
+            
+            {(note.tags.length > 0 || linkedTask) && (
+                <div className="flex flex-col gap-2 pt-2 border-t border-current/20 mt-auto">
+                    {note.tags.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {note.tags.map(tag => (
+                                <div key={tag} className="px-2 py-0.5 rounded-md text-xs font-semibold" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                                    {tag}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {linkedTask && (
+                        <div className="flex items-center gap-1.5 text-xs font-semibold" style={{color: textColor, opacity: 0.9}}>
+                            <LinkIcon className="w-3.5 h-3.5 flex-shrink-0"/>
+                            <span className="truncate">Linked: {linkedTask.title} ({linkedTask.category})</span>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+    
+     return (
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0, backgroundColor: bgColor, color: textColor }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={handleClick}
+            onPointerDown={handlePointerDown}
+            onPointerUp={clearLongPress}
+            onPointerLeave={clearLongPress}
+            drag={isDraggable}
+            onDragEnd={onDragEnd}
+            whileDrag={{ scale: 1.05, zIndex: 100 }}
+            dragElastic={0.2}
+            className="rounded-2xl"
+        >
+           {cardContent}
         </motion.div>
-    </motion.div>
+    );
+}
+
+// --- MULTI-SELECT ACTION BAR ---
+interface MultiSelectActionBarProps {
+    selectedCount: number;
+    notebooks: Notebook[];
+    onMove: (notebookId: number) => void;
+    onCancel: () => void;
+}
+
+function MultiSelectActionBar({ selectedCount, notebooks, onMove, onCancel }: MultiSelectActionBarProps) {
+    if (selectedCount === 0) return null;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-md z-20"
+        >
+            <div className="bg-card p-3 rounded-2xl shadow-lg border border-border flex items-center justify-between">
+                <span className="font-semibold text-sm">{selectedCount} notes selected</span>
+                <div className="flex items-center gap-2">
+                     <Menu target={<button className="px-3 py-1.5 bg-accent text-white rounded-lg text-sm font-semibold">Move To...</button>}>
+                        {notebooks.map(nb => (
+                            <MenuItem key={nb.id} label={nb.title} onClick={() => onMove(nb.id)} />
+                        ))}
+                    </Menu>
+                    <button onClick={onCancel} className="p-2 text-text-secondary hover:text-text rounded-lg"><XMarkIcon className="w-5 h-5" /></button>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+
+// --- NOTE EDITOR VIEW ---
+interface NoteEditorViewProps extends NotesProps {
+    note: Note;
+    onBack: () => void;
+}
+
+function NoteEditorView({ note, onBack, updateNote, showToast, deleteNote }: NoteEditorViewProps) {
+    const [currentNote, setCurrentNote] = useState(note);
+    const editorRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    
+     useEffect(() => {
+        setCurrentNote(note);
+        if (editorRef.current && editorRef.current.innerHTML !== note.content) {
+            editorRef.current.innerHTML = note.content;
+        }
+    }, [note]);
+    
+    const debouncedUpdateNote = useCallback(debounce(updateNote, 500), [updateNote]);
+
+    const handleNoteChange = (field: 'title' | 'content' | 'attachments' | 'flagged', value: any) => {
+        const updated = { ...currentNote, [field]: value, updatedAt: new Date() };
+        setCurrentNote(updated);
+        debouncedUpdateNote(updated);
+    };
+    
+    const handleToolbarCommand = (command: string) => {
+        document.execCommand(command);
+        editorRef.current?.focus();
+        handleNoteChange('content', editorRef.current?.innerHTML || '');
+    };
+    
+    const handleAttachmentUpdate = (updatedAttachment: NoteAttachment) => {
+        const updatedAttachments = (currentNote.attachments || []).map(att => att.id === updatedAttachment.id ? updatedAttachment : att);
+        handleNoteChange('attachments', updatedAttachments);
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const newAttachment: NoteAttachment = {
+                id: `${Date.now()}`,
+                name: file.name,
+                type: file.type.startsWith('image/') ? 'image' : 'pdf',
+                url: reader.result as string,
+                x: 50, y: 50, width: file.type.startsWith('image/') ? 300 : 500, height: 400
+            };
+            handleNoteChange('attachments', [...(currentNote.attachments || []), newAttachment]);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleDelete = () => {
+        deleteNote(currentNote.id);
+        onBack();
+    };
+    
+    return (
+        <div className="bg-card dark:bg-zinc-900/50 rounded-3xl p-6 flex flex-col h-full">
+             <header className="flex items-center justify-between mb-6 flex-shrink-0">
+                <button onClick={onBack} className="flex items-center gap-2 font-semibold text-text-secondary hover:text-text transition-colors">
+                     <BookOpenIcon className="w-6 h-6"/>
+                    Back
+                </button>
+                <button 
+                    onClick={() => updateNote({ ...currentNote, flagged: !currentNote.flagged }, { silent: true })}
+                    className="p-2 rounded-full hover:bg-accent/10"
+                    aria-label={currentNote.flagged ? "Unflag note" : "Flag note"}
+                >
+                    <StarIcon className={`w-6 h-6 transition-colors ${currentNote.flagged ? 'text-amber-400 fill-amber-400' : 'text-text-secondary'}`} />
+                </button>
+            </header>
+            
+            <div className="flex-1 flex flex-col min-h-0">
+                 <input type="text" value={currentNote.title} onChange={e => handleNoteChange('title', e.target.value)} className="text-4xl font-bold font-display bg-transparent w-full focus:outline-none placeholder:opacity-50 mb-4 flex-shrink-0" placeholder="Note Title"/>
+                 
+                 <div className="sticky top-0 z-10 p-2 mb-4 bg-bg rounded-2xl border border-border shadow-sm flex items-center justify-between flex-shrink-0">
+                     <div className="flex items-center gap-1">
+                        <button onClick={() => handleToolbarCommand('bold')} className="p-2.5 rounded-lg hover:bg-accent/10"><BoldIcon className="w-5 h-5"/></button>
+                        <button onClick={() => handleToolbarCommand('italic')} className="p-2.5 rounded-lg hover:bg-accent/10"><ItalicIcon className="w-5 h-5"/></button>
+                        <button onClick={() => handleToolbarCommand('underline')} className="p-2.5 rounded-lg hover:bg-accent/10"><UnderlineIcon className="w-5 h-5"/></button>
+                     </div>
+                     <div className="flex items-center gap-1">
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*,application/pdf" className="hidden" />
+                        <button onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-lg hover:bg-accent/10"><PaperClipIcon className="w-5 h-5"/></button>
+                        <div className="relative">
+                             <Menu target={
+                                <button className="flex items-center gap-1 px-3 py-2 bg-accent/10 text-accent font-semibold rounded-lg hover:bg-accent/20">
+                                    <KikoIcon className="w-5 h-5"/>
+                                    <EllipsisVerticalIcon className="w-4 h-4"/>
+                                </button>
+                             }>
+                                 <MenuItem label="Summarize Note" onClick={() => {}} />
+                                 <MenuItem label="Auto-Tag Note" onClick={() => {}} />
+                                 <MenuItem label="Add Smart Feature..." onClick={() => {}} />
+                                 <div className="h-px bg-border my-1"></div>
+                                 <MenuItem label="Delete Note" onClick={handleDelete} className="text-red-500" />
+                            </Menu>
+                        </div>
+                     </div>
+                 </div>
+                
+                <div className="relative w-full h-full min-h-0 flex-grow">
+                    <div ref={editorRef} contentEditable={true} onInput={e => handleNoteChange('content', e.currentTarget.innerHTML)} dangerouslySetInnerHTML={{ __html: currentNote.content }} className="w-full h-full p-2 focus:outline-none overflow-y-auto prose prose-lg prose-headings:font-display prose-headings:tracking-tight dark:prose-invert max-w-none break-word absolute inset-0 z-0" aria-label="Note content"/>
+                    
+                    <div className="absolute inset-0 z-10 pointer-events-none">
+                        {(currentNote.attachments || []).map(att => (
+                            <DraggableAttachment key={att.id} attachment={att} onUpdate={handleAttachmentUpdate} />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --- Draggable Attachment ---
+const DraggableAttachment = ({ attachment, onUpdate }: { attachment: NoteAttachment; onUpdate: (att: NoteAttachment) => void }) => {
+    const nodeRef = useRef(null);
+
+    const handleResize = (e: React.MouseEvent, direction: string) => {
+        e.stopPropagation();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startWidth = attachment.width || 300;
+        const startHeight = attachment.height || 400;
+
+        const doDrag = (e: MouseEvent) => {
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+            if(direction.includes('right')) newWidth = startWidth + e.clientX - startX;
+            if(direction.includes('left')) newWidth = startWidth - (e.clientX - startX);
+            if(direction.includes('bottom')) newHeight = startHeight + e.clientY - startY;
+            if(direction.includes('top')) newHeight = startHeight - (e.clientY - startY);
+            
+            onUpdate({ ...attachment, width: Math.max(100, newWidth), height: Math.max(100, newHeight) });
+        };
+
+        const stopDrag = () => {
+            document.removeEventListener('mousemove', doDrag);
+            document.removeEventListener('mouseup', stopDrag);
+        };
+
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('mouseup', stopDrag);
+    };
+    
+    const renderContent = () => {
+        switch(attachment.type) {
+            case 'image': return <img src={attachment.url} alt={attachment.name} className="w-full h-full object-contain" draggable={false}/>;
+            case 'pdf': return <iframe src={attachment.url} title={attachment.name} className="w-full h-full border-0"/>;
+            default: return null;
+        }
+    }
+    
+    if (attachment.type === 'pdf') {
+        return (
+            <div className="p-4 rounded-xl border border-border bg-card shadow-lg absolute pointer-events-auto" style={{ top: '20px', left: '20px' }}>
+                <div className="font-semibold text-sm mb-2">{attachment.name}</div>
+                <div style={{width: '500px', height: '600px'}}>
+                     {renderContent()}
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <Draggable
+            nodeRef={nodeRef}
+            position={{ x: attachment.x || 50, y: attachment.y || 50 }}
+            onStop={(e, data) => onUpdate({ ...attachment, x: data.x, y: data.y })}
+            bounds="parent"
+        >
+            <div ref={nodeRef} style={{ width: attachment.width, height: attachment.height }} className="p-2 border-2 border-accent/50 bg-bg shadow-lg rounded-lg absolute pointer-events-auto box-content cursor-move group">
+                 {renderContent()}
+                 <div onMouseDown={(e) => handleResize(e, 'bottom-right')} className="w-4 h-4 bg-accent rounded-full absolute -right-2 -bottom-2 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </div>
+        </Draggable>
+    );
+};
+
+
+// --- SHARED SUB-COMPONENTS ---
+
+const Menu = ({ target, children }: { target: React.ReactNode; children: React.ReactNode; }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) setIsOpen(false);
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [menuRef]);
+
+    return (
+        <div className="relative" ref={menuRef}>
+            {React.cloneElement(target as React.ReactElement<any>, { onClick: () => setIsOpen(p => !p) })}
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div 
+                        initial={{opacity:0,y:-10}} 
+                        animate={{opacity:1,y:0}} 
+                        exit={{opacity:0,y:-10}} 
+                        className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-lg shadow-xl z-[100] p-1"
+                    >
+                        {React.Children.map(children, child =>
+                             React.isValidElement<{ onClick?: () => void }>(child) && child.props.onClick ? React.cloneElement(child as React.ReactElement<any>, { onClick: () => { child.props.onClick!(); setIsOpen(false); } }) : child
+                         )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+const MenuItem = ({ icon, label, onClick, className }: { icon?: React.ReactNode; label: string; onClick: () => void; className?: string }) => (
+    <button onClick={onClick} className={`w-full text-left flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/10 ${className}`}>
+        {icon}
+        <span>{label}</span>
+    </button>
 );
 
 export default Notes;

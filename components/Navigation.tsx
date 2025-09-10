@@ -50,7 +50,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
   const navItemsRight = NAV_ITEMS.slice(2);
   
   return (
-    <nav className="card fixed bottom-0 left-0 right-0 h-20 border-t z-50 !rounded-none">
+    <nav className="fixed bottom-0 left-0 right-0 h-20 bg-bg/80 dark:bg-bg/90 backdrop-blur-lg border-t border-border z-50">
       <div className="max-w-6xl mx-auto flex justify-between items-center h-full px-2">
         <div className="flex justify-around w-2/5">
             {navItemsLeft.map(({ label, icon }) => (

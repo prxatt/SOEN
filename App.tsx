@@ -93,6 +93,12 @@ const generateMockTasksForMonth = (year: number, month: number): Task[] => {
 };
 
 const initialTasks: Task[] = generateMockTasksForMonth(new Date().getFullYear(), new Date().getMonth());
+// Link a mock task to a note for demonstration
+const workoutTaskIndex = initialTasks.findIndex(t => t.category === 'Workout');
+if (workoutTaskIndex > -1) {
+    initialTasks[workoutTaskIndex].linkedNoteId = 104; // Links to "Workout Plan" note
+    initialTasks[workoutTaskIndex].title = "Execute Leg Day Routine";
+}
 
 
 const initialNotebooks: Notebook[] = [
@@ -102,11 +108,14 @@ const initialNotebooks: Notebook[] = [
 ];
 
 const initialNotes: Note[] = [
-    { id: 101, notebookId: 1, title: 'Initial Project Ideas', content: '<p>Exploring concepts for a new AI-driven productivity tool...</p>', createdAt: new Date(), updatedAt: new Date(), archived: false, flagged: true, tags: ['idea', 'ai'] },
-    { id: 102, notebookId: 2, title: 'Brand Guidelines', content: '<p>Core principles for the Surface Tension brand...</p>', createdAt: new Date(Date.now() - 86400000), updatedAt: new Date(Date.now() - 86400000), archived: false, flagged: false, tags: ['branding'] },
+    // FIX: Remove `linkedNoteId` as it does not exist on the Note type.
+    { id: 101, notebookId: 1, title: 'Initial Project Ideas', content: '<p>Exploring concepts for a new AI-driven productivity tool. This note should be a bit longer to test the masonry layout. The core idea is to build a system that not only tracks tasks but actively helps in formulating strategy by connecting disparate pieces of information. It could analyze notes, calendar events, and even web browsing history to suggest project directions or highlight unseen opportunities. We need to focus on a very slick and responsive UI.</p>', createdAt: new Date(), updatedAt: new Date(), flagged: true, tags: ['idea', 'ai', 'strategy'] },
+    { id: 102, notebookId: 2, title: 'Brand Guidelines', content: '<p>Core principles for the Surface Tension brand...</p>', createdAt: new Date(Date.now() - 86400000), updatedAt: new Date(Date.now() - 86400000), flagged: false, tags: ['branding', 'design'] },
+    // FIX: Remove `linkedNoteId` as it does not exist on the Note type.
+    { id: 103, notebookId: 1, title: 'Q3 Roadmap', content: '<p>Focus on API integration and the new Notes module.</p>', createdAt: new Date(Date.now() - 172800000), updatedAt: new Date(Date.now() - 172800000), flagged: false, tags: ['planning', 'q3'] },
+    { id: 104, notebookId: 3, title: 'Workout Plan', content: '<p>Monday: Chest, Tuesday: Back, Wednesday: Legs.</p>', createdAt: new Date(Date.now() - 259200000), updatedAt: new Date(Date.now() - 259200000), flagged: true, tags: ['health', 'fitness'] },
 ];
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function App() {
     // --- STATE MANAGEMENT ---
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -116,6 +125,7 @@ function App() {
     const [uiMode, setUiMode] = useState<'dark' | 'glass'>('dark');
     const [activeTheme, setActiveTheme] = useState('obsidian');
     const [toast, setToast] = useState<{ message: string; id: number; action?: { label: string; onClick: () => void; } } | null>(null);
+    const [scheduleInitialDate, setScheduleInitialDate] = useState<Date | undefined>(undefined);
 
     // Data states
     const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -131,15 +141,18 @@ function App() {
     const [focusTask, setFocusTask] = useState<Task | null>(null);
     const [activeFocusBackground, setActiveFocusBackground] = useState<string>('synthwave');
     const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-    const [activeNotebookId, setActiveNotebookId] = useState<number | 'all' | 'flagged' | 'archived' | 'trash'>('all');
+    const [activeNotebookId, setActiveNotebookId] = useState<number | 'all' | 'flagged' | 'trash'>('all');
     const [dailyCompletionImage, setDailyCompletionImage] = useState<string | null>(null);
     const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
     const [categoryColors, setCategoryColors] = useState<Record<Category, string>>(CATEGORY_COLORS);
     const [lastDeletedNote, setLastDeletedNote] = useState<Note | null>(null);
+    const [lastDeletedNotebook, setLastDeletedNotebook] = useState<(Notebook & { associatedNoteIds?: number[] }) | null>(null);
+
 
     // Derived/Generated states
     const [healthData, setHealthData] = useState<HealthData>({ totalWorkouts: 1, totalWorkoutMinutes: 28, workoutTypes: { 'Running': 1 }, avgSleepHours: 7.5, sleepQuality: 'good', energyLevel: 'high' });
     const [briefing, setBriefing] = useState(MOCKED_BRIEFING);
+    const [isBriefingLoading, setIsBriefingLoading] = useState(true);
 
     const showToast = (message: string, action?: { label: string; onClick: () => void; }) => {
         setToast({ message, id: Date.now(), action });
@@ -184,20 +197,54 @@ function App() {
         }
     }, []);
 
+    useEffect(() => {
+        const fetchBriefing = async () => {
+            setIsBriefingLoading(true);
+            try {
+                const todaysTasks = tasks.filter(t => new Date(t.startTime).toDateString() === new Date().toDateString());
+                
+                const { data: newBriefing, fallbackUsed } = await kikoRequest('generate_briefing', {
+                    timeframe: 'day',
+                    tasks: todaysTasks,
+                    notes,
+                    healthData,
+                });
+
+                if (fallbackUsed) {
+                    showToast("Kiko's primary brain is offline. Briefing generated by backup agent.");
+                }
+
+                if (newBriefing) {
+                    setBriefing(newBriefing);
+                } else {
+                    showToast("Could not generate today's briefing.");
+                }
+
+            } catch (error) {
+                console.error("Failed to generate mission briefing:", error);
+                showToast("Kiko couldn't generate the daily briefing.");
+            } finally {
+                setIsBriefingLoading(false);
+            }
+        };
+
+        if (isAuthenticated && isOnboardingComplete) {
+            fetchBriefing();
+        }
+    }, [isAuthenticated, isOnboardingComplete, tasks, notes, healthData]);
+
     // Effect to check for daily completion and generate reward image
     useEffect(() => {
         const todaysTasks = tasks.filter(t => new Date(t.startTime).toDateString() === new Date().toDateString());
         const allTasksCompleted = todaysTasks.length > 0 && todaysTasks.every(t => t.status === TaskStatus.Completed);
         const dayIdentifier = new Date().toDateString();
 
-        // Condition to generate: all tasks are done, and we don't already have an image for today in the state.
         if (allTasksCompleted && !dailyCompletionImage) {
             const generateImage = async () => {
                 try {
                     showToast("Daily Reward Unlocked! Generating your image...");
                     const { data: imageUrl } = await kikoRequest('generate_daily_image', { date: new Date(), tasks: todaysTasks });
                     setDailyCompletionImage(imageUrl);
-                    // Store object with date and URL for persistence
                     localStorage.setItem('dailyReward', JSON.stringify({ date: dayIdentifier, url: imageUrl }));
                 } catch (error) {
                     console.error("Failed to generate daily reward image:", error);
@@ -207,14 +254,18 @@ function App() {
             generateImage();
         }
     }, [tasks, dailyCompletionImage]);
+
+    useEffect(() => {
+        // This effect resets the initial date for the schedule so it doesn't persist
+        if (activeScreen !== 'Schedule' && scheduleInitialDate) {
+            setScheduleInitialDate(undefined);
+        }
+    }, [activeScreen, scheduleInitialDate]);
     
     // --- AUTH & ONBOARDING HANDLERS ---
     const handleLogin = () => {
         localStorage.setItem('praxis-authenticated', 'true');
         setIsAuthenticated(true);
-        if (!isOnboardingComplete) {
-            // Stay on auth screen, let it transition to onboarding
-        }
     };
     
     const handleLogout = () => {
@@ -232,11 +283,7 @@ function App() {
         const newMode = uiMode === 'dark' ? 'glass' : 'dark';
         setUiMode(newMode);
         localStorage.setItem('praxis-ui-mode', newMode);
-        if (newMode === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+        document.documentElement.classList.toggle('dark', newMode === 'dark');
     };
     
     const handleSetActiveTheme = (themeValue: string) => {
@@ -275,12 +322,7 @@ function App() {
     
         const existingColors = Object.values(categoryColors);
         const availableColors = PRESET_COLORS.filter(c => !existingColors.includes(c));
-        let newColor: string;
-        if (availableColors.length > 0) {
-            newColor = availableColors[0];
-        } else {
-            newColor = `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
-        }
+        const newColor = availableColors.length > 0 ? availableColors[0] : `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
     
         setCategories(prev => [...prev, newCategory]);
         setCategoryColors(prev => ({...prev, [newCategory]: newColor}));
@@ -288,7 +330,7 @@ function App() {
         return true;
     };
 
-    // --- DATA HANDLERS ---
+    // --- DATA HANDLERS (TASKS) ---
     const updateTask = (updatedTask: Task) => {
         setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
     };
@@ -299,16 +341,10 @@ function App() {
             const draggedTask = newTasks.find(t => t.id === draggedId);
             const targetTask = newTasks.find(t => t.id === targetId);
     
-            if (!draggedTask || !targetTask) {
+            if (!draggedTask || !targetTask || new Date(draggedTask.startTime).toDateString() !== new Date(targetTask.startTime).toDateString()) {
                 return prevTasks;
             }
     
-            // Prevent swapping between different days for simplicity and predictability
-            if (new Date(draggedTask.startTime).toDateString() !== new Date(targetTask.startTime).toDateString()) {
-                return prevTasks; // Silently prevent cross-day drag and drop
-            }
-    
-            // Swap the start times to reorder them. The list will sort itself on next render.
             const tempStartTime = draggedTask.startTime;
             draggedTask.startTime = targetTask.startTime;
             targetTask.startTime = tempStartTime;
@@ -337,44 +373,88 @@ function App() {
         showToast('Task deleted successfully.');
         triggerHapticFeedback('medium');
     };
+    
+    // --- DATA HANDLERS (NOTEBOOKS) ---
+    const addNotebook = (title: string, color: string) => {
+        const newNotebook: Notebook = { id: Date.now(), title, color };
+        setNotebooks(prev => [newNotebook, ...prev]);
+        showToast(`Notebook "${title}" created.`);
+        return newNotebook;
+    };
 
+    const updateNotebook = (updatedNotebook: Notebook) => {
+        setNotebooks(prev => prev.map(nb => nb.id === updatedNotebook.id ? updatedNotebook : nb));
+    };
+
+    const deleteNotebook = (notebookId: number) => {
+        const notebookToDelete = notebooks.find(nb => nb.id === notebookId);
+        if (notebookToDelete) {
+            const associatedNoteIds = notes.filter(n => n.notebookId === notebookId && !n.deletedAt).map(n => n.id);
+            setNotes(prev => prev.map(n => associatedNoteIds.includes(n.id) ? { ...n, deletedAt: new Date() } : n));
+            setLastDeletedNotebook({ ...notebookToDelete, associatedNoteIds });
+            setNotebooks(prev => prev.filter(nb => nb.id !== notebookId));
+            setActiveNotebookId('all');
+            showToast(`Notebook "${notebookToDelete.title}" deleted.`, {
+                label: 'Undo',
+                onClick: () => restoreNotebook(notebookId)
+            });
+        }
+    };
+
+    const restoreNotebook = (notebookId: number) => {
+        if (lastDeletedNotebook && lastDeletedNotebook.id === notebookId) {
+            const { associatedNoteIds, ...notebookToRestore } = lastDeletedNotebook;
+            setNotebooks(prev => [...prev, notebookToRestore].sort((a,b) => a.id - b.id));
+            if (associatedNoteIds) {
+                setNotes(prev => prev.map(n => associatedNoteIds.includes(n.id) ? { ...n, deletedAt: undefined } : n));
+            }
+            setLastDeletedNotebook(null);
+            showToast(`Notebook "${notebookToRestore.title}" restored.`);
+        }
+    };
+
+    // --- DATA HANDLERS (NOTES) ---
     const addNote = (title: string, content: string, notebookId: number) => {
         const newNote: Note = {
             id: Date.now(),
             notebookId, title, content,
-            createdAt: new Date(), updatedAt: new Date(), archived: false, flagged: false, tags: [],
+            createdAt: new Date(), updatedAt: new Date(), flagged: false, tags: [],
         };
         setNotes(prev => [newNote, ...prev]);
         showToast(`Note "${title}" created.`);
         return newNote;
     };
 
-    const updateNote = (updatedNote: Note) => {
-        setNotes(prev => prev.map(n => n.id === updatedNote.id ? {...updatedNote, updatedAt: new Date()} : n));
+    const updateNote = (updatedNote: Note, options?: { silent?: boolean }) => {
+        setNotes(prev => prev.map(n => {
+            if (n.id === updatedNote.id) {
+                return {
+                    ...updatedNote,
+                    updatedAt: options?.silent ? n.updatedAt : new Date()
+                };
+            }
+            return n;
+        }));
     };
 
     const restoreNote = (noteId: number) => {
         const noteToRestore = notes.find(n => n.id === noteId);
         if (noteToRestore) {
             const restoredNote = { ...noteToRestore };
-            delete restoredNote.deletedAt; // Remove the property to restore it
+            delete restoredNote.deletedAt;
             updateNote(restoredNote);
-            if (lastDeletedNote?.id === noteId) {
-                setLastDeletedNote(null);
-            }
+            if (lastDeletedNote?.id === noteId) setLastDeletedNote(null);
             showToast('Note restored.');
         }
     };
 
     const deleteNote = (noteId: number) => {
         const noteToDelete = notes.find(n => n.id === noteId);
-        if (noteToDelete && !noteToDelete.deletedAt) { // Don't re-trash a trashed note
+        if (noteToDelete && !noteToDelete.deletedAt) {
             const updatedNote = { ...noteToDelete, deletedAt: new Date() };
             updateNote(updatedNote);
-            setLastDeletedNote(updatedNote); // Keep for the undo menu item
-            if (selectedNote?.id === noteId) {
-                setSelectedNote(null);
-            }
+            setLastDeletedNote(updatedNote);
+            if (selectedNote?.id === noteId) setSelectedNote(null);
             showToast('Note moved to trash.', {
                 label: 'Undo',
                 onClick: () => restoreNote(noteId)
@@ -385,9 +465,7 @@ function App() {
     
     const permanentlyDeleteNote = (noteId: number) => {
         setNotes(prev => prev.filter(n => n.id !== noteId));
-        if (selectedNote?.id === noteId) {
-            setSelectedNote(null);
-        }
+        if (selectedNote?.id === noteId) setSelectedNote(null);
         showToast('Note permanently deleted.');
         triggerHapticFeedback('heavy');
     };
@@ -396,11 +474,7 @@ function App() {
         showToast('Syncing with Google Calendar...');
         const newEvents = await syncCalendar();
         const newTasks: Task[] = newEvents.map((e, i) => ({
-            id: Date.now() + i,
-            status: TaskStatus.Pending,
-            category: 'Meeting', // Default category for calendar events
-            plannedDuration: 60, // Default duration
-            ...e,
+            id: Date.now() + i, status: TaskStatus.Pending, category: 'Meeting', plannedDuration: 60, ...e,
         } as Task));
         setTasks(prev => [...prev, ...newTasks.filter(nt => !prev.some(pt => pt.googleCalendarEventId === nt.googleCalendarEventId))]);
         showToast(`${newTasks.length} new events synced!`);
@@ -410,19 +484,28 @@ function App() {
         const userMessage: ChatMessage = { role: 'user', text: message, attachment };
         setChatMessages(prev => [...prev, userMessage]);
         setIsAiReplying(true);
-        // This is a simplified call. In a real app, you might have different AI tasks.
-        const responseText = `This is a mocked response to: "${message}". In a real app, Kiko would provide a detailed answer.`;
-        setTimeout(() => {
+        try {
+            const requestPayload = attachment 
+                ? { taskType: 'analyze_image', payload: { ...attachment, prompt: message } }
+                : { taskType: 'generate_note_text', payload: { instruction: 'summarize', text: message } }; // Example: default chat action
+            
+            const { data: responseText } = await kikoRequest(requestPayload.taskType as any, requestPayload.payload);
+
             const modelMessage: ChatMessage = { role: 'model', text: responseText };
             setChatMessages(prev => [...prev, modelMessage]);
+        } catch (error) {
+            console.error("Error sending message via Kiko:", error);
+            const errorMessage: ChatMessage = { role: 'model', text: "Sorry, I'm having trouble connecting right now." };
+            setChatMessages(prev => [...prev, errorMessage]);
+        } finally {
             setIsAiReplying(false);
-        }, 1500);
+        }
     };
     
     const startChatWithContext = (context: string) => {
         setActiveScreen('Kiko');
-        setChatMessages([{ role: 'user', text: context }]);
-        // Mock a reply
+        const userMessage: ChatMessage = { role: 'user', text: context };
+        setChatMessages([userMessage]);
         handleSendMessage(context);
     };
 
@@ -434,17 +517,9 @@ function App() {
     const handleUndoCompleteTask = (taskToUndo: Task) => {
         if (!taskToUndo) return;
 
-        // Revert status
-        const revertedTask: Task = {
-            ...taskToUndo,
-            status: TaskStatus.Pending,
-            actualDuration: undefined,
-            completionSummary: undefined,
-            completionImageUrl: undefined
-        };
+        const revertedTask: Task = { ...taskToUndo, status: TaskStatus.Pending, actualDuration: undefined, completionSummary: undefined, completionImageUrl: undefined };
         updateTask(revertedTask);
 
-        // Revert points
         const points = Math.round((taskToUndo.actualDuration || taskToUndo.plannedDuration) * 0.5);
         setPraxisFlow(prev => prev - points);
 
@@ -455,27 +530,17 @@ function App() {
         const taskToComplete = tasks.find(t => t.id === taskId);
         if (!taskToComplete || taskToComplete.status === TaskStatus.Completed) return;
     
-        // --- Optimistic UI Update ---
-        const optimisticTask: Task = {
-            ...taskToComplete,
-            status: TaskStatus.Completed,
-            actualDuration,
-        };
-        updateTask(optimisticTask); // Update state immediately
-        setFocusTask(null); // Close focus mode if it was open
+        const optimisticTask: Task = { ...taskToComplete, status: TaskStatus.Completed, actualDuration };
+        updateTask(optimisticTask);
+        setFocusTask(null);
     
         const points = Math.round(actualDuration * 0.5);
         setPraxisFlow(prev => prev + points);
         
-        showToast(`+${points} Flow! Great work!`, {
-            label: 'Undo',
-            onClick: () => handleUndoCompleteTask(optimisticTask)
-        });
+        showToast(`+${points} Flow! Great work!`, { label: 'Undo', onClick: () => handleUndoCompleteTask(optimisticTask) });
     
-        // --- Background AI Generation (Fire and Forget) ---
         (async () => {
             try {
-                // Generate completion summary and image in parallel
                 const [summaryResult, imageResult] = await Promise.all([
                     kikoRequest('generate_completion_summary', { task: optimisticTask }),
                     kikoRequest('generate_completion_image', { task: optimisticTask })
@@ -484,41 +549,24 @@ function App() {
                 const summary = summaryResult.data as CompletionSummary;
                 const imageUrl = imageResult.data as string;
     
-                // Update the task again with the generated details, but use a functional update
-                // to get the latest state and check if the task hasn't been "undone".
                 setTasks(currentTasks => 
-                    currentTasks.map(t => {
-                        if (t.id === taskId && t.status === TaskStatus.Completed) {
-                            return {
-                                ...t,
-                                completionSummary: summary,
-                                completionImageUrl: imageUrl,
-                            };
-                        }
-                        return t;
-                    })
+                    currentTasks.map(t => (t.id === taskId && t.status === TaskStatus.Completed) ? { ...t, completionSummary: summary, completionImageUrl: imageUrl } : t)
                 );
             } catch (error) {
-                console.error("Error generating completion details in background:", error);
-                showToast("Couldn't generate completion visuals."); // User-friendly, non-blocking error
+                console.error("Error generating completion details:", error);
+                showToast("Couldn't generate completion visuals.");
             }
         })();
     };
     
     const triggerInsightGeneration = useCallback(async (task: Task, isRegeneration: boolean) => {
         try {
+            updateTask({ ...task, isGeneratingInsights: true });
             const { data: insightData, fallbackUsed } = await kikoRequest('generate_task_insights', {
-                task,
-                healthData,
-                notes,
-                goals,
-                allTasks: tasks,
-                isRegeneration
+                task, healthData, notes, goals, allTasks: tasks, isRegeneration
             });
 
-            if (fallbackUsed) {
-                showToast("Kiko's primary brain had a glitch. Using a creative backup!");
-            }
+            if (fallbackUsed) showToast("Kiko's primary brain had a glitch. Using a creative backup!");
 
             updateTask({ ...task, insights: insightData, isGeneratingInsights: false });
         } catch (error) {
@@ -528,33 +576,30 @@ function App() {
         }
     }, [tasks, notes, goals, healthData]);
 
+    const navigateToScheduleDate = (date: Date) => {
+        setScheduleInitialDate(date);
+        setActiveScreen('Schedule');
+    };
+
     // --- RENDER LOGIC ---
     const renderScreen = () => {
         switch (activeScreen) {
-            case 'Dashboard': return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} />;
-            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} />;
-            case 'Notes': return <Notes notes={notes} notebooks={notebooks} setNotebooks={setNotebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} />;
+            case 'Dashboard': return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} />;
+            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
+            case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
             case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={setActiveScreen} goals={goals} setGoals={setGoals} />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;
             case 'Kiko': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} projects={projects} healthData={healthData} addTask={(title) => addTask({title})} addNote={addNote} startChatWithContext={startChatWithContext} searchHistory={[]} setSearchHistory={()=>{}} visionHistory={[]} setVisionHistory={()=>{}} applyInsight={()=>{}} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} showToast={showToast} />;
             case 'Settings': return <Settings uiMode={uiMode} toggleUiMode={toggleUiMode} onSyncCalendar={handleSyncCalendar} onLogout={handleLogout} />;
             case 'Rewards': return <Rewards onBack={() => setActiveScreen('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
-            default: return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} />;
+            default: return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} />;
         }
     };
     
-    if (isLoading) {
-        return <div className="min-h-screen flex items-center justify-center bg-bg"><PraxisLogo className="w-24 h-24 text-accent animate-pulse" /></div>;
-    }
-
-    if (!isAuthenticated) {
-        return <Auth onLogin={handleLogin} Logo={PraxisLogo} />;
-    }
-    
-    if (!isOnboardingComplete) {
-        return <Onboarding goals={goals} setGoals={setGoals} onComplete={handleOnboardingComplete} />;
-    }
+    if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-bg"><PraxisLogo className="w-24 h-24 text-accent animate-pulse" /></div>;
+    if (!isAuthenticated) return <Auth onLogin={handleLogin} Logo={PraxisLogo} />;
+    if (!isOnboardingComplete) return <Onboarding goals={goals} setGoals={setGoals} onComplete={handleOnboardingComplete} />;
 
     return (
         <div className={`min-h-screen font-sans ${uiMode === 'dark' ? 'bg-bg' : ''} text-text transition-colors duration-300`}>

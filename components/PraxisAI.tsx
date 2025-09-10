@@ -2,23 +2,21 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, RadialBarChart, RadialBar, Legend, Cell, PieChart, Pie } from 'recharts';
-import { Insight, StrategicBriefing, Task, Note, SearchResult, SearchHistoryItem, VisionHistoryItem, Notebook, Goal, GoalTerm, MindMapNode, MindMapEdge, ChatMessage, Project, ProjectStatusReport, MissionBriefing, HealthRingMetric, HealthData } from '../types';
-import { performInternetSearch, generateProjectStatusReport, getChatContextualPrompts } from '../services/geminiService';
+import { Insight, Task, Note, ChatMessage, Project, HealthData } from '../types';
+import { getChatContextualPrompts } from '../services/geminiService';
 import { kikoRequest } from '../services/kikoAIService';
-import { LightBulbIcon, BookOpenIcon, LinkIcon, FlagIcon, PlusCircleIcon, CheckCircleIcon, SparklesIcon, UserIcon, PaperAirplaneIcon, PaperClipIcon, HeartIcon, BrainCircuitIcon, RocketIcon, MagnifyingGlassIcon, KikoIcon, ChevronDownIcon, ChevronRightIcon, BriefcaseIcon, ArrowPathIcon, XMarkIcon } from './Icons';
-import * as Icons from './Icons';
+import { UserIcon, PaperAirplaneIcon, PaperClipIcon, KikoIcon, XMarkIcon } from './Icons';
 import LoadingSpinner from './LoadingSpinner';
 
 interface PraxisAIProps {
   insights: Insight[]; setInsights: React.Dispatch<React.SetStateAction<Insight[]>>;
-  tasks: Task[]; notes: Note[]; notebooks: Notebook[]; projects: Project[];
+  tasks: Task[]; notes: Note[]; notebooks: any; projects: Project[];
   healthData: HealthData;
   addTask: (title: string) => void;
   addNote: (title: string, content: string, notebookId: number) => void;
   startChatWithContext: (context: string) => void;
-  searchHistory: SearchHistoryItem[]; setSearchHistory: React.Dispatch<React.SetStateAction<SearchHistoryItem[]>>;
-  visionHistory: VisionHistoryItem[]; setVisionHistory: React.Dispatch<React.SetStateAction<VisionHistoryItem[]>>;
+  searchHistory: any; setSearchHistory: any;
+  visionHistory: any; setVisionHistory: any;
   applyInsight: (insightId: number) => void;
   chatMessages: ChatMessage[]; setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   onSendMessage: (message: string, attachment?: ChatMessage['attachment']) => void;
@@ -26,7 +24,6 @@ interface PraxisAIProps {
   showToast: (message: string) => void;
 }
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function ChatInterface(props: PraxisAIProps) {
     const { onSendMessage, chatMessages, isAiReplying } = props;
     const [chatInput, setChatInput] = useState('');
@@ -38,6 +35,7 @@ function ChatInterface(props: PraxisAIProps) {
 
     const handleChatSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!chatInput.trim() && !chatAttachment) return;
         onSendMessage(chatInput, chatAttachment ? { base64: chatAttachment.base64, mimeType: chatAttachment.mimeType } : undefined);
         setChatInput('');
         setChatAttachment(null);
@@ -120,7 +118,6 @@ function ChatInterface(props: PraxisAIProps) {
 };
 
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function PraxisAI(props: PraxisAIProps) {
   return (
     <div className="flex flex-col h-[calc(100vh-9.5rem)]">

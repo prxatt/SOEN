@@ -65,6 +65,7 @@ export interface Note {
     url: string; // data URL
     mimeType: string;
   };
+  deletedAt?: Date;
 }
 
 export interface Insight {

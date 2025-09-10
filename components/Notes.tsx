@@ -24,6 +24,7 @@ import {
     LightBulbIcon,
     ArrowsPointingOutIcon,
     ArrowsPointingInIcon,
+    ArrowUturnLeftIcon,
 } from './Icons';
 
 // --- UTILITY FUNCTIONS ---
@@ -47,10 +48,11 @@ const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
 
 // --- EDITOR COMPONENT ---
 
-function LightweightEditor({ content, onChange, textColor }: {
+function LightweightEditor({ content, onChange, textColor, editable = true }: {
   content: string;
   onChange: (newContent: string) => void;
   textColor: string;
+  editable?: boolean;
 }) {
     const editorRef = useRef<HTMLDivElement>(null);
 
@@ -62,15 +64,17 @@ function LightweightEditor({ content, onChange, textColor }: {
     }, [content]);
 
     const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-        onChange(e.currentTarget.innerHTML);
+        if (editable) {
+            onChange(e.currentTarget.innerHTML);
+        }
     };
     
     return (
       <div
         ref={editorRef}
-        contentEditable
+        contentEditable={editable}
         onInput={handleInput}
-        className="w-full h-full p-6 focus:outline-none overflow-y-auto prose prose-lg prose-headings:font-display prose-headings:tracking-tight dark:prose-invert max-w-none"
+        className={`w-full h-full p-6 focus:outline-none overflow-y-auto prose prose-lg prose-headings:font-display prose-headings:tracking-tight dark:prose-invert max-w-none ${!editable ? 'cursor-not-allowed' : ''}`}
         style={{ color: textColor, '--tw-prose-body': textColor, '--tw-prose-headings': textColor, '--tw-prose-bold': textColor, '--tw-prose-links': textColor, '--tw-prose-bullets': textColor } as React.CSSProperties}
         aria-label="Note content"
       />
@@ -86,12 +90,15 @@ interface NotesProps {
     updateNote: (note: Note) => void;
     addNote: (title: string, content: string, notebookId: number) => Note;
     deleteNote: (noteId: number) => void;
+    restoreNote: (noteId: number) => void;
+    permanentlyDeleteNote: (noteId: number) => void;
     startChatWithContext: (context: string) => void;
     showToast: (message: string, action?: { label: string; onClick: () => void; }) => void;
     selectedNote: Note | null;
     setSelectedNote: (note: Note | null) => void;
-    activeNotebookId: number | 'all' | 'flagged' | 'archived';
-    setActiveNotebookId: (id: number | 'all' | 'flagged' | 'archived') => void;
+    activeNotebookId: number | 'all' | 'flagged' | 'archived' | 'trash';
+    setActiveNotebookId: (id: number | 'all' | 'flagged' | 'archived' | 'trash') => void;
+    lastDeletedNote: Note | null;
 }
 
 // --- MAIN COMPONENT ---
@@ -100,7 +107,8 @@ function Notes({
     notes, notebooks, setNotebooks, 
     updateNote, addNote, deleteNote, showToast,
     selectedNote, setSelectedNote, 
-    activeNotebookId, setActiveNotebookId 
+    activeNotebookId, setActiveNotebookId,
+    lastDeletedNote, restoreNote, permanentlyDeleteNote
 }: NotesProps) {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -110,21 +118,25 @@ function Notes({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isParsingTitle, setIsParsingTitle] = useState(false);
     const [notebookToDelete, setNotebookToDelete] = useState<Notebook | null>(null);
+    const [noteToDeletePermanently, setNoteToDeletePermanently] = useState<Note | null>(null);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [summary, setSummary] = useState<string | null>(null);
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [isTagging, setIsTagging] = useState(false);
+    const [isEditorMenuOpen, setIsEditorMenuOpen] = useState(false);
+    const editorMenuRef = useRef<HTMLDivElement>(null);
 
 
     // --- NOTEBOOK & NOTE FILTERING/SORTING ---
 
     const filteredAndSortedNotes = useMemo(() => {
-        let filtered = notes;
-        
-        if (activeNotebookId === 'all') filtered = notes.filter(n => !n.archived);
-        else if (activeNotebookId === 'flagged') filtered = notes.filter(n => n.flagged && !n.archived);
-        else if (activeNotebookId === 'archived') filtered = notes.filter(n => n.archived);
-        else filtered = notes.filter(n => n.notebookId === activeNotebookId && !n.archived);
+        let filtered;
+
+        if (activeNotebookId === 'all') filtered = notes.filter(n => !n.archived && !n.deletedAt);
+        else if (activeNotebookId === 'flagged') filtered = notes.filter(n => n.flagged && !n.archived && !n.deletedAt);
+        else if (activeNotebookId === 'archived') filtered = notes.filter(n => n.archived && !n.deletedAt);
+        else if (activeNotebookId === 'trash') filtered = notes.filter(n => !!n.deletedAt);
+        else filtered = notes.filter(n => n.notebookId === activeNotebookId && !n.archived && !n.deletedAt);
         
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
@@ -162,6 +174,16 @@ function Notes({
         }
     }, [filteredAndSortedNotes, selectedNote, setSelectedNote]);
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (editorMenuRef.current && !editorMenuRef.current.contains(event.target as Node)) {
+                setIsEditorMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [editorMenuRef]);
+
     // --- NOTEBOOK CRUD ---
 
     const handleSaveNotebook = (title: string, color: string) => {
@@ -194,11 +216,7 @@ function Notes({
         
         setNotebooks(prev => prev.filter(nb => nb.id !== notebookToDelete.id));
         const notesInNotebook = notes.filter(n => n.notebookId === notebookToDelete.id);
-        notesInNotebook.forEach(note => {
-            if (selectedNote?.id === note.id) {
-                setSelectedNote(null);
-            }
-        });
+        notesInNotebook.forEach(note => deleteNote(note.id)); // Move notes to trash instead of deleting
         
         showToast(`Notebook "${notebookToDelete.title}" deleted.`);
         if (activeNotebookId === notebookToDelete.id) {
@@ -262,7 +280,14 @@ function Notes({
             const isArchiving = !selectedNote.archived;
             const updated = { ...selectedNote, archived: isArchiving };
             updateNote(updated);
-            setSelectedNote(null); // Deselect after archiving/unarchiving
+    
+            if (isArchiving) {
+                setSelectedNote(null); // Deselect after archiving
+            } else {
+                // When un-archiving, switch to its notebook and select it
+                setActiveNotebookId(updated.notebookId);
+                setSelectedNote(updated);
+            }
             showToast(isArchiving ? "Note archived." : "Note restored from archive.");
         }
     };
@@ -332,9 +357,13 @@ function Notes({
     const selectedNotebook = notebooks.find(nb => nb.id === selectedNote?.notebookId);
     const editorColor = selectedNotebook?.color || '#374151';
     const editorTextColor = getTextColorForBackground(editorColor);
+    const isNoteInTrash = selectedNote && !!selectedNote.deletedAt;
 
     return (
-        <div className={`transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-40 h-screen !rounded-none bg-bg/50 backdrop-blur-md' : 'h-[calc(100vh-8rem)] rounded-3xl bg-card shadow-lg'} flex overflow-hidden`}>
+        <div 
+            className={`transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-40' : 'h-[calc(100vh-8rem)] rounded-3xl bg-card shadow-lg'} flex overflow-hidden`}
+            style={{ backgroundColor: isFullScreen ? editorColor : undefined }}
+        >
             <AnimatePresence>
                 {isNotebookModalOpen && (
                     <NotebookModal 
@@ -349,9 +378,23 @@ function Notes({
                 {notebookToDelete && (
                     <ConfirmationModal
                         title={`Delete "${notebookToDelete.title}"?`}
-                        message="This will permanently delete the notebook and all associated notes. This action cannot be undone."
+                        message="This will permanently delete the notebook and move all its notes to the trash. This action cannot be undone."
                         onConfirm={confirmDeleteNotebook}
                         onCancel={() => setNotebookToDelete(null)}
+                    />
+                )}
+            </AnimatePresence>
+
+             <AnimatePresence>
+                {noteToDeletePermanently && (
+                    <ConfirmationModal
+                        title={`Delete "${noteToDeletePermanently.title}" forever?`}
+                        message="This action is irreversible and the note cannot be recovered."
+                        onConfirm={() => {
+                            permanentlyDeleteNote(noteToDeletePermanently.id);
+                            setNoteToDeletePermanently(null);
+                        }}
+                        onCancel={() => setNoteToDeletePermanently(null)}
                     />
                 )}
             </AnimatePresence>
@@ -381,20 +424,21 @@ function Notes({
                         </div>
                         
                         <div className="flex-1 overflow-y-auto space-y-1">
-                            <SidebarItem id="all" icon={<DocumentTextIcon className="w-5 h-5"/>} title="All Notes" count={notes.filter(n => !n.archived).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
-                            <SidebarItem id="flagged" icon={<StarIcon className="w-5 h-5"/>} title="Starred" count={notes.filter(n => n.flagged && !n.archived).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
+                            <SidebarItem id="all" icon={<DocumentTextIcon className="w-5 h-5"/>} title="All Notes" count={notes.filter(n => !n.archived && !n.deletedAt).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
+                            <SidebarItem id="flagged" icon={<StarIcon className="w-5 h-5"/>} title="Starred" count={notes.filter(n => n.flagged && !n.archived && !n.deletedAt).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
                             <div className="h-px bg-border my-2 mx-2"></div>
                             {notebooks.map(nb => (
                                 <SidebarItem 
                                     key={nb.id} id={nb.id} icon={<div className="w-3 h-3 rounded-full flex-shrink-0" style={{backgroundColor: nb.color}}/>} 
-                                    title={nb.title} count={notes.filter(n => n.notebookId === nb.id && !n.archived).length}
-                                    activeId={activeNotebookId} onClick={setActiveNotebookId} 
+                                    title={nb.title} count={notes.filter(n => n.notebookId === nb.id && !n.archived && !n.deletedAt).length}
+                                    activeId={activeNotebookId} onClick={(id) => { setActiveNotebookId(id); setIsSidebarCollapsed(true); }} 
                                     onEdit={() => { setEditingNotebook(nb); setIsNotebookModalOpen(true); }}
                                     onDelete={() => handleDeleteNotebook(nb.id)}
                                 />
                             ))}
                             <div className="h-px bg-border my-2 mx-2"></div>
-                             <SidebarItem id="archived" icon={<ArchiveBoxIcon className="w-5 h-5"/>} title="Archived" count={notes.filter(n => n.archived).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
+                             <SidebarItem id="archived" icon={<ArchiveBoxIcon className="w-5 h-5"/>} title="Archived" count={notes.filter(n => n.archived && !n.deletedAt).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
+                             <SidebarItem id="trash" icon={<TrashIcon className="w-5 h-5"/>} title="Trash" count={notes.filter(n => !!n.deletedAt).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
                         </div>
 
                         <div className="p-2 border-t border-border mt-1">
@@ -446,7 +490,14 @@ function Notes({
                             <div className="flex-1 overflow-y-auto p-2">
                                 <AnimatePresence>
                                     {filteredAndSortedNotes.map(note => (
-                                        <NoteListItem key={note.id} note={note} isSelected={selectedNote?.id === note.id} onClick={() => setSelectedNote(note)} notebooks={notebooks} />
+                                        <NoteListItem 
+                                            key={note.id} 
+                                            note={note} 
+                                            isSelected={selectedNote?.id === note.id} 
+                                            onClick={() => setSelectedNote(note)} 
+                                            notebooks={notebooks}
+                                            setIsFullScreen={setIsFullScreen}
+                                        />
                                     ))}
                                 </AnimatePresence>
                             </div>
@@ -461,36 +512,68 @@ function Notes({
                             layoutId={`editor-card-${selectedNote.id}`}
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                             className={`flex-1 flex flex-col transition-all duration-300 ${isFullScreen ? 'p-4 sm:p-8 m-auto max-w-4xl w-full h-full' : 'p-6 rounded-3xl m-3'}`}
-                            style={{ backgroundColor: editorColor }}
+                            style={{ backgroundColor: isFullScreen ? 'rgba(0,0,0,0.1)' : editorColor }}
                         >
+                             {isNoteInTrash && (
+                                <div className="flex items-center justify-between gap-4 p-3 rounded-xl mb-4" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                                    <p className="text-sm font-semibold">This note is in the trash.</p>
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={() => restoreNote(selectedNote.id)} 
+                                            className="px-3 py-1.5 text-sm font-semibold rounded-lg hover:bg-black/20"
+                                        >
+                                            Restore
+                                        </button>
+                                        <button 
+                                            onClick={() => setNoteToDeletePermanently(selectedNote)} 
+                                            className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-red-500/80 hover:bg-red-500 text-white"
+                                        >
+                                            Delete Forever
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex-shrink-0 flex items-start justify-between gap-4 mb-4">
                                 <div className="flex-1 relative">
                                     <input 
                                         type="text" 
                                         value={selectedNote.title} 
                                         onChange={e => handleNoteChange('title', e.target.value)} 
-                                        className="text-4xl font-bold font-display bg-transparent w-full focus:outline-none placeholder:opacity-50"
+                                        readOnly={isNoteInTrash}
+                                        className="text-3xl font-bold font-display bg-transparent w-full focus:outline-none placeholder:opacity-50"
                                         style={{ color: editorTextColor }}
                                         placeholder="Note title..."
                                     />
                                     {isParsingTitle && <SparklesIcon className="w-5 h-5 absolute right-0 top-1/2 -translate-y-1/2 animate-pulse" style={{ color: editorTextColor }}/>}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <EditorIconButton onClick={handleSummarize} title="Summarize Note" textColor={editorTextColor} disabled={isSummarizing}>
-                                        <LightBulbIcon className={`w-5 h-5 ${isSummarizing ? 'animate-pulse' : ''}`}/>
-                                    </EditorIconButton>
-                                    <EditorIconButton onClick={handleAutoTag} title="Auto-tag Note" textColor={editorTextColor} disabled={isTagging}>
-                                        <SparklesIcon className={`w-5 h-5 ${isTagging ? 'animate-pulse' : ''}`}/>
-                                    </EditorIconButton>
-                                    <EditorIconButton onClick={() => setIsFullScreen(p => !p)} title={isFullScreen ? "Exit Full Screen" : "Full Screen"} textColor={editorTextColor}>
-                                        {isFullScreen ? <ArrowsPointingInIcon className="w-5 h-5"/> : <ArrowsPointingOutIcon className="w-5 h-5"/>}
-                                    </EditorIconButton>
-                                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,application/pdf" />
-                                    <EditorIconButton onClick={() => fileInputRef.current?.click()} title="Attach File" textColor={editorTextColor}><PhotoIcon className="w-5 h-5"/></EditorIconButton>
-                                    <EditorIconButton onClick={handleToggleFlag} title={selectedNote.flagged ? 'Unstar' : 'Star'} textColor={editorTextColor} active={selectedNote.flagged}><StarIcon className="w-5 h-5"/></EditorIconButton>
-                                    <EditorIconButton onClick={handleToggleArchive} title={selectedNote.archived ? 'Unarchive' : 'Archive'} textColor={editorTextColor}><ArchiveBoxIcon className="w-5 h-5"/></EditorIconButton>
-                                    <EditorIconButton onClick={() => deleteNote(selectedNote.id)} title="Delete Note" textColor={editorTextColor}><TrashIcon className="w-5 h-5"/></EditorIconButton>
-                                </div>
+                                {!isNoteInTrash && (
+                                    <div className="flex items-center gap-1">
+                                        <EditorIconButton onClick={handleToggleFlag} title={selectedNote.flagged ? 'Unstar' : 'Star'} textColor={editorTextColor} active={selectedNote.flagged}><StarIcon className="w-5 h-5"/></EditorIconButton>
+                                        <EditorIconButton onClick={handleSummarize} title="Summarize Note" textColor={editorTextColor} disabled={isSummarizing}><LightBulbIcon className={`w-5 h-5 ${isSummarizing ? 'animate-pulse' : ''}`}/></EditorIconButton>
+                                        <EditorIconButton onClick={handleAutoTag} title="Auto-tag Note" textColor={editorTextColor} disabled={isTagging}><SparklesIcon className={`w-5 h-5 ${isTagging ? 'animate-pulse' : ''}`}/></EditorIconButton>
+                                        <EditorIconButton onClick={() => setIsFullScreen(p => !p)} title={isFullScreen ? "Exit Full Screen" : "Full Screen"} textColor={editorTextColor}>{isFullScreen ? <ArrowsPointingInIcon className="w-5 h-5"/> : <ArrowsPointingOutIcon className="w-5 h-5"/>}</EditorIconButton>
+                                        
+                                        <div className="relative" ref={editorMenuRef}>
+                                            <EditorIconButton onClick={() => setIsEditorMenuOpen(p => !p)} title="More options" textColor={editorTextColor}><EllipsisVerticalIcon className="w-5 h-5"/></EditorIconButton>
+                                            <AnimatePresence>
+                                                {isEditorMenuOpen && (
+                                                    <motion.div 
+                                                        initial={{opacity: 0, y: -10}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -10}} 
+                                                        className="absolute right-0 top-12 w-48 bg-card border border-border rounded-lg shadow-xl z-20 p-1"
+                                                    >
+                                                        <MenuItem icon={<ArchiveBoxIcon className="w-4 h-4"/>} label={selectedNote.archived ? 'Unarchive' : 'Archive'} onClick={handleToggleArchive} />
+                                                        <MenuItem icon={<PhotoIcon className="w-4 h-4"/>} label="Attach File" onClick={() => fileInputRef.current?.click()} />
+                                                        <MenuItem icon={<ArrowUturnLeftIcon className="w-4 h-4"/>} label="Undo Delete" onClick={() => { if (lastDeletedNote) restoreNote(lastDeletedNote.id); }} disabled={!lastDeletedNote} />
+                                                        <div className="h-px bg-border my-1 mx-1"></div>
+                                                        <MenuItem icon={<TrashIcon className="w-4 h-4"/>} label="Move to Trash" onClick={() => deleteNote(selectedNote.id)} destructive />
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,application/pdf" />
+                                    </div>
+                                )}
                             </div>
                             
                             {selectedNote.tags && selectedNote.tags.length > 0 && (
@@ -512,7 +595,7 @@ function Notes({
                             )}
                             
                             <div className="flex-1 bg-black/10 rounded-2xl overflow-hidden mt-4">
-                                <LightweightEditor key={selectedNote.id} content={selectedNote.content || ''} onChange={v => handleNoteChange('content', v)} textColor={editorTextColor} />
+                                <LightweightEditor key={selectedNote.id} content={selectedNote.content || ''} onChange={v => handleNoteChange('content', v)} textColor={editorTextColor} editable={!isNoteInTrash} />
                             </div>
                         </motion.div>
                     ) : (
@@ -535,8 +618,28 @@ function Notes({
 
 // --- SUB-COMPONENTS ---
 
+const MenuItem = ({ icon, label, onClick, disabled = false, destructive = false }: {
+    icon: React.ReactNode;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    destructive?: boolean;
+}) => (
+    <button 
+        onClick={() => { if (!disabled) onClick(); }}
+        disabled={disabled}
+        className={`w-full text-left flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors 
+            ${destructive ? 'text-red-500' : ''} 
+            ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-black/5 dark:hover:bg-white/10'}`
+        }
+    >
+        {icon}
+        <span>{label}</span>
+    </button>
+);
+
 const SidebarItem = ({ id, icon, title, count, activeId, onClick, onEdit, onDelete }: {
-    id: number | 'all' | 'flagged' | 'archived';
+    id: number | 'all' | 'flagged' | 'archived' | 'trash';
     icon: React.ReactNode;
     title: string;
     count?: number;
@@ -568,7 +671,7 @@ const SidebarItem = ({ id, icon, title, count, activeId, onClick, onEdit, onDele
         >
             <span className="flex items-center gap-3 truncate">
                 {icon}
-                <span className="font-semibold text-sm">{title}</span>
+                <span className="font-bold text-sm">{title}</span>
             </span>
             <div className="flex items-center gap-1">
                 {typeof id === 'number' && (isHovered || isMenuOpen) && (
@@ -594,7 +697,13 @@ const SidebarItem = ({ id, icon, title, count, activeId, onClick, onEdit, onDele
     );
 };
 
-const NoteListItem = ({ note, isSelected, onClick, notebooks }: { note: Note; isSelected: boolean; onClick: () => void; notebooks: Notebook[] }) => {
+const NoteListItem = ({ note, isSelected, onClick, notebooks, setIsFullScreen }: { 
+    note: Note; 
+    isSelected: boolean; 
+    onClick: () => void; 
+    notebooks: Notebook[];
+    setIsFullScreen: (isFull: boolean) => void;
+}) => {
     const notebook = notebooks.find(nb => nb.id === note.notebookId);
     const ref = useRef<HTMLButtonElement>(null);
 
@@ -604,6 +713,11 @@ const NoteListItem = ({ note, isSelected, onClick, notebooks }: { note: Note; is
         }
     }, [isSelected]);
 
+    const handleDoubleClick = () => {
+        onClick(); // Select the note first
+        setIsFullScreen(true);
+    };
+
     return (
         <motion.button 
             ref={ref}
@@ -611,8 +725,10 @@ const NoteListItem = ({ note, isSelected, onClick, notebooks }: { note: Note; is
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClick} className={`block w-full text-left p-3 rounded-xl transition-all duration-200 ${isSelected ? 'bg-accent/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`
-        }>
+            onClick={onClick}
+            onDoubleClick={handleDoubleClick}
+            className={`block w-full text-left p-3 rounded-xl transition-all duration-200 ${isSelected ? 'bg-accent/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+        >
             <div className="flex items-start justify-between gap-2 mb-1">
                 <h4 className="font-semibold text-text truncate pr-4">{note.title}</h4>
                 {note.flagged && <StarIcon className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"/>}

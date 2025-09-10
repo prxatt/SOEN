@@ -28,9 +28,9 @@ interface EventDetailProps {
 }
 
 const modalVariants: Variants = {
-  hidden: { opacity: 0, scale: 0.95 },
-  visible: { opacity: 1, scale: 1, transition: { type: 'spring', damping: 30, stiffness: 300 } },
-  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } }
+    hidden: { opacity: 0, scale: 0.95, y: 20 },
+    visible: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', damping: 30, stiffness: 300 } },
+    exit: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.2 } }
 };
 
 const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
@@ -50,60 +50,45 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
     };
 }
 
-interface EditableRowProps {
-  icon: React.ElementType;
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}
-
-function EditableRow({ icon: Icon, label, children, className = '' }: EditableRowProps) {
-  return (
-    <div className={`bg-gray-100 dark:bg-zinc-900/50 p-2 rounded-xl flex items-center justify-between ${className}`}>
-        <div className="flex items-center gap-3">
-            <Icon className="w-5 h-5 text-text-secondary flex-shrink-0" />
-            <span className="font-semibold text-text text-sm">{label}</span>
-        </div>
-        <div className="text-right text-sm font-medium text-text flex-grow">
-            {children}
-        </div>
-    </div>
-  );
-}
-
 function InsightWidget({ widget }: { widget: InsightWidgetData }) {
     switch (widget.type) {
         case 'metric': {
             const Icon = (Icons as any)[widget.icon] || SparklesIcon;
             return (
-                <div className="bg-gray-100 dark:bg-zinc-900/50 p-4 rounded-xl h-full">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-text-secondary"><Icon className="w-4 h-4" />{widget.title}</div>
-                    <p className="text-3xl font-bold font-display mt-1">{widget.value} <span className="text-lg text-text-secondary">{widget.unit}</span></p>
+                <div className="p-3 rounded-2xl h-full" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                    <div className="flex items-center gap-2 text-sm font-semibold opacity-70">
+                        <Icon className="w-4 h-4" />{widget.title}
+                    </div>
+                    <p className="text-2xl font-bold font-display mt-1">
+                        {widget.value} <span className="text-sm opacity-70">{widget.unit}</span>
+                    </p>
                 </div>
             );
         }
         case 'text': {
             const Icon = (Icons as any)[widget.icon] || SparklesIcon;
             return (
-                <div className="bg-gray-100 dark:bg-zinc-900/50 p-4 rounded-xl h-full">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-text-secondary"><Icon className="w-4 h-4" />{widget.title}</div>
+                <div className="p-3 rounded-2xl h-full" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                    <div className="flex items-center gap-2 text-sm font-semibold opacity-70">
+                        <Icon className="w-4 h-4" />{widget.title}
+                    </div>
                     <p className="text-sm mt-1">{widget.content}</p>
                 </div>
             );
         }
         case 'radial': {
             return (
-                <div className="bg-gray-100 dark:bg-zinc-900/50 p-4 rounded-xl h-full flex flex-col items-center justify-center text-center">
-                    <h4 className="text-sm font-semibold text-text-secondary">{widget.title}</h4>
-                    <div className="w-24 h-24 relative mt-1">
+                <div className="p-3 rounded-2xl h-full flex flex-col items-center justify-center text-center" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                    <h4 className="text-sm font-semibold opacity-70">{widget.title}</h4>
+                    <div className="w-20 h-20 relative mt-1">
                         <ResponsiveContainer width="100%" height="100%">
                             <RadialBarChart innerRadius="70%" outerRadius="100%" data={[{ value: widget.value, fill: widget.color }]} startAngle={90} endAngle={-270}>
                                 <RadialBar background dataKey="value" cornerRadius={10} />
                             </RadialBarChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-2xl font-bold font-display">{widget.value}%</span>
-                            <span className="text-xs text-text-secondary">{widget.label}</span>
+                            <span className="text-xl font-bold font-display">{widget.value}%</span>
+                            <span className="text-xs opacity-70">{widget.label}</span>
                         </div>
                     </div>
                 </div>
@@ -111,9 +96,11 @@ function InsightWidget({ widget }: { widget: InsightWidgetData }) {
         }
         case 'map': {
             return (
-                <div className="bg-gray-100 dark:bg-zinc-900/50 p-4 rounded-xl h-full sm:col-span-2">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-text-secondary"><MapPinIcon className="w-4 h-4" />{widget.title}</div>
-                    <div className="mt-2 w-full aspect-video rounded-lg overflow-hidden border border-gray-200 dark:border-zinc-700">
+                <div className="p-3 rounded-2xl h-full col-span-2" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                    <div className="flex items-center gap-2 text-sm font-semibold opacity-70">
+                        <MapPinIcon className="w-4 h-4" />{widget.title}
+                    </div>
+                    <div className="mt-2 w-full aspect-video rounded-lg overflow-hidden border border-current/20">
                         <iframe
                             width="100%"
                             height="100%"
@@ -129,22 +116,24 @@ function InsightWidget({ widget }: { widget: InsightWidgetData }) {
         case 'weather': {
             const WeatherIcon = (Icons as any)[widget.conditionIcon] || CloudIcon;
             return (
-                <div className="bg-gray-100 dark:bg-zinc-900/50 p-4 rounded-xl h-full">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-text-secondary"><MapPinIcon className="w-4 h-4" />{widget.location}</div>
-                    <div className="flex items-center gap-4 mt-2">
-                        <WeatherIcon className="w-12 h-12 text-accent"/>
+                <div className="p-3 rounded-2xl h-full" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                    <div className="flex items-center gap-2 text-sm font-semibold opacity-70">
+                        <MapPinIcon className="w-4 h-4" />{widget.location}
+                    </div>
+                    <div className="flex items-center gap-3 mt-2">
+                        <WeatherIcon className="w-10 h-10 opacity-90"/>
                         <div>
-                            <p className="text-3xl font-bold font-display">{widget.currentTemp}°</p>
-                            <p className="text-xs text-text-secondary">{widget.title}</p>
+                            <p className="text-2xl font-bold font-display">{widget.currentTemp}°</p>
+                            <p className="text-xs opacity-70">{widget.title}</p>
                         </div>
                     </div>
-                     <div className="mt-3 flex justify-between gap-2 text-xs text-center">
+                    <div className="mt-3 flex justify-between gap-2 text-xs text-center">
                         {(widget.hourlyForecast || []).slice(0, 4).map((f, i) => {
                             const ForecastIcon = (Icons as any)[f.icon] || CloudIcon;
                             return (
                                 <div key={i} className="flex flex-col items-center">
                                     <span className="font-semibold">{f.time}</span>
-                                    <ForecastIcon className="w-5 h-5 my-1 text-text-secondary"/>
+                                    <ForecastIcon className="w-4 h-4 my-1 opacity-70"/>
                                     <span className="font-bold">{f.temp}°</span>
                                 </div>
                             );
@@ -155,17 +144,19 @@ function InsightWidget({ widget }: { widget: InsightWidgetData }) {
         }
         case 'recipe': {
             return (
-                <div className="bg-gray-100 dark:bg-zinc-900/50 p-4 rounded-xl h-full sm:col-span-2">
-                    <div className="flex gap-4">
-                        <img src={widget.imageUrl} alt={widget.name} className="w-24 h-24 rounded-lg object-cover flex-shrink-0" />
+                <div className="p-3 rounded-2xl h-full col-span-2" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                    <div className="flex gap-3">
+                        <img src={widget.imageUrl} alt={widget.name} className="w-20 h-20 rounded-lg object-cover flex-shrink-0" />
                         <div>
-                            <a href={widget.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-bold hover:underline">{widget.name}</a>
-                            <p className="text-xs text-text-secondary mt-1 line-clamp-3">{widget.quick_instructions}</p>
+                            <a href={widget.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-bold hover:underline">
+                                {widget.name}
+                            </a>
+                            <p className="text-xs opacity-70 mt-1 line-clamp-3">{widget.quick_instructions}</p>
                         </div>
                     </div>
                     <details className="mt-2 text-xs">
-                        <summary className="cursor-pointer font-semibold text-text-secondary">Ingredients</summary>
-                        <ul className="list-disc list-inside mt-1 pl-2 text-text-secondary space-y-0.5">
+                        <summary className="cursor-pointer font-semibold opacity-70">Ingredients</summary>
+                        <ul className="list-disc list-inside mt-1 pl-2 opacity-70 space-y-0.5">
                             {(widget.ingredients || []).slice(0, 5).map((ing, i) => <li key={i}>{ing}</li>)}
                             {widget.ingredients && widget.ingredients.length > 5 && <li>... and more</li>}
                         </ul>
@@ -177,11 +168,15 @@ function InsightWidget({ widget }: { widget: InsightWidgetData }) {
     }
 }
 
-const PrioritySelector = ({ value, onChange }: {value: Task['priority'], onChange: (p: Task['priority']) => void}) => {
-    const priorities: Array<{ label: string, value: 'low' | 'medium' | 'high', color: string, textColor: string }> = [
-        { label: 'Low', value: 'low', color: 'bg-blue-100 dark:bg-blue-900/50', textColor: 'text-blue-600 dark:text-blue-300' },
-        { label: 'Medium', value: 'medium', color: 'bg-yellow-100 dark:bg-yellow-800/50', textColor: 'text-yellow-700 dark:text-yellow-300' },
-        { label: 'High', value: 'high', color: 'bg-red-100 dark:bg-red-900/50', textColor: 'text-red-600 dark:text-red-300' },
+const PrioritySelector = ({ value, onChange, textColor }: {
+    value: Task['priority'], 
+    onChange: (p: Task['priority']) => void,
+    textColor: string
+}) => {
+    const priorities: Array<{ label: string, value: 'low' | 'medium' | 'high' }> = [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium' },
+        { label: 'High', value: 'high' },
     ];
 
     return (
@@ -193,9 +188,13 @@ const PrioritySelector = ({ value, onChange }: {value: Task['priority'], onChang
                     onClick={() => onChange(p.value)}
                     className={`px-3 py-1 text-sm font-semibold rounded-full transition-all ${
                         value === p.value
-                            ? `${p.color} ${p.textColor} ring-2 ring-current`
-                            : 'bg-gray-200 dark:bg-zinc-700 text-text-secondary hover:bg-gray-300 dark:hover:bg-zinc-600'
+                            ? 'ring-2 ring-current'
+                            : 'opacity-60 hover:opacity-80'
                     }`}
+                    style={{
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        color: textColor
+                    }}
                 >
                     {p.label}
                 </button>
@@ -204,27 +203,31 @@ const PrioritySelector = ({ value, onChange }: {value: Task['priority'], onChang
     );
 };
 
-
-function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categories, categoryColors, onAddNewCategory, projects, notes, notebooks, deleteTask, triggerInsightGeneration }: EventDetailProps) {
+function EventDetail({ 
+    task, 
+    allTasks, 
+    updateTask, 
+    onComplete, 
+    onClose, 
+    categories, 
+    categoryColors, 
+    onAddNewCategory, 
+    projects, 
+    notes, 
+    notebooks, 
+    deleteTask, 
+    triggerInsightGeneration 
+}: EventDetailProps) {
     const [editableTask, setEditableTask] = useState(task);
-    const titleTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const titleInputRef = useRef<HTMLInputElement>(null);
     const [locationSuggestions, setLocationSuggestions] = useState<{place_name: string; address: string}[]>([]);
-    const locationInputRef = useRef<HTMLInputElement>(null);
     const [isParsing, setIsParsing] = useState(false);
 
-
     // Sync local state with task prop
-    useEffect(() => { setEditableTask(task); }, [task]);
-    
-    // Resize textarea after render to ensure layout is stable
-    useEffect(() => {
-        const textarea = titleTextareaRef.current;
-        if (textarea) {
-            textarea.style.height = 'auto'; // Reset height
-            textarea.style.height = `${textarea.scrollHeight}px`; // Set to scroll height
-        }
-    }, [editableTask.title, task]); // Rerun on new task or title change
-    
+    useEffect(() => { 
+        setEditableTask(task); 
+    }, [task]);
+
     const debouncedParseUpdate = useCallback(debounce(async (currentTaskState: Task) => {
         const title = currentTaskState.title;
         const commandStartIndex = title.indexOf('/');
@@ -234,19 +237,23 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
         const newTitleCandidate = title.substring(0, commandStartIndex).trim();
         
         setIsParsing(true);
-        const { data: updatePayload } = await kikoRequest('parse_task_update', { 
-            command: command, 
-            task: { ...currentTaskState, title: newTitleCandidate } 
-        });
-        setIsParsing(false);
-        
-        if (updatePayload && Object.keys(updatePayload).length > 0) {
-            setEditableTask(prev => ({ ...prev, title: newTitleCandidate, ...updatePayload }));
-        } else {
-             setEditableTask(prev => ({...prev, title: newTitleCandidate }));
+        try {
+            const { data: updatePayload } = await kikoRequest('parse_task_update', { 
+                command: command, 
+                task: { ...currentTaskState, title: newTitleCandidate } 
+            });
+            
+            if (updatePayload && Object.keys(updatePayload).length > 0) {
+                setEditableTask(prev => ({ ...prev, title: newTitleCandidate, ...updatePayload }));
+            } else {
+                setEditableTask(prev => ({...prev, title: newTitleCandidate }));
+            }
+        } catch (error) {
+            console.error('AI parsing error:', error);
+        } finally {
+            setIsParsing(false);
         }
     }, 1200), []);
-
 
     const handleFieldChange = (field: keyof Task, value: any) => {
         setEditableTask(prev => {
@@ -312,8 +319,19 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
         triggerInsightGeneration(task, !!task.insights);
     };
 
+    // Get category color and text color
+    const categoryColor = categoryColors[editableTask.category!] || '#A855F7';
+    const textColor = getTextColorForBackground(categoryColor);
+
+    // Format date display
+    const taskDate = new Date(editableTask.startTime);
+    const dayOfWeek = taskDate.toLocaleDateString('en-US', { weekday: 'long' });
+    const day = String(taskDate.getDate()).padStart(2, '0');
+    const monthNum = String(taskDate.getMonth() + 1).padStart(2, '0');
+    const month = taskDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+
     return (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in-fast" onClick={handleSave}>
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
             <motion.div
                 key="edit-task-modal"
                 variants={modalVariants}
@@ -321,167 +339,292 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
                 animate="visible"
                 exit="exit"
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white dark:bg-zinc-800 rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]"
+                className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             >
-                <header className="p-6 pb-4 flex-shrink-0 bg-gray-50 dark:bg-black/30 rounded-t-3xl">
-                    <div className="flex justify-between items-start">
-                         <div className="relative inline-block">
-                             <select
-                                aria-label="Task category"
-                                value={editableTask.category}
-                                onChange={handleCategoryChange}
-                                className="appearance-none cursor-pointer rounded-full px-4 py-1.5 text-sm font-bold focus:outline-none focus:ring-2 ring-offset-2 ring-offset-bg transition-colors"
-                                style={{
-                                    backgroundColor: categoryColors[editableTask.category!] || '#6B7280',
-                                    color: getTextColorForBackground(categoryColors[editableTask.category!] || '#6B7280'),
+                <div 
+                    className="rounded-3xl p-6 shadow-2xl transition-all duration-300"
+                    style={{ backgroundColor: categoryColor, color: textColor }}
+                >
+                    {/* Header */}
+                    <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="flex flex-col">
+                                <p className="font-semibold opacity-80 text-sm">{dayOfWeek}</p>
+                                <p className="text-3xl font-bold font-display tracking-tighter leading-none">{monthNum}.{day}</p>
+                                <p className="text-3xl font-bold font-display tracking-tight leading-none opacity-60">{month}</p>
+                            </div>
+                            
+                            <div className="border-l border-current/20 pl-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <h2 className="text-2xl font-bold font-display">Edit Task</h2>
+                                    <button 
+                                        onClick={handleGenerateInsights} 
+                                        className="p-1.5 rounded-lg transition-colors text-sm"
+                                        style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+                                    >
+                                        {task.isGeneratingInsights ? (
+                                            <SparklesIcon className="w-4 h-4 animate-pulse" />
+                                        ) : task.insights ? (
+                                            <ArrowPathIcon className="w-4 h-4" />
+                                        ) : (
+                                            <SparklesIcon className="w-4 h-4" />
+                                        )}
+                                    </button>
+                                </div>
+                                <p className="opacity-70 text-sm">Use "/" for AI magic...</p>
+                            </div>
+                        </div>
+                        
+                        <button 
+                            type="button" 
+                            onClick={onClose} 
+                            className="p-2 rounded-full transition-colors" 
+                            style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+                        >
+                            <XMarkIcon className="w-6 h-6"/>
+                        </button>
+                    </div>
+
+                    {/* Title */}
+                    <div className="relative mb-4">
+                        <input 
+                            ref={titleInputRef}
+                            type="text"
+                            value={editableTask.title}
+                            onChange={(e) => handleFieldChange('title', e.target.value)}
+                            className="w-full text-2xl font-bold px-5 py-3 rounded-2xl border-2 border-current/20 focus:border-current/40 focus:outline-none transition-colors"
+                            style={{ 
+                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                color: textColor,
+                            }}
+                            placeholder="Task title..."
+                        />
+                        {isParsing && (
+                            <SparklesIcon 
+                                className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 animate-pulse" 
+                                style={{ color: textColor, opacity: 0.7 }}
+                            />
+                        )}
+                    </div>
+
+                    {/* Form Fields */}
+                    <div className="space-y-3">
+                        {/* Category and Duration */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                                <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
+                                    <BriefcaseIcon className="w-4 h-4" /> Category
+                                </label>
+                                <select
+                                    value={editableTask.category}
+                                    onChange={handleCategoryChange}
+                                    className="w-full bg-transparent text-lg font-bold focus:outline-none appearance-none"
+                                    style={{ color: textColor }}
+                                >
+                                    {categories.map(c => <option key={c} value={c} className="text-black bg-white">{c}</option>)}
+                                    <option value="CREATE_NEW" className="text-black bg-white italic">+ Create New...</option>
+                                </select>
+                            </div>
+
+                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                                <label className="font-semibold opacity-70 mb-1.5 block text-sm">Duration (min)</label>
+                                <input 
+                                    type="number" 
+                                    value={editableTask.plannedDuration} 
+                                    onChange={e => handleFieldChange('plannedDuration', parseInt(e.target.value))} 
+                                    className="w-full bg-transparent text-lg font-bold focus:outline-none"
+                                    style={{ color: textColor }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Time and Repeat */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                                <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
+                                    <ClockIcon className="w-4 h-4"/> Start Time
+                                </label>
+                                <input 
+                                    type="time" 
+                                    value={new Date(editableTask.startTime).toTimeString().substring(0,5)} 
+                                    onChange={e => {
+                                        const [h, m] = e.target.value.split(':');
+                                        const d = new Date(editableTask.startTime);
+                                        d.setHours(parseInt(h), parseInt(m));
+                                        handleFieldChange('startTime', d);
+                                    }}
+                                    className="w-full bg-transparent text-lg font-bold focus:outline-none"
+                                    style={{ color: textColor }}
+                                />
+                            </div>
+                            
+                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                                <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
+                                    <ArrowPathIcon className="w-4 h-4"/> Repeat
+                                </label>
+                                <select 
+                                    value={editableTask.repeat || 'none'} 
+                                    onChange={e => handleFieldChange('repeat', e.target.value)} 
+                                    className="w-full bg-transparent text-lg font-bold focus:outline-none appearance-none"
+                                    style={{ color: textColor }}
+                                >
+                                    <option value="none">None</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Virtual Toggle */}
+                        <div 
+                            className="flex items-center justify-between p-3 rounded-2xl"
+                            style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+                        >
+                            <label className="text-lg font-bold">Virtual Event</label>
+                            <button 
+                                type="button" 
+                                onClick={() => handleFieldChange('isVirtual', !editableTask.isVirtual)} 
+                                className="relative inline-flex items-center h-6 rounded-full w-11 transition-colors"
+                                style={{ 
+                                    backgroundColor: editableTask.isVirtual ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'
                                 }}
                             >
-                                {categories.map(c => <option key={c} value={c} className="text-black bg-white">{c}</option>)}
-                                <option value="CREATE_NEW" className="text-black bg-white italic font-semibold">＋ Create New...</option>
-                            </select>
-                             <ChevronDownIcon 
-                                className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" 
-                                style={{ color: getTextColorForBackground(categoryColors[editableTask.category!] || '#6B7280') }}
-                            />
+                                <span 
+                                    className="inline-block w-4 h-4 transform bg-current rounded-full transition-transform"
+                                    style={{
+                                        transform: editableTask.isVirtual ? 'translateX(1.25rem)' : 'translateX(0.25rem)',
+                                        opacity: 0.9
+                                    }}
+                                />
+                            </button>
                         </div>
-                        <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-200 dark:bg-zinc-700">
-                            <XMarkIcon className="w-5 h-5"/>
-                        </button>
-                    </div>
-                    <div className="flex justify-between items-end mt-2">
-                        <div className="relative flex-grow">
-                             <textarea
-                                ref={titleTextareaRef}
-                                value={editableTask.title}
-                                onChange={e => handleFieldChange('title', e.target.value)}
-                                className="text-5xl font-bold bg-transparent focus:outline-none w-full resize-none overflow-hidden placeholder:text-current/30 text-black dark:text-white"
-                                rows={1}
-                                placeholder="Task Title"
-                            />
-                            {isParsing && <SparklesIcon className="w-5 h-5 text-accent absolute right-2 top-1/2 -translate-y-1/2 animate-pulse" />}
-                        </div>
-                         <button onClick={handleGenerateInsights} className="ml-4 flex-shrink-0 p-2 text-xs text-center border border-gray-300 dark:border-zinc-600 rounded-lg w-24 h-16 flex flex-col items-center justify-center hover:border-accent transition-colors">
-                            {task.isGeneratingInsights ? (
-                                <>
-                                 <SparklesIcon className="w-5 h-5 text-accent animate-pulse" />
-                                 <span className="text-text-secondary mt-1 animate-pulse">Generating...</span>
-                                </>
-                            ) : task.insights ? (
-                                <>
-                                    <ArrowPathIcon className="w-5 h-5 text-text-secondary" />
-                                    <span className="text-text-secondary mt-1">Regenerate</span>
-                                </>
-                            ) : (
-                                <>
-                                    <SparklesIcon className="w-5 h-5 text-accent" />
-                                    <span className="text-text-secondary mt-1">Get Insights</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </header>
-                
-                <main className="flex-grow p-6 pt-4 bg-white dark:bg-zinc-800 overflow-y-auto min-h-0">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-semibold text-text">Task Details</h3>
-                        <button onClick={onComplete} className="bg-green-500 text-white px-4 py-2 rounded-full font-semibold text-sm flex items-center gap-2 hover:bg-green-600 transition-colors">
-                            <CheckCircleIcon className="w-5 h-5"/>
-                            Mark as Complete
-                        </button>
-                    </div>
 
-                    <div className="space-y-3">
-                         <div>
-                            <h4 className="font-semibold text-xs text-text-secondary mb-1 uppercase tracking-wider">Timing</h4>
-                            <div className="space-y-1.5">
-                                <EditableRow icon={ClockIcon} label="Start Time">
-                                    <input type="time" value={new Date(editableTask.startTime).toTimeString().substring(0,5)} onChange={e => { const [h, m] = e.target.value.split(':'); const d = new Date(editableTask.startTime); d.setHours(parseInt(h), parseInt(m)); handleFieldChange('startTime', d); }} className="bg-transparent text-right font-semibold focus:outline-none" />
-                                </EditableRow>
-                                <EditableRow icon={DocumentTextIcon} label="Duration (min)">
-                                    <input type="number" value={editableTask.plannedDuration} onChange={e => handleFieldChange('plannedDuration', parseInt(e.target.value))} className="w-20 bg-transparent text-right font-semibold focus:outline-none" />
-                                </EditableRow>
-                                <EditableRow icon={ArrowPathIcon} label="Repeat">
-                                    <select value={editableTask.repeat || "none"} onChange={e => handleFieldChange('repeat', e.target.value)} className="bg-transparent text-right font-semibold focus:outline-none appearance-none pr-1">
-                                        <option value="none">Does not repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option>
-                                    </select>
-                                </EditableRow>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="font-semibold text-xs text-text-secondary mb-1 uppercase tracking-wider">Details</h4>
-                            <div className="space-y-1.5">
-                                <EditableRow icon={LinkIcon} label="Notes">
-                                   <input type="text" value={editableTask.notes || ""} onChange={e => handleFieldChange('notes', e.target.value)} className="w-full bg-transparent text-right font-semibold focus:outline-none truncate" placeholder="Add a quick note..."/>
-                                </EditableRow>
-                                <EditableRow icon={UserIcon} label="Virtual Event">
-                                    <button type="button" role="switch" aria-checked={!!editableTask.isVirtual} onClick={() => handleFieldChange('isVirtual', !editableTask.isVirtual)} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${editableTask.isVirtual ? 'bg-green-500' : 'bg-gray-300 dark:bg-zinc-700'}`}>
-                                        <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${editableTask.isVirtual ? 'translate-x-6' : 'translate-x-1'}`} />
-                                    </button>
-                                </EditableRow>
-                                <div className="relative">
-                                    <EditableRow icon={editableTask.isVirtual ? VideoCameraIcon : MapPinIcon} label={editableTask.isVirtual ? 'Meeting Link' : 'Location'}>
-                                        <input
-                                            ref={locationInputRef}
-                                            type="text"
-                                            value={editableTask.isVirtual ? (editableTask.linkedUrl || '') : (editableTask.location || '')}
-                                            onChange={e => handleLocationChange(e.target.value)}
-                                            onBlur={() => setTimeout(() => setLocationSuggestions([]), 200)}
-                                            className="w-full bg-transparent text-right font-semibold focus:outline-none truncate"
-                                            placeholder={editableTask.isVirtual ? 'https://...' : 'Add address'}
-                                        />
-                                    </EditableRow>
-                                    {locationSuggestions.length > 0 && !editableTask.isVirtual && (
-                                        <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg animate-fade-in-fast">
-                                            {locationSuggestions.map(s => (
-                                                <button
-                                                    key={s.address}
-                                                    onMouseDown={() => handleLocationSuggestionClick(s)}
-                                                    className="w-full text-left p-2 hover:bg-accent/10 cursor-pointer text-sm"
-                                                >
-                                                    <strong>{s.place_name}</strong><br />
-                                                    <span className="text-xs text-text-secondary">{s.address}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
+                        {/* Location/Link */}
+                        <div className="p-3 rounded-2xl relative" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                            <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
+                                {editableTask.isVirtual ? (
+                                    <>
+                                        <LinkIcon className="w-4 h-4"/> Meeting Link
+                                    </>
+                                ) : (
+                                    <>
+                                        <MapPinIcon className="w-4 h-4"/> Location
+                                    </>
+                                )}
+                            </label>
+                            <input 
+                                type="text" 
+                                value={editableTask.isVirtual ? (editableTask.linkedUrl || '') : (editableTask.location || '')} 
+                                onChange={e => handleLocationChange(e.target.value)} 
+                                className="w-full bg-transparent text-lg font-bold focus:outline-none"
+                                style={{ color: textColor }}
+                                placeholder={editableTask.isVirtual ? 'https://...' : 'Add address'}
+                            />
+                            {locationSuggestions.length > 0 && !editableTask.isVirtual && (
+                                <div 
+                                    className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-lg z-10"
+                                    style={{ backgroundColor: categoryColor }}
+                                >
+                                    {locationSuggestions.slice(0, 3).map((suggestion, index) => (
+                                        <button 
+                                            key={index} 
+                                            type="button" 
+                                            onClick={() => handleLocationSuggestionClick(suggestion)} 
+                                            className="w-full text-left p-2 text-sm transition-colors"
+                                            style={{ 
+                                                backgroundColor: 'rgba(0,0,0,0.05)',
+                                                borderBottom: index < Math.min(locationSuggestions.length, 3) - 1 ? '1px solid rgba(0,0,0,0.1)' : 'none'
+                                            }}
+                                        >
+                                            <div className="font-medium">{suggestion.place_name}</div>
+                                            <div className="text-xs opacity-70">{suggestion.address}</div>
+                                        </button>
+                                    ))}
                                 </div>
-                                <EditableRow icon={FlagIcon} label="Priority">
-                                    <PrioritySelector
-                                        value={editableTask.priority || 'medium'}
-                                        onChange={(p) => handleFieldChange('priority', p)}
-                                    />
-                                </EditableRow>
+                            )}
+                        </div>
+
+                        {/* Priority */}
+                        <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                            <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-2 text-sm">
+                                <FlagIcon className="w-4 h-4"/> Priority
+                            </label>
+                            <PrioritySelector
+                                value={editableTask.priority || 'medium'}
+                                onChange={(p) => handleFieldChange('priority', p)}
+                                textColor={textColor}
+                            />
+                        </div>
+
+                        {/* Notes and Connections */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                                <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
+                                    <DocumentTextIcon className="w-4 h-4"/> Notes
+                                </label>
+                                <textarea 
+                                    value={editableTask.notes || ''} 
+                                    onChange={e => handleFieldChange('notes', e.target.value)} 
+                                    rows={2} 
+                                    className="w-full bg-transparent text-sm focus:outline-none resize-none"
+                                    style={{ color: textColor }}
+                                    placeholder="Quick details..."
+                                />
+                            </div>
+                            
+                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                                <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
+                                    <BriefcaseIcon className="w-4 h-4"/> Project
+                                </label>
+                                <select 
+                                    value={editableTask.projectId || ''} 
+                                    onChange={e => handleFieldChange('projectId', e.target.value ? parseInt(e.target.value) : undefined)} 
+                                    className="w-full bg-transparent text-sm font-bold focus:outline-none appearance-none"
+                                    style={{ color: textColor }}
+                                >
+                                    <option value="">No project</option>
+                                    {projects.map(p => (
+                                        <option key={p.id} value={p.id} className="text-black bg-white">
+                                            {p.title}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
-                         <div>
-                            <h4 className="font-semibold text-xs text-text-secondary mb-1 uppercase tracking-wider">Connections</h4>
-                            <div className="space-y-1.5">
-                                <EditableRow icon={BriefcaseIcon} label="Project">
-                                    <select value={editableTask.projectId || ''} onChange={e => handleFieldChange('projectId', e.target.value ? parseInt(e.target.value) : undefined)} className="bg-transparent text-right font-semibold focus:outline-none appearance-none pr-1">
-                                        <option value="">None</option>
-                                        {projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-                                    </select>
-                                </EditableRow>
-                                <EditableRow icon={DocumentTextIcon} label="Notebook">
-                                    <select value={editableTask.notebookId || ''} onChange={e => handleFieldChange('notebookId', e.target.value ? parseInt(e.target.value) : undefined)} className="bg-transparent text-right font-semibold focus:outline-none appearance-none pr-1">
-                                        <option value="">None</option>
-                                        {notebooks.map(n => <option key={n.id} value={n.id}>{n.title}</option>)}
-                                    </select>
-                                </EditableRow>
-                            </div>
+
+                        {/* Notebook */}
+                        <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                            <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
+                                <DocumentTextIcon className="w-4 h-4"/> Notebook
+                            </label>
+                            <select 
+                                value={editableTask.notebookId || ''} 
+                                onChange={e => handleFieldChange('notebookId', e.target.value ? parseInt(e.target.value) : undefined)} 
+                                className="w-full bg-transparent text-sm font-bold focus:outline-none appearance-none"
+                                style={{ color: textColor }}
+                            >
+                                <option value="" className="text-black bg-white">No notebook</option>
+                                {notebooks.map(n => (
+                                    <option key={n.id} value={n.id} className="text-black bg-white">
+                                        {n.title}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
+                    {/* AI Insights */}
                     <AnimatePresence>
                         {task.insights && (
                             <motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
                                 exit={{ opacity: 0, height: 0 }}
-                                className="mt-6"
+                                className="mt-4"
                             >
-                                <h3 className="font-semibold mb-2">AI Insights</h3>
-                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                                <h3 className="font-bold mb-3 text-lg opacity-90">AI Insights</h3>
+                                <div className="grid grid-cols-2 gap-3">
                                     {task.insights.widgets.map((widget, index) => (
                                         <InsightWidget key={index} widget={widget} />
                                     ))}
@@ -489,14 +632,42 @@ function EventDetail({ task, allTasks, updateTask, onComplete, onClose, categori
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </main>
 
-                <footer className="p-4 flex-shrink-0 border-t border-gray-200 dark:border-zinc-700 z-10 bg-white dark:bg-zinc-800/50 flex justify-between items-center rounded-b-3xl">
-                    <button onClick={handleDeleteTask} className="text-red-500 font-semibold text-sm px-4 py-2 rounded-lg hover:bg-red-500/10">Delete Task</button>
-                    <button onClick={handleSave} className="bg-accent text-white px-6 py-3 rounded-full font-semibold text-sm hover:bg-accent-hover transition-colors">
-                        Save Changes
-                    </button>
-                </footer>
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-6">
+                        <button 
+                            onClick={handleDeleteTask} 
+                            className="px-4 py-3 rounded-2xl text-lg font-bold transition-colors"
+                            style={{ 
+                                backgroundColor: 'rgba(255,0,0,0.2)',
+                                color: textColor 
+                            }}
+                        >
+                            Delete
+                        </button>
+                        <button 
+                            onClick={onComplete} 
+                            className="flex-1 py-3 px-4 rounded-2xl text-lg font-bold transition-colors flex items-center justify-center gap-2"
+                            style={{ 
+                                backgroundColor: 'rgba(0,255,0,0.2)',
+                                color: textColor 
+                            }}
+                        >
+                            <CheckCircleIcon className="w-5 h-5"/>
+                            Complete
+                        </button>
+                        <button 
+                            onClick={handleSave} 
+                            className="flex-1 py-3 px-4 rounded-2xl text-lg font-bold transition-colors"
+                            style={{ 
+                                backgroundColor: 'rgba(255,255,255,0.2)',
+                                color: textColor 
+                            }}
+                        >
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
             </motion.div>
         </div>
     );

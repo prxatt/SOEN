@@ -435,8 +435,8 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
                                     <DocumentTextIcon className="w-4 h-4"/> Link Notes
                                 </label>
                                 <select 
-                                    value={taskDetails.linkedNote || ''} 
-                                    onChange={e => setTaskDetails({...taskDetails, linkedNote: e.target.value || undefined})} 
+                                    value={taskDetails.linkedNoteId || ''} 
+                                    onChange={e => setTaskDetails({...taskDetails, linkedNoteId: e.target.value ? parseInt(e.target.value, 10) : undefined})} 
                                     className="w-full bg-transparent text-sm font-bold focus:outline-none appearance-none"
                                     style={{ color: textColor }}
                                 >

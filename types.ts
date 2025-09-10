@@ -50,6 +50,18 @@ export interface Notebook {
   color: string;
 }
 
+export interface NoteAttachment {
+    id: string;
+    type: 'image' | 'pdf';
+    name: string;
+    url: string; // data URL
+    // For interactive elements
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+}
+
 export interface Note {
   id: number;
   notebookId: number;
@@ -57,14 +69,9 @@ export interface Note {
   content: string;
   createdAt: Date;
   updatedAt: Date;
-  archived: boolean;
   flagged: boolean;
   tags: string[];
-  attachment?: {
-    name: string;
-    url: string; // data URL
-    mimeType: string;
-  };
+  attachments?: NoteAttachment[];
   deletedAt?: Date;
 }
 
@@ -276,3 +283,4 @@ export interface RewardItem {
 }
 
 export type ScheduleView = 'today' | 'month';
+export type NoteView = 'grid' | 'list' | 'board';

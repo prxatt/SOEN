@@ -16,6 +16,7 @@ interface DashboardProps {
   setFocusTask: (task: Task) => void;
   dailyCompletionImage: string | null;
   categoryColors: Record<Category, string>;
+  isBriefingLoading: boolean;
 }
 
 const containerVariants = {
@@ -32,7 +33,6 @@ interface MetricCardProps {
   metric: { label: string; value: string; icon: string };
 }
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function MetricCard({ metric }: MetricCardProps) {
     const Icon = (Icons as any)[metric.icon] || SparklesIcon;
     return (
@@ -51,7 +51,6 @@ interface StrategicInsightsProps {
   categoryColors: Record<Category, string>;
 }
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function StrategicInsights({ briefing, categoryColors }: StrategicInsightsProps) {
     return (
         <div className="card p-4 rounded-2xl">
@@ -78,7 +77,6 @@ interface DailyRewardProps {
   imageUrl: string;
 }
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function DailyReward({ imageUrl }: DailyRewardProps) {
     const handleDownload = () => {
         const link = document.createElement('a');
@@ -111,8 +109,7 @@ function DailyReward({ imageUrl }: DailyRewardProps) {
 };
 
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function Dashboard({ tasks, healthData, briefing, goals, setFocusTask, dailyCompletionImage, categoryColors }: DashboardProps) {
+function Dashboard({ tasks, healthData, briefing, goals, setFocusTask, dailyCompletionImage, categoryColors, isBriefingLoading }: DashboardProps) {
 
     const todaysTasks = tasks.filter(t => new Date(t.startTime).toDateString() === new Date().toDateString());
     const upcomingTask = todaysTasks.find(t => t.status !== TaskStatus.Completed && new Date(t.startTime) > new Date());
@@ -131,8 +128,11 @@ function Dashboard({ tasks, healthData, briefing, goals, setFocusTask, dailyComp
 
       {/* Mission Briefing */}
       <motion.div variants={itemVariants} className="card p-4 rounded-2xl">
-        <h3 className="text-lg font-bold font-display text-accent flex items-center gap-2"><SparklesIcon className="w-5 h-5"/> {briefing.title}</h3>
-        <p className="text-sm mt-1 mb-4">{briefing.summary}</p>
+        <h3 className="text-lg font-bold font-display text-accent flex items-center gap-2">
+          <SparklesIcon className={`w-5 h-5 ${isBriefingLoading ? 'animate-pulse' : ''}`}/> 
+          {isBriefingLoading ? "Connecting to Praxis AI..." : briefing.title}
+        </h3>
+        <p className="text-sm mt-1 mb-4">{isBriefingLoading ? "Stand by, syncing with Kiko to generate your daily intelligence report..." : briefing.summary}</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {briefing.metrics.map(metric => <MetricCard key={metric.label} metric={metric} />)}
         </div>

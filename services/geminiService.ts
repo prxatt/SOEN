@@ -124,7 +124,8 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
         return JSON.parse(jsonString);
     } catch (e) {
         console.error("Error in generateActionableInsights:", e);
-        return null;
+        // Throw the error to be caught by the kiko orchestrator
+        throw e;
     }
 };
 

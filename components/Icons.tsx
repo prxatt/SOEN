@@ -462,7 +462,7 @@ export const ItalicIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
         height={size}
         {...props}
     >
-        <path d="M19 4h-9m4 16H5m7-16l-4 16"></path>
+        <line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line>
     </svg>
 );
 
@@ -526,7 +526,7 @@ export const PhotoIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
         height={size}
         {...props}
     >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 017.5 0z" />
     </svg>
 );
 
@@ -572,7 +572,7 @@ export const Cog6ToothIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
         height={size}
         {...props}
     >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.26.716.53 1.003l.867.867c.27.27.63.424 1.003.53l1.28.213c.542.09.94.56.94 1.11v2.594c0 .55-.398 1.02-.94 1.11l-1.28.213c-.374.063-.716.26-1.003.53l-.867.867c-.27.27-.424.63-.53 1.003l-.213 1.28c-.09.542-.56.94-1.11.94h-2.593c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.26-.716-.53-1.003l-.867-.867c-.27-.27-.63-.424-1.003-.53l-1.28-.213c-.542-.09-.94-.56-.94-1.11v-2.594c0 .55.398 1.02.94 1.11l1.28-.213c.374-.063.716-.26 1.003-.53l.867-.867c.27.27.424-.63.53-1.003l.213-1.28z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.26.716.53 1.003l.867.867c.27.27.63.424 1.003.53l1.28.213c.542.09.94.56.94 1.11v2.594c0 .55-.398 1.02-.94 1.11l-1.28.213c-.374.063-.716.26-1.003.53l-.867.867c-.27.27-.424.63-.53 1.003l-.213 1.28c-.09.542-.56.94-1.11.94h-2.593c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.26-.716-.53-1.003l-.867-.867c-.27-.27-.63-.424-1.003-.53l-1.28-.213c-.542.09-.94-.56-.94-1.11v-2.594c0 .55.398 1.02.94 1.11l1.28-.213c.374-.063.716-.26 1.003-.53l.867-.867c.27.27.424-.63.53-1.003l.213-1.28z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
 );
@@ -1063,6 +1063,18 @@ export const EllipsisHorizontalIcon: React.FC<IconProps> = ({ size = 24, ...prop
     </svg>
 );
 
+export const SortAscendingIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width={size} height={size} {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12" />
+    </svg>
+);
+
+export const SortDescendingIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width={size} height={size} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25.75L17.25 18m0 0L21 15.25M17.25 18V6" />
+    </svg>
+);
+
 // Task and Productivity Icons
 export const ClipboardIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     <svg 
@@ -1124,6 +1136,36 @@ export const PencilIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
     </svg>
 );
+
+export const TagIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+    </svg>
+);
+
+export const Squares2X2Icon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width={size} height={size} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+    </svg>
+);
+
+
+export const ViewColumnsIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width={size} height={size} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125a1.125 1.125 0 00-1.125 1.125v12.75c0 .621.504 1.125 1.125 1.125z" />
+    </svg>
+);
+
 
 // Layout Components Export
 export default {
@@ -1224,17 +1266,24 @@ export default {
     Bars3Icon,
     EllipsisVerticalIcon,
     EllipsisHorizontalIcon,
+    Squares2X2Icon,
+    ViewColumnsIcon,
     
     // Productivity
     ClipboardIcon,
     StarIcon,
     BookmarkIcon,
     PencilIcon,
+    TagIcon,
     
     // Text formatting
     BoldIcon,
     ItalicIcon,
     UnderlineIcon,
     ListBulletIcon,
-    ListOrderedIcon
+    ListOrderedIcon,
+
+    // Sorting
+    SortAscendingIcon,
+    SortDescendingIcon
 };

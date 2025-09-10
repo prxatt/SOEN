@@ -22,6 +22,8 @@ export interface Task {
   notes?: string;
   projectId?: number;
   notebookId?: number;
+  // FIX: Add linkedNoteId to allow tasks to be associated with a specific note.
+  linkedNoteId?: number;
   isVirtual?: boolean;
   location?: string;
   linkedUrl?: string;
@@ -54,10 +56,15 @@ export interface Note {
   title: string;
   content: string;
   createdAt: Date;
+  updatedAt: Date;
   archived: boolean;
   flagged: boolean;
   tags: string[];
-  imageUrl?: string;
+  attachment?: {
+    name: string;
+    url: string; // data URL
+    mimeType: string;
+  };
 }
 
 export interface Insight {

@@ -1,9 +1,32 @@
-
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Note, Notebook, Insight, ActionItem } from '../types';
+import { Note, Notebook } from '../types';
 import { kikoRequest } from '../services/kikoAIService';
-import { PlusCircleIcon, TrashIcon, ChatBubbleLeftEllipsisIcon, SparklesIcon, ChevronDownIcon, ArchiveBoxIcon, FlagIcon, XMarkIcon, DocumentPlusIcon, DocumentIcon, BriefcaseIcon, BoldIcon, ItalicIcon, UnderlineIcon, ListBulletIcon, ListOrderedIcon, PhotoIcon, DocumentTextIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from './Icons';
+import { PRESET_COLORS } from '../constants';
+import { 
+    PlusIcon, 
+    TrashIcon, 
+    SparklesIcon, 
+    ArchiveBoxIcon, 
+    FlagIcon, 
+    XMarkIcon, 
+    DocumentPlusIcon, 
+    DocumentIcon, 
+    PhotoIcon, 
+    DocumentTextIcon, 
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    EllipsisVerticalIcon,
+    StarIcon,
+    MagnifyingGlassIcon,
+    BookOpenIcon,
+    PencilIcon,
+    LightBulbIcon,
+    ArrowsPointingOutIcon,
+    ArrowsPointingInIcon,
+} from './Icons';
+
+// --- UTILITY FUNCTIONS ---
 
 function debounce<T extends (...args: any[]) => any>(func: T, delay: number): (...args: Parameters<T>) => void {
     let timeoutId: number | undefined;
@@ -13,13 +36,22 @@ function debounce<T extends (...args: any[]) => any>(func: T, delay: number): (.
     };
 }
 
-interface LightweightEditorProps {
+const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
+    if (!hexColor || !hexColor.startsWith('#')) return 'black';
+    const r = parseInt(hexColor.slice(1, 3), 16);
+    const g = parseInt(hexColor.slice(3, 5), 16);
+    const b = parseInt(hexColor.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? 'black' : 'white';
+};
+
+// --- EDITOR COMPONENT ---
+
+function LightweightEditor({ content, onChange, textColor }: {
   content: string;
   onChange: (newContent: string) => void;
-}
-
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function LightweightEditor({ content, onChange }: LightweightEditorProps) {
+  textColor: string;
+}) {
     const editorRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -38,466 +70,676 @@ function LightweightEditor({ content, onChange }: LightweightEditorProps) {
         ref={editorRef}
         contentEditable
         onInput={handleInput}
-        className="w-full h-full p-4 focus:outline-none overflow-y-auto prose prose-sm sm:prose-base dark:prose-invert max-w-none"
+        className="w-full h-full p-6 focus:outline-none overflow-y-auto prose prose-lg prose-headings:font-display prose-headings:tracking-tight dark:prose-invert max-w-none"
+        style={{ color: textColor, '--tw-prose-body': textColor, '--tw-prose-headings': textColor, '--tw-prose-bold': textColor, '--tw-prose-links': textColor, '--tw-prose-bullets': textColor } as React.CSSProperties}
         aria-label="Note content"
       />
     );
-};
-
-interface EditorToolbarProps {
-  onCommand: (cmd: string) => void;
-  onAiCommand: (cmd: 'summarize' | 'expand' | 'findActionItems' | 'createTable' | 'generateProposal', fullNote: boolean) => void;
-  onChat: () => void;
-}
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function EditorToolbar({ onCommand, onAiCommand, onChat }: EditorToolbarProps) {
-    const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
-    const aiMenuRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (aiMenuRef.current && !aiMenuRef.current.contains(event.target as Node)) setIsAiMenuOpen(false);
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const TButton: React.FC<{onClick: () => void; children: React.ReactNode; title: string, 'aria-label': string}> = ({onClick, children, title, ...props}) => (
-      <button type="button" title={title} onMouseDown={(e) => { e.preventDefault(); onClick(); }} className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors hover:bg-bg dark:hover:bg-black/20 text-text-secondary`} {...props}>{children}</button>
-    );
-
-    return (
-        <div className="flex items-center gap-1 p-2 bg-card border-b border-border flex-wrap">
-            <TButton onClick={() => onCommand('bold')} title="Bold" aria-label="Bold"><BoldIcon className="w-5 h-5"/></TButton>
-            <TButton onClick={() => onCommand('italic')} title="Italic" aria-label="Italic"><ItalicIcon className="w-5 h-5"/></TButton>
-            <TButton onClick={() => onCommand('underline')} title="Underline" aria-label="Underline"><UnderlineIcon className="w-5 h-5"/></TButton>
-            <div className="w-px h-6 bg-border mx-1"></div>
-            <TButton onClick={() => onCommand('insertUnorderedList')} title="Bullet List" aria-label="Bullet list"><ListBulletIcon className="w-5 h-5"/></TButton>
-            <TButton onClick={() => onCommand('insertOrderedList')} title="Numbered List" aria-label="Numbered list"><ListOrderedIcon className="w-5 h-5"/></TButton>
-            <div className="w-px h-6 bg-border mx-1"></div>
-            <div className="relative" ref={aiMenuRef}>
-                 <button onClick={() => setIsAiMenuOpen(prev => !prev)} className="flex items-center gap-1.5 p-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm" aria-haspopup="true" aria-expanded={isAiMenuOpen}>
-                    <SparklesIcon className="w-5 h-5"/> Kiko <ChevronDownIcon className="w-4 h-4"/>
-                </button>
-                {isAiMenuOpen && (
-                    <div className="absolute top-full right-0 mt-1 w-48 bg-bg border border-border rounded-lg shadow-xl z-10 animate-fade-in-fast" role="menu">
-                        <button onClick={onChat} className="w-full text-left px-3 py-1.5 text-sm hover:bg-card" role="menuitem">Chat about selection</button>
-                        <div className="h-px bg-border my-1"></div>
-                        <button onClick={() => {onAiCommand('summarize', false); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-card" role="menuitem">Summarize selection</button>
-                        <button onClick={() => {onAiCommand('expand', false); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-card" role="menuitem">Expand selection</button>
-                        <button onClick={() => {onAiCommand('findActionItems', false); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-card" role="menuitem">Find action items</button>
-                        <div className="h-px bg-border my-1"></div>
-                        <button onClick={() => {onAiCommand('generateProposal', true); setIsAiMenuOpen(false);}} className="w-full text-left px-3 py-1.5 text-sm hover:bg-card" role="menuitem">Generate Proposal</button>
-                    </div>
-                )}
-            </div>
-        </div>
-    )
-};
-
-interface NewNoteModalProps {
-  onClose: () => void;
-  onCreate: (type: 'blank' | 'daily_planner' | 'case_study') => void;
 }
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function NewNoteModal({ onClose, onCreate }: NewNoteModalProps) {
-    return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in-fast p-4" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="new-note-title">
-            <div className="card rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4" onClick={e => e.stopPropagation()}>
-                <div className="flex justify-between items-start">
-                    <h2 id="new-note-title" className="text-xl font-bold font-display">Create New Note</h2>
-                    <button onClick={onClose} aria-label="Close modal" className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"><XMarkIcon className="w-6 h-6"/></button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button onClick={() => onCreate('blank')} className="flex flex-col items-center justify-center text-center p-6 bg-bg rounded-xl hover:ring-2 ring-accent transition-all border border-border">
-                        <DocumentIcon className="w-10 h-10 mb-2"/>
-                        <p className="font-semibold">Blank Note</p>
-                        <p className="text-xs text-text-secondary">Start from scratch.</p>
-                    </button>
-                    <button onClick={() => onCreate('daily_planner')} className="flex flex-col items-center justify-center text-center p-6 bg-bg rounded-xl hover:ring-2 ring-accent transition-all border border-border">
-                        <SparklesIcon className="w-10 h-10 mb-2 text-accent"/>
-                        <p className="font-semibold">AI Daily Planner</p>
-                        <p className="text-xs text-text-secondary">Let Kiko structure your day.</p>
-                    </button>
-                    <button onClick={() => onCreate('case_study')} className="flex flex-col items-center justify-center text-center p-6 bg-bg rounded-xl hover:ring-2 ring-accent transition-all border border-border">
-                        <BriefcaseIcon className="w-10 h-10 mb-2"/>
-                        <p className="font-semibold">Business Case Study</p>
-                        <p className="text-xs text-text-secondary">For clients and proposals.</p>
-                    </button>
-                     <div className="flex flex-col items-center justify-center text-center p-6 bg-bg rounded-xl opacity-50 cursor-not-allowed border border-border">
-                         <PhotoIcon className="w-10 h-10 mb-2"/>
-                         <p className="font-semibold">Visual Note</p>
-                         <p className="text-xs text-text-secondary">From image (soon).</p>
-                     </div>
-                </div>
-            </div>
-        </div>
-    );
-};
+// --- PROPS INTERFACE ---
 
 interface NotesProps {
     notes: Note[];
-    setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
     notebooks: Notebook[];
     setNotebooks: React.Dispatch<React.SetStateAction<Notebook[]>>;
-    addInsights: (newInsights: Insight[]) => void;
     updateNote: (note: Note) => void;
-    addTask: (title: string, notebookId: number) => void;
+    addNote: (title: string, content: string, notebookId: number) => Note;
+    deleteNote: (noteId: number) => void;
     startChatWithContext: (context: string) => void;
+    showToast: (message: string, action?: { label: string; onClick: () => void; }) => void;
     selectedNote: Note | null;
     setSelectedNote: (note: Note | null) => void;
     activeNotebookId: number | 'all' | 'flagged' | 'archived';
     setActiveNotebookId: (id: number | 'all' | 'flagged' | 'archived') => void;
 }
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function Notes({ notes, setNotes, notebooks, setNotebooks, addInsights, updateNote, addTask, startChatWithContext, selectedNote, setSelectedNote, activeNotebookId, setActiveNotebookId }: NotesProps) {
-    const [isNewNoteModalOpen, setIsNewNoteModalOpen] = useState(false);
-    const [isLoadingAI, setIsLoadingAI] = useState(false);
-    const editorContainerRef = useRef<HTMLDivElement>(null);
-    const [isFocusMode, setIsFocusMode] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+// --- MAIN COMPONENT ---
 
-    const filteredNotes = useMemo(() => {
+function Notes({ 
+    notes, notebooks, setNotebooks, 
+    updateNote, addNote, deleteNote, showToast,
+    selectedNote, setSelectedNote, 
+    activeNotebookId, setActiveNotebookId 
+}: NotesProps) {
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortMethod, setSortMethod] = useState<'updatedAt-newest' | 'updatedAt-oldest' | 'createdAt-newest' | 'createdAt-oldest' | 'title-az' | 'title-za'>('updatedAt-newest');
+    const [isNotebookModalOpen, setIsNotebookModalOpen] = useState(false);
+    const [editingNotebook, setEditingNotebook] = useState<Notebook | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isParsingTitle, setIsParsingTitle] = useState(false);
+    const [notebookToDelete, setNotebookToDelete] = useState<Notebook | null>(null);
+    const [isFullScreen, setIsFullScreen] = useState(false);
+    const [summary, setSummary] = useState<string | null>(null);
+    const [isSummarizing, setIsSummarizing] = useState(false);
+    const [isTagging, setIsTagging] = useState(false);
+
+
+    // --- NOTEBOOK & NOTE FILTERING/SORTING ---
+
+    const filteredAndSortedNotes = useMemo(() => {
         let filtered = notes;
-        if (activeNotebookId === 'all') {
-            filtered = notes.filter(n => !n.archived);
-        } else if (activeNotebookId === 'flagged') {
-            filtered = notes.filter(n => n.flagged && !n.archived);
-        } else if (activeNotebookId === 'archived') {
-            filtered = notes.filter(n => n.archived);
-        } else {
-            filtered = notes.filter(n => n.notebookId === activeNotebookId && !n.archived);
+        
+        if (activeNotebookId === 'all') filtered = notes.filter(n => !n.archived);
+        else if (activeNotebookId === 'flagged') filtered = notes.filter(n => n.flagged && !n.archived);
+        else if (activeNotebookId === 'archived') filtered = notes.filter(n => n.archived);
+        else filtered = notes.filter(n => n.notebookId === activeNotebookId && !n.archived);
+        
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(note => 
+                note.title.toLowerCase().includes(query) ||
+                (note.content && note.content.replace(/<[^>]*>?/gm, '').toLowerCase().includes(query)) ||
+                note.tags.some(tag => tag.toLowerCase().includes(query))
+            );
         }
-        return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    }, [notes, activeNotebookId]);
+        
+        return filtered.sort((a, b) => {
+            switch (sortMethod) {
+                case 'updatedAt-oldest':
+                    return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+                case 'createdAt-newest':
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                case 'createdAt-oldest':
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                case 'title-az':
+                    return a.title.localeCompare(b.title);
+                case 'title-za':
+                    return b.title.localeCompare(a.title);
+                case 'updatedAt-newest':
+                default:
+                    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+            }
+        });
+    }, [notes, activeNotebookId, searchQuery, sortMethod]);
 
     useEffect(() => {
-        if (filteredNotes.length > 0 && (!selectedNote || !filteredNotes.find(n => n.id === selectedNote.id))) {
-            setSelectedNote(filteredNotes[0]);
-        } else if (filteredNotes.length === 0) {
+        if (filteredAndSortedNotes.length > 0 && (!selectedNote || !filteredAndSortedNotes.find(n => n.id === selectedNote.id))) {
+            setSelectedNote(filteredAndSortedNotes[0]);
+        } else if (filteredAndSortedNotes.length === 0) {
             setSelectedNote(null);
         }
-    }, [filteredNotes, selectedNote, setSelectedNote]);
-    
-    const handleCreateNote = async (type: 'blank' | 'daily_planner' | 'case_study') => {
-        setIsNewNoteModalOpen(false);
-        const defaultNotebookId = notebooks[0]?.id || 1;
-        let newNote: Note;
+    }, [filteredAndSortedNotes, selectedNote, setSelectedNote]);
 
-        if (type === 'blank') {
-            newNote = {
-                id: Date.now(),
-                notebookId: defaultNotebookId,
-                title: 'Untitled Note',
-                content: '<p>Start writing...</p>',
-                createdAt: new Date(),
-                archived: false, flagged: false, tags: [],
-            };
-        } else {
-            setIsLoadingAI(true);
-            const { data: templateContent } = await kikoRequest('generate_note_from_template', { type });
-            setIsLoadingAI(false);
-            if (!templateContent) {
-                // handle error, maybe show toast
-                console.error("Failed to generate note from template.");
-                return;
-            }
-            if (type === 'daily_planner') {
-                const content = `<h2>Priorities</h2><ul>${templateContent.priorities.map((p:string) => `<li>${p}</li>`).join('')}</ul><h2>Schedule</h2><ul>${templateContent.schedule.map((s:{time:string, task:string}) => `<li><strong>${s.time}:</strong> ${s.task}</li>`).join('')}</ul><h2>Mindfulness Moment</h2><p>${templateContent.mindfulness_moment}</p><hr><h2>Notes</h2><p>${templateContent.notes}</p>`;
-                newNote = {
-                    id: Date.now(), notebookId: defaultNotebookId, title: `Daily Plan - ${new Date().toLocaleDateString()}`, content,
-                    createdAt: new Date(), archived: false, flagged: false, tags: ['ai', 'planner'],
-                };
-            } else { // case_study
-                 newNote = {
-                    id: Date.now(), notebookId: defaultNotebookId, title: templateContent.title, content: templateContent.content,
-                    createdAt: new Date(), archived: false, flagged: false, tags: ['casestudy', 'template'],
-                };
-            }
+    // --- NOTEBOOK CRUD ---
+
+    const handleSaveNotebook = (title: string, color: string) => {
+        if (!title.trim()) {
+            showToast("Notebook title cannot be empty.");
+            return;
         }
-        setNotes(prev => [newNote, ...prev]);
-        setSelectedNote(newNote);
+        if (editingNotebook) { // Editing existing notebook
+            setNotebooks(prev => prev.map(nb => nb.id === editingNotebook.id ? { ...nb, title, color } : nb));
+            showToast(`Notebook "${title}" updated.`);
+        } else { // Creating new notebook
+            const newNotebook: Notebook = { id: Date.now(), title, color };
+            setNotebooks(prev => [...prev, newNotebook]);
+            setActiveNotebookId(newNotebook.id);
+            showToast(`Notebook "${title}" created.`);
+        }
+        setIsNotebookModalOpen(false);
+        setEditingNotebook(null);
     };
 
-    const handleDeleteNote = (noteId: number) => {
-        setNotes(prev => prev.filter(note => note.id !== noteId));
-        if (selectedNote?.id === noteId) {
-            setSelectedNote(null);
+    const handleDeleteNotebook = (notebookId: number) => {
+        const notebook = notebooks.find(nb => nb.id === notebookId);
+        if (notebook) {
+            setNotebookToDelete(notebook);
         }
+    };
+    
+    const confirmDeleteNotebook = () => {
+        if (!notebookToDelete) return;
+        
+        setNotebooks(prev => prev.filter(nb => nb.id !== notebookToDelete.id));
+        const notesInNotebook = notes.filter(n => n.notebookId === notebookToDelete.id);
+        notesInNotebook.forEach(note => {
+            if (selectedNote?.id === note.id) {
+                setSelectedNote(null);
+            }
+        });
+        
+        showToast(`Notebook "${notebookToDelete.title}" deleted.`);
+        if (activeNotebookId === notebookToDelete.id) {
+            setActiveNotebookId('all');
+        }
+        
+        setNotebookToDelete(null);
+    };
+
+    // --- NOTE CRUD & ACTIONS ---
+
+    const handleCreateNote = () => {
+        const currentNotebookId = (typeof activeNotebookId === 'number') ? activeNotebookId : notebooks[0]?.id;
+        if (!currentNotebookId) {
+            showToast("Create a notebook before adding notes.", { label: "New Notebook", onClick: () => setIsNotebookModalOpen(true) });
+            return;
+        }
+        const newNote = addNote('Untitled Note', '<p></p>', currentNotebookId);
+        setSelectedNote(newNote);
     };
     
     const debouncedUpdateNote = useCallback(debounce(updateNote, 500), [updateNote]);
 
-    const handleNoteContentChange = (newContent: string) => {
+    const handleNoteChange = (field: 'title' | 'content', value: string) => {
         if (selectedNote) {
-            const updated: Note = {...selectedNote, content: newContent};
+            const updated = { ...selectedNote, [field]: value, updatedAt: new Date() };
             setSelectedNote(updated);
             debouncedUpdateNote(updated);
+            if (field === 'title' && value.includes('/tags')) {
+                handleAiTitleParse(value);
+            }
         }
     };
 
-    const handleNoteTitleChange = (newTitle: string) => {
-        if (selectedNote) {
-            const updated: Note = {...selectedNote, title: newTitle};
-            setSelectedNote(updated);
-            debouncedUpdateNote(updated);
+    const handleAiTitleParse = useCallback(debounce(async (title: string) => {
+        if (!selectedNote) return;
+        setIsParsingTitle(true);
+        try {
+            const {data: tags} = await kikoRequest('generate_note_tags', { title, content: selectedNote.content });
+            if (tags && tags.length > 0) {
+                const newTitle = title.replace(/\/tags/g, '').trim();
+                const updatedNote = { ...selectedNote, title: newTitle, tags: [...new Set([...selectedNote.tags, ...tags])] };
+                updateNote(updatedNote); // Update immediately, not debounced
+                setSelectedNote(updatedNote);
+                showToast(`Added tags: ${tags.join(', ')}`);
+            }
+        } catch (e) {
+            console.error("Error generating tags:", e);
+            showToast("Kiko couldn't generate tags for this note.");
+        } finally {
+            setIsParsingTitle(false);
         }
-    }
+    }, 1500), [selectedNote, updateNote, showToast]);
+    
+    const handleToggleFlag = () => {
+        if (selectedNote) updateNote({ ...selectedNote, flagged: !selectedNote.flagged });
+    };
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleToggleArchive = () => {
+        if (selectedNote) {
+            const isArchiving = !selectedNote.archived;
+            const updated = { ...selectedNote, archived: isArchiving };
+            updateNote(updated);
+            setSelectedNote(null); // Deselect after archiving/unarchiving
+            showToast(isArchiving ? "Note archived." : "Note restored from archive.");
+        }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0] && selectedNote) {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onloadend = () => {
-                const updatedNote = { ...selectedNote, imageUrl: reader.result as string };
+                const updatedNote = { ...selectedNote, attachment: { name: file.name, url: reader.result as string, mimeType: file.type } };
                 updateNote(updatedNote);
+                setSelectedNote(updatedNote);
             };
             reader.readAsDataURL(file);
         }
     };
 
-    const handleAnalyzeImage = async () => {
-        if (!selectedNote || !selectedNote.imageUrl) return;
-
-        setIsLoadingAI(true);
+    const handleSummarize = async () => {
+        if (!selectedNote || !selectedNote.content) {
+            showToast("Note is empty, nothing to summarize.");
+            return;
+        }
+        setIsSummarizing(true);
         try {
-            const [header, base64] = selectedNote.imageUrl.split(',');
-            const mimeTypeMatch = header.match(/:(.*?);/);
-            const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/png';
-
-            if (!base64 || !mimeType) throw new Error("Invalid image URL format");
-
-            const result = await kikoRequest('analyze_image', {
-                base64,
-                mimeType,
-                prompt: "Analyze this image in detail. Describe the objects, setting, mood, and potential significance."
-            });
-            
-            const analysisText = result.data;
-            const newContent = `${selectedNote.content}<hr><h3>Image Analysis</h3><p>${analysisText}</p>`;
-            handleNoteContentChange(newContent);
-
-        } catch (error) {
-            console.error("Image analysis failed", error);
-            // TODO: show toast with error
+            const contentToSummarize = selectedNote.content.replace(/<[^>]*>?/gm, ''); // Strip HTML
+            const { data: summaryText } = await kikoRequest('generate_note_text', { instruction: 'summarize', text: contentToSummarize });
+            setSummary(summaryText);
+        } catch (e) {
+            console.error("Error generating summary:", e);
+            showToast("Kiko couldn't generate a summary for this note.");
         } finally {
-            setIsLoadingAI(false);
+            setIsSummarizing(false);
         }
     };
-    
-    const handleGenerateTags = async () => {
-        if (!selectedNote) return;
-        setIsLoadingAI(true);
-        try {
-            const result = await kikoRequest('generate_note_tags', {
-                title: selectedNote.title,
-                content: selectedNote.content,
-            });
 
-            if (result.data && Array.isArray(result.data)) {
-                // Merge with existing tags, removing duplicates
-                const newTags = [...new Set([...selectedNote.tags, ...result.data])];
-                const updatedNote = { ...selectedNote, tags: newTags };
+    const handleAutoTag = async () => {
+        if (!selectedNote) return;
+        setIsTagging(true);
+        try {
+            const { data: newTags } = await kikoRequest('generate_note_tags', { title: selectedNote.title, content: selectedNote.content });
+            if (newTags && newTags.length > 0) {
+                const updatedTags = [...new Set([...(selectedNote.tags || []), ...newTags])];
+                const updatedNote = { ...selectedNote, tags: updatedTags };
                 updateNote(updatedNote);
+                setSelectedNote(updatedNote);
+                showToast(`Added tags: ${newTags.join(', ')}`);
+            } else {
+                showToast("No new tags were found.");
             }
-        } catch (error) {
-            console.error("Error generating tags:", error);
-            // TODO: show a toast notification on error
+        } catch (e) {
+            console.error("Error generating tags:", e);
+            showToast("Kiko couldn't generate tags for this note.");
         } finally {
-            setIsLoadingAI(false);
+            setIsTagging(false);
         }
     };
 
     const handleRemoveTag = (tagToRemove: string) => {
         if (selectedNote) {
-            const newTags = selectedNote.tags.filter(tag => tag !== tagToRemove);
-            const updatedNote = { ...selectedNote, tags: newTags };
-            setSelectedNote(updatedNote); // Immediate UI update
-            updateNote(updatedNote); // Update parent state
+            const updatedTags = selectedNote.tags.filter(t => t !== tagToRemove);
+            const updatedNote = { ...selectedNote, tags: updatedTags };
+            updateNote(updatedNote);
+            setSelectedNote(updatedNote);
         }
     };
 
-    const handleAICommand = async (command: 'summarize' | 'expand' | 'findActionItems' | 'createTable' | 'generateProposal', fullNote: boolean) => {
-        if (!selectedNote) return;
-        const selection = window.getSelection();
-        const textToProcess = (fullNote || !selection || selection.toString().trim().length === 0) 
-            ? selectedNote.content.replace(/<[^>]*>?/gm, '')
-            : selection.toString();
-        
-        if (!textToProcess) return;
+    const selectedNotebook = notebooks.find(nb => nb.id === selectedNote?.notebookId);
+    const editorColor = selectedNotebook?.color || '#374151';
+    const editorTextColor = getTextColorForBackground(editorColor);
 
-        setIsLoadingAI(true);
-        const result = await kikoRequest('generate_note_text', {
-            instruction: command,
-            text: textToProcess,
-            noteContent: command === 'generateProposal' ? selectedNote.content : undefined
-        });
-        setIsLoadingAI(false);
-
-        if (command === 'findActionItems' && Array.isArray(result.data)) {
-            result.data.forEach(item => addTask((item as ActionItem).title, selectedNote.notebookId));
-            // Maybe show toast here
-        } else if (typeof result.data === 'string') {
-            const editor = editorContainerRef.current?.querySelector('[contenteditable]');
-            if (editor) {
-                if (selection && selection.rangeCount > 0 && selection.toString().trim().length > 0) {
-                     const range = selection.getRangeAt(0);
-                     range.deleteContents();
-                     range.insertNode(document.createTextNode(result.data));
-                } else {
-                    const newContent = `${selectedNote.content}<hr><p><strong>${command.toUpperCase()}:</strong></p><p>${result.data}</p>`;
-                    handleNoteContentChange(newContent);
-                }
-            }
-        }
-    };
-
-    const handleEditorCommand = (command: string) => {
-        document.execCommand(command, false);
-    };
-
-    const handleChatFromSelection = () => {
-        const selection = window.getSelection()?.toString().trim();
-        if (selection) {
-            startChatWithContext(`Let's talk about this selection from my notes: "${selection}"`);
-        }
-    };
-    
-    const NotebookItem: React.FC<{id: number | 'all' | 'flagged' | 'archived', icon: React.ReactNode, title: string, count?: number}> = ({id, icon, title, count}) => (
-        <button onClick={() => setActiveNotebookId(id)} className={`flex items-center justify-between w-full text-left px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeNotebookId === id ? 'bg-accent/10 text-accent' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>
-            <span className="flex items-center gap-2 truncate">{icon}{title}</span>
-            {count !== undefined && <span className="text-xs text-text-secondary">{count}</span>}
-        </button>
-    );
-
-    const NoteListItem: React.FC<{note: Note}> = ({note}) => (
-        <button onClick={() => setSelectedNote(note)} className={`block w-full text-left p-3 border-b border-border ${selectedNote?.id === note.id ? 'bg-accent/10' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>
-            <h4 className="font-semibold truncate">{note.title}</h4>
-            <p className="text-xs text-text-secondary truncate mt-1">{(note?.content || '').replace(/<[^>]*>?/gm, '')}</p>
-        </button>
-    );
-    
     return (
-        <div className="card rounded-2xl h-full flex overflow-hidden relative">
-             {isNewNoteModalOpen && <NewNoteModal onClose={() => setIsNewNoteModalOpen(false)} onCreate={handleCreateNote} />}
-             {isLoadingAI && <div className="absolute inset-0 bg-black/30 z-20 flex items-center justify-center text-white"><SparklesIcon className="w-6 h-6 animate-pulse"/></div>}
-            
+        <div className={`transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-40 h-screen !rounded-none bg-bg/50 backdrop-blur-md' : 'h-[calc(100vh-8rem)] rounded-3xl bg-card shadow-lg'} flex overflow-hidden`}>
             <AnimatePresence>
-            {!isFocusMode && (
-                <motion.aside 
-                    initial={{ width: 0, opacity: 0, padding: 0 }}
-                    animate={{ width: '25%', opacity: 1, padding: '0.75rem' }}
-                    exit={{ width: 0, opacity: 0, padding: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="max-w-[250px] border-r border-border flex-shrink-0 flex flex-col overflow-hidden"
-                >
-                    <div className="flex flex-col h-full">
-                        <h3 className="font-bold font-display px-2 mb-2 flex-shrink-0">Notebooks</h3>
-                        <div className="space-y-1 flex-shrink-0">
-                            <NotebookItem id="all" icon={<DocumentTextIcon className="w-5 h-5"/>} title="All Notes" count={notes.filter(n => !n.archived).length} />
-                            <NotebookItem id="flagged" icon={<FlagIcon className="w-5 h-5"/>} title="Flagged" count={notes.filter(n => n.flagged && !n.archived).length} />
-                        </div>
-                        <div className="my-2 border-t border-border flex-shrink-0"></div>
-                        <div className="space-y-1 flex-grow overflow-y-auto">
-                            {notebooks.map(nb => <NotebookItem key={nb.id} id={nb.id} icon={<div className="w-3 h-3 rounded-full" style={{backgroundColor: nb.color}}/>} title={nb.title} count={notes.filter(n => n.notebookId === nb.id && !n.archived).length}/>)}
-                        </div>
-                        <div className="mt-2 border-t border-border flex-shrink-0"></div>
-                        <div className="pt-2 flex-shrink-0">
-                            <NotebookItem id="archived" icon={<ArchiveBoxIcon className="w-5 h-5"/>} title="Archived" count={notes.filter(n => n.archived).length} />
-                        </div>
-                    </div>
-                </motion.aside>
-            )}
+                {isNotebookModalOpen && (
+                    <NotebookModal 
+                        onClose={() => { setIsNotebookModalOpen(false); setEditingNotebook(null); }}
+                        onSave={handleSaveNotebook}
+                        notebook={editingNotebook}
+                    />
+                )}
             </AnimatePresence>
             
             <AnimatePresence>
-            {!isFocusMode && (
-                 <motion.section 
-                    initial={{ width: 0, opacity: 0, padding: 0 }}
-                    animate={{ width: '33.33%', opacity: 1 }}
-                    exit={{ width: 0, opacity: 0, padding: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="max-w-[320px] border-r border-border flex flex-col"
-                >
-                    <div className="p-3 border-b border-border flex-shrink-0">
-                        <button onClick={() => setIsNewNoteModalOpen(true)} className="w-full flex items-center justify-center gap-2 text-sm font-semibold p-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors">
-                            <DocumentPlusIcon className="w-5 h-5"/> New Note
-                        </button>
-                    </div>
-                    <div className="overflow-y-auto flex-grow">
-                        {filteredNotes.map(note => <NoteListItem key={note.id} note={note}/>)}
-                    </div>
-                </motion.section>
-            )}
+                {notebookToDelete && (
+                    <ConfirmationModal
+                        title={`Delete "${notebookToDelete.title}"?`}
+                        message="This will permanently delete the notebook and all associated notes. This action cannot be undone."
+                        onConfirm={confirmDeleteNotebook}
+                        onCancel={() => setNotebookToDelete(null)}
+                    />
+                )}
             </AnimatePresence>
             
-             <section ref={editorContainerRef} className="flex-1 flex flex-col bg-bg">
-                 {selectedNote ? (
-                    <>
-                        <div className="p-3 border-b border-border flex-shrink-0">
-                             <div className="flex items-center">
-                                <input type="text" value={selectedNote.title} onChange={e => handleNoteTitleChange(e.target.value)} className="font-bold text-xl bg-transparent w-full focus:outline-none"/>
-                                <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-                                <button onClick={handleGenerateTags} disabled={isLoadingAI} className="p-2 rounded-full hover:bg-accent/20 disabled:opacity-50" title="Generate Tags with Kiko">
-                                    <SparklesIcon className="w-5 h-5 text-text-secondary"/>
-                                </button>
-                                <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-full hover:bg-accent/20" title="Attach Image"><PhotoIcon className="w-5 h-5 text-text-secondary"/></button>
-                                <button onClick={() => setIsFocusMode(!isFocusMode)} className="p-2 rounded-full hover:bg-accent/20" title={isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode"}>
-                                    {isFocusMode ? <ArrowsPointingInIcon className="w-5 h-5 text-text-secondary"/> : <ArrowsPointingOutIcon className="w-5 h-5 text-text-secondary"/>}
-                                </button>
-                                <button onClick={() => handleDeleteNote(selectedNote.id)} className="p-2 rounded-full hover:bg-red-500/10 text-text-secondary"><TrashIcon className="w-5 h-5"/></button>
-                             </div>
-                             {selectedNote.tags.length > 0 && (
-                                <div className="flex flex-wrap items-center gap-2 pt-2">
-                                    {selectedNote.tags.map(tag => (
-                                        <div key={tag} className="flex items-center gap-1 bg-accent/10 text-accent text-xs font-semibold px-2 py-1 rounded-full animate-fade-in-fast">
-                                            <span>{tag}</span>
-                                            <button onClick={() => handleRemoveTag(tag)} className="hover:text-red-500 rounded-full">
-                                                <XMarkIcon className="w-3 h-3"/>
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                             )}
+            <AnimatePresence>
+                {summary && !isSummarizing && (
+                    <SummaryModal summary={summary} onClose={() => setSummary(null)} showToast={showToast} />
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {!isSidebarCollapsed && !isFullScreen && (
+                    <motion.aside 
+                        initial={{ width: 0, opacity: 0, padding: 0 }}
+                        animate={{ width: 280, opacity: 1, padding: '0.5rem' }}
+                        exit={{ width: 0, opacity: 0, padding: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="flex-shrink-0 border-r border-border flex flex-col bg-bg/50"
+                    >
+                        <div className="p-2 flex items-center justify-between border-b border-border mb-1">
+                            <h3 className="font-bold font-display text-lg flex items-center gap-2">
+                                <BookOpenIcon className="w-5 h-5"/> Notebooks
+                            </h3>
+                            <button onClick={() => setIsSidebarCollapsed(true)} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10" title="Collapse sidebar">
+                                <ChevronLeftIcon className="w-5 h-5"/>
+                            </button>
                         </div>
-                        {selectedNote.imageUrl && (
-                            <div className="p-4 border-b border-border bg-bg/50">
-                                <div className="relative group max-w-xs mx-auto">
-                                    <img src={selectedNote.imageUrl} alt="Note attachment" className="rounded-lg shadow-md w-full object-contain" />
-                                    <button 
-                                        onClick={() => {
-                                            if (selectedNote) {
-                                                const updated = {...selectedNote, imageUrl: undefined};
-                                                updateNote(updated);
-                                            }
-                                        }}
-                                        className="absolute top-2 right-2 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
-                                        aria-label="Remove image"
-                                    >
-                                        <XMarkIcon className="w-4 h-4" />
+                        
+                        <div className="flex-1 overflow-y-auto space-y-1">
+                            <SidebarItem id="all" icon={<DocumentTextIcon className="w-5 h-5"/>} title="All Notes" count={notes.filter(n => !n.archived).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
+                            <SidebarItem id="flagged" icon={<StarIcon className="w-5 h-5"/>} title="Starred" count={notes.filter(n => n.flagged && !n.archived).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
+                            <div className="h-px bg-border my-2 mx-2"></div>
+                            {notebooks.map(nb => (
+                                <SidebarItem 
+                                    key={nb.id} id={nb.id} icon={<div className="w-3 h-3 rounded-full flex-shrink-0" style={{backgroundColor: nb.color}}/>} 
+                                    title={nb.title} count={notes.filter(n => n.notebookId === nb.id && !n.archived).length}
+                                    activeId={activeNotebookId} onClick={setActiveNotebookId} 
+                                    onEdit={() => { setEditingNotebook(nb); setIsNotebookModalOpen(true); }}
+                                    onDelete={() => handleDeleteNotebook(nb.id)}
+                                />
+                            ))}
+                            <div className="h-px bg-border my-2 mx-2"></div>
+                             <SidebarItem id="archived" icon={<ArchiveBoxIcon className="w-5 h-5"/>} title="Archived" count={notes.filter(n => n.archived).length} activeId={activeNotebookId} onClick={setActiveNotebookId} />
+                        </div>
+
+                        <div className="p-2 border-t border-border mt-1">
+                            <button onClick={() => { setEditingNotebook(null); setIsNotebookModalOpen(true); }} className="w-full flex items-center justify-center gap-2 text-sm font-semibold p-2 rounded-lg text-text-secondary hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                                <PlusIcon className="w-5 h-5"/> New Notebook
+                            </button>
+                        </div>
+                    </motion.aside>
+                )}
+            </AnimatePresence>
+
+            <main className="flex-1 flex min-w-0">
+                <AnimatePresence>
+                    {!isFullScreen && (
+                        <motion.section 
+                            initial={{ width: 0, opacity: 0, padding: 0 }}
+                            animate={{ width: 350, opacity: 1 }}
+                            exit={{ width: 0, opacity: 0, padding: 0 }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            className="w-[350px] flex-shrink-0 border-r border-border flex flex-col bg-card"
+                        >
+                            <div className="p-4 border-b border-border flex flex-col gap-3">
+                                <div className="flex items-center justify-between">
+                                    {isSidebarCollapsed && (
+                                        <button onClick={() => setIsSidebarCollapsed(false)} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10" title="Expand sidebar">
+                                            <ChevronRightIcon className="w-5 h-5"/>
+                                        </button>
+                                    )}
+                                    <h2 className="font-bold font-display text-lg">Notes</h2>
+                                    <button onClick={handleCreateNote} className="p-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors" title="New note">
+                                        <DocumentPlusIcon className="w-5 h-5"/>
                                     </button>
                                 </div>
-                                <div className="text-center mt-3">
-                                    <button onClick={handleAnalyzeImage} disabled={isLoadingAI} className="flex items-center gap-2 text-sm font-semibold py-2 px-4 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors mx-auto disabled:bg-gray-500">
-                                        <SparklesIcon className="w-5 h-5"/> Analyze with Kiko
-                                    </button>
+                                <div className="flex items-center gap-2">
+                                    <div className="relative flex-grow">
+                                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-secondary"/>
+                                        <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-bg border border-border rounded-lg text-sm focus:ring-2 focus:ring-accent" />
+                                    </div>
+                                    <select value={sortMethod} onChange={e => setSortMethod(e.target.value as any)} className="bg-bg border border-border rounded-lg text-sm p-2 focus:ring-2 focus:ring-accent appearance-none">
+                                        <option value="updatedAt-newest">Modified: Newest</option>
+                                        <option value="updatedAt-oldest">Modified: Oldest</option>
+                                        <option value="createdAt-newest">Created: Newest</option>
+                                        <option value="createdAt-oldest">Created: Oldest</option>
+                                        <option value="title-az">Title: A-Z</option>
+                                        <option value="title-za">Title: Z-A</option>
+                                    </select>
                                 </div>
                             </div>
-                        )}
-                        <EditorToolbar onCommand={handleEditorCommand} onAiCommand={handleAICommand} onChat={handleChatFromSelection} />
-                        <div className="relative flex-grow overflow-hidden">
-                           <LightweightEditor key={selectedNote.id} content={selectedNote.content} onChange={handleNoteContentChange} />
+                            <div className="flex-1 overflow-y-auto p-2">
+                                <AnimatePresence>
+                                    {filteredAndSortedNotes.map(note => (
+                                        <NoteListItem key={note.id} note={note} isSelected={selectedNote?.id === note.id} onClick={() => setSelectedNote(note)} notebooks={notebooks} />
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        </motion.section>
+                    )}
+                </AnimatePresence>
+                
+                <section className="flex-1 flex flex-col min-w-0 bg-bg">
+                    {selectedNote ? (
+                        <motion.div 
+                            key={selectedNote.id}
+                            layoutId={`editor-card-${selectedNote.id}`}
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                            className={`flex-1 flex flex-col transition-all duration-300 ${isFullScreen ? 'p-4 sm:p-8 m-auto max-w-4xl w-full h-full' : 'p-6 rounded-3xl m-3'}`}
+                            style={{ backgroundColor: editorColor }}
+                        >
+                            <div className="flex-shrink-0 flex items-start justify-between gap-4 mb-4">
+                                <div className="flex-1 relative">
+                                    <input 
+                                        type="text" 
+                                        value={selectedNote.title} 
+                                        onChange={e => handleNoteChange('title', e.target.value)} 
+                                        className="text-4xl font-bold font-display bg-transparent w-full focus:outline-none placeholder:opacity-50"
+                                        style={{ color: editorTextColor }}
+                                        placeholder="Note title..."
+                                    />
+                                    {isParsingTitle && <SparklesIcon className="w-5 h-5 absolute right-0 top-1/2 -translate-y-1/2 animate-pulse" style={{ color: editorTextColor }}/>}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <EditorIconButton onClick={handleSummarize} title="Summarize Note" textColor={editorTextColor} disabled={isSummarizing}>
+                                        <LightBulbIcon className={`w-5 h-5 ${isSummarizing ? 'animate-pulse' : ''}`}/>
+                                    </EditorIconButton>
+                                    <EditorIconButton onClick={handleAutoTag} title="Auto-tag Note" textColor={editorTextColor} disabled={isTagging}>
+                                        <SparklesIcon className={`w-5 h-5 ${isTagging ? 'animate-pulse' : ''}`}/>
+                                    </EditorIconButton>
+                                    <EditorIconButton onClick={() => setIsFullScreen(p => !p)} title={isFullScreen ? "Exit Full Screen" : "Full Screen"} textColor={editorTextColor}>
+                                        {isFullScreen ? <ArrowsPointingInIcon className="w-5 h-5"/> : <ArrowsPointingOutIcon className="w-5 h-5"/>}
+                                    </EditorIconButton>
+                                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,application/pdf" />
+                                    <EditorIconButton onClick={() => fileInputRef.current?.click()} title="Attach File" textColor={editorTextColor}><PhotoIcon className="w-5 h-5"/></EditorIconButton>
+                                    <EditorIconButton onClick={handleToggleFlag} title={selectedNote.flagged ? 'Unstar' : 'Star'} textColor={editorTextColor} active={selectedNote.flagged}><StarIcon className="w-5 h-5"/></EditorIconButton>
+                                    <EditorIconButton onClick={handleToggleArchive} title={selectedNote.archived ? 'Unarchive' : 'Archive'} textColor={editorTextColor}><ArchiveBoxIcon className="w-5 h-5"/></EditorIconButton>
+                                    <EditorIconButton onClick={() => deleteNote(selectedNote.id)} title="Delete Note" textColor={editorTextColor}><TrashIcon className="w-5 h-5"/></EditorIconButton>
+                                </div>
+                            </div>
+                            
+                            {selectedNote.tags && selectedNote.tags.length > 0 && (
+                                <TagsDisplay tags={selectedNote.tags} onRemove={handleRemoveTag} textColor={editorTextColor} />
+                            )}
+
+                            {selectedNote.attachment && (
+                                <AttachmentPreview
+                                    attachment={selectedNote.attachment}
+                                    onRemove={() => {
+                                        if (selectedNote) {
+                                            const updated = { ...selectedNote, attachment: undefined };
+                                            updateNote(updated);
+                                            setSelectedNote(updated);
+                                        }
+                                    }}
+                                    textColor={editorTextColor}
+                                />
+                            )}
+                            
+                            <div className="flex-1 bg-black/10 rounded-2xl overflow-hidden mt-4">
+                                <LightweightEditor key={selectedNote.id} content={selectedNote.content || ''} onChange={v => handleNoteChange('content', v)} textColor={editorTextColor} />
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <div className="flex-1 flex items-center justify-center text-center p-8">
+                             <div>
+                                <DocumentIcon className="w-16 h-16 text-text-secondary/30 mx-auto mb-4"/>
+                                <h3 className="text-lg font-semibold text-text-secondary mb-2">Select a note</h3>
+                                <p className="text-text-secondary/70 mb-6">Choose a note from the list or create a new one to begin.</p>
+                                <button onClick={handleCreateNote} className="inline-flex items-center gap-2 px-5 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors shadow-lg">
+                                    <DocumentPlusIcon className="w-5 h-5"/> Create New Note
+                                </button>
+                            </div>
                         </div>
-                    </>
-                 ) : (
-                    <div className="flex-grow flex items-center justify-center text-text-secondary">
-                        <p>Select a note to view or create a new one.</p>
-                    </div>
-                 )}
-            </section>
+                    )}
+                </section>
+            </main>
         </div>
     );
+}
+
+// --- SUB-COMPONENTS ---
+
+const SidebarItem = ({ id, icon, title, count, activeId, onClick, onEdit, onDelete }: {
+    id: number | 'all' | 'flagged' | 'archived';
+    icon: React.ReactNode;
+    title: string;
+    count?: number;
+    activeId: any;
+    onClick: (id: any) => void;
+    onEdit?: () => void;
+    onDelete?: () => void;
+}) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (ref.current && !ref.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [ref]);
+
+    return (
+        <button 
+            onClick={() => onClick(id)} 
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className={`flex items-center justify-between w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 group relative ${activeId === id ? 'bg-accent text-white shadow-md' : 'hover:bg-black/5 dark:hover:bg-white/10 text-text'}`}
+        >
+            <span className="flex items-center gap-3 truncate">
+                {icon}
+                <span className="font-semibold text-sm">{title}</span>
+            </span>
+            <div className="flex items-center gap-1">
+                {typeof id === 'number' && (isHovered || isMenuOpen) && (
+                    <motion.div initial={{opacity: 0, scale: 0.8}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0}}>
+                        <EllipsisVerticalIcon onClick={(e) => { e.stopPropagation(); setIsMenuOpen(p => !p); }} className="w-5 h-5 p-0.5 rounded-md hover:bg-black/10 dark:hover:bg-white/20"/>
+                    </motion.div>
+                )}
+                 {count !== undefined && (
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full transition-colors ${activeId === id ? 'bg-white/20' : 'bg-black/5 dark:bg-white/10'}`}>
+                        {count}
+                    </span>
+                )}
+            </div>
+            <AnimatePresence>
+                {isMenuOpen && typeof id === 'number' && (
+                    <motion.div ref={ref} initial={{opacity: 0, y: -10}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -10}} className="absolute right-0 top-10 w-32 bg-card border border-border rounded-lg shadow-xl z-10 p-1">
+                        <button onClick={(e) => { e.stopPropagation(); onEdit?.(); setIsMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-black/5 dark:hover:bg-white/10"><PencilIcon className="w-4 h-4"/> Edit</button>
+                        <button onClick={(e) => { e.stopPropagation(); onDelete?.(); setIsMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-red-500"><TrashIcon className="w-4 h-4"/> Delete</button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </button>
+    );
 };
+
+const NoteListItem = ({ note, isSelected, onClick, notebooks }: { note: Note; isSelected: boolean; onClick: () => void; notebooks: Notebook[] }) => {
+    const notebook = notebooks.find(nb => nb.id === note.notebookId);
+    const ref = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        if (isSelected) {
+            ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [isSelected]);
+
+    return (
+        <motion.button 
+            ref={ref}
+            layout
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClick} className={`block w-full text-left p-3 rounded-xl transition-all duration-200 ${isSelected ? 'bg-accent/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`
+        }>
+            <div className="flex items-start justify-between gap-2 mb-1">
+                <h4 className="font-semibold text-text truncate pr-4">{note.title}</h4>
+                {note.flagged && <StarIcon className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"/>}
+            </div>
+            <p className="text-sm text-text-secondary line-clamp-2 mb-2">
+                {(note.content || '').replace(/<[^>]*>?/gm, '')}
+            </p>
+            <div className="flex items-center justify-between text-xs text-text-secondary">
+                <span>{new Date(note.updatedAt).toLocaleDateString()}</span>
+                {notebook && <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{backgroundColor: notebook.color}}></div><span>{notebook.title}</span></div>}
+            </div>
+        </motion.button>
+    );
+};
+
+const EditorIconButton = ({ onClick, title, textColor, active = false, disabled = false, children }: { onClick: (e: React.MouseEvent) => void; title: string; textColor: string; active?: boolean; disabled?: boolean; children: React.ReactNode; }) => (
+    <button 
+        onClick={onClick} 
+        title={title} 
+        disabled={disabled}
+        className={`p-2 rounded-lg transition-colors ${active ? 'bg-black/20 text-amber-300' : 'hover:bg-black/10'} disabled:opacity-50 disabled:cursor-not-allowed`} 
+        style={{ color: active ? undefined : textColor }}
+    >
+        {children}
+    </button>
+);
+
+const AttachmentPreview = ({ attachment, onRemove, textColor }: {
+    attachment: Note['attachment'];
+    onRemove: () => void;
+    textColor: string;
+}) => {
+    if (!attachment) return null;
+    const isImage = attachment.mimeType.startsWith('image/');
+    const handleRemoveClick = (e: React.MouseEvent) => {
+        e.preventDefault(); e.stopPropagation(); onRemove();
+    };
+    return (
+        <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1, y:0}} className="relative group p-3 bg-black/10 rounded-2xl mt-4">
+            <a href={attachment.url} target="_blank" rel="noopener noreferrer" download={!isImage ? attachment.name : undefined} className="block cursor-pointer" title={`Open ${attachment.name} in new tab`}>
+                {isImage ? (
+                    <img src={attachment.url} alt={attachment.name} className="max-h-48 rounded-lg object-contain mx-auto" />
+                ) : (
+                    <div className="flex items-center gap-3 p-2 rounded-lg">
+                        <DocumentIcon className="w-8 h-8 flex-shrink-0 opacity-70" style={{color: textColor}}/>
+                        <div className="truncate"><p className="font-semibold truncate">{attachment.name}</p><p className="text-xs opacity-70">Click to open or download</p></div>
+                    </div>
+                )}
+            </a>
+            <button onClick={handleRemoveClick} title="Remove attachment" className="absolute top-1 right-1 p-1 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"><XMarkIcon className="w-4 h-4 text-white" /></button>
+        </motion.div>
+    );
+};
+
+const TagsDisplay = ({ tags, onRemove, textColor }: { tags: string[], onRemove: (tag: string) => void, textColor: string }) => (
+    <div className="flex flex-wrap gap-2 mt-3">
+        {tags.map(tag => (
+            <motion.div 
+                key={tag} layout
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full text-xs font-semibold"
+                style={{ backgroundColor: 'rgba(0,0,0,0.15)', color: textColor }}
+            >
+                <span>{tag}</span>
+                <button onClick={() => onRemove(tag)} className="p-0.5 rounded-full hover:bg-black/20"><XMarkIcon className="w-3 h-3"/></button>
+            </motion.div>
+        ))}
+    </div>
+);
+
+const SummaryModal = ({ summary, onClose, showToast }: { summary: string, onClose: () => void, showToast: (msg: string) => void }) => {
+    const handleCopy = () => {
+        navigator.clipboard.writeText(summary);
+        showToast("Summary copied to clipboard!");
+    };
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl p-6 border border-border" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-accent/20 rounded-full text-accent"><LightBulbIcon className="w-6 h-6"/></div>
+                    <h2 className="text-xl font-bold font-display text-text">Kiko's Summary</h2>
+                </div>
+                <div className="max-h-[50vh] overflow-y-auto pr-2 text-text-secondary prose dark:prose-invert">
+                    <p>{summary}</p>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                    <button onClick={handleCopy} className="px-4 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10">Copy</button>
+                    <button onClick={onClose} className="px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover">Close</button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+};
+
+const NotebookModal = ({ onClose, onSave, notebook }: { onClose: () => void; onSave: (title: string, color: string) => void; notebook: Notebook | null; }) => {
+    const [title, setTitle] = useState(notebook?.title || '');
+    const [color, setColor] = useState(notebook?.color || PRESET_COLORS[0]);
+    const [hexInput, setHexInput] = useState(notebook?.color || PRESET_COLORS[0]);
+    useEffect(() => { setHexInput(color); }, [color]);
+    const handleHexInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value; setHexInput(value);
+        if (/^#[0-9A-F]{6}$/i.test(value)) { setColor(value); }
+    };
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+                <h2 className="text-xl font-bold font-display mb-6">{notebook ? 'Edit Notebook' : 'New Notebook'}</h2>
+                <div className="space-y-5">
+                    <div><label className="block text-sm font-medium text-text-secondary mb-1">Title</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Notebook Title" className="w-full p-2 bg-bg border border-border rounded-lg" /></div>
+                    <div><label className="block text-sm font-medium text-text-secondary mb-2">Color</label><div className="grid grid-cols-7 gap-2 mb-3">{PRESET_COLORS.map(c => (<button key={c} type="button" onClick={() => setColor(c)} className={`w-full aspect-square rounded-full transition-transform hover:scale-110 ${color === c ? 'ring-2 ring-offset-2 ring-offset-card ring-accent' : ''}`} style={{ backgroundColor: c }} aria-label={`Select color ${c}`}/>))}</div>
+                        <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full border border-border flex-shrink-0" style={{ backgroundColor: /^#[0-9A-F]{6}$/i.test(hexInput) ? hexInput : 'transparent' }}></div><input type="text" value={hexInput} onChange={handleHexInputChange} className="w-full p-2 bg-bg border border-border rounded-lg font-mono text-sm" placeholder="#A855F7"/></div>
+                    </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-8"><button onClick={onClose} className="px-4 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10">Cancel</button><button onClick={() => onSave(title, color)} className="px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover">Save</button></div>
+            </motion.div>
+        </motion.div>
+    );
+};
+
+const ConfirmationModal = ({ title, message, onConfirm, onCancel }: { title: string; message: string; onConfirm: () => void; onCancel: () => void; }) => (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onCancel}>
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold font-display mb-2 text-red-500">{title}</h2>
+            <p className="text-text-secondary mb-6">{message}</p>
+            <div className="flex justify-center gap-3"><button onClick={onCancel} className="px-6 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 font-semibold">Cancel</button><button onClick={onConfirm} className="px-6 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold">Delete</button></div>
+        </motion.div>
+    </motion.div>
+);
+
 export default Notes;

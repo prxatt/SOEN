@@ -102,8 +102,8 @@ const initialNotebooks: Notebook[] = [
 ];
 
 const initialNotes: Note[] = [
-    { id: 101, notebookId: 1, title: 'Initial Project Ideas', content: '<p>Exploring concepts for a new AI-driven productivity tool...</p>', createdAt: new Date(), archived: false, flagged: true, tags: ['idea', 'ai'] },
-    { id: 102, notebookId: 2, title: 'Brand Guidelines', content: '<p>Core principles for the Surface Tension brand...</p>', createdAt: new Date(Date.now() - 86400000), archived: false, flagged: false, tags: ['branding'] },
+    { id: 101, notebookId: 1, title: 'Initial Project Ideas', content: '<p>Exploring concepts for a new AI-driven productivity tool...</p>', createdAt: new Date(), updatedAt: new Date(), archived: false, flagged: true, tags: ['idea', 'ai'] },
+    { id: 102, notebookId: 2, title: 'Brand Guidelines', content: '<p>Core principles for the Surface Tension brand...</p>', createdAt: new Date(Date.now() - 86400000), updatedAt: new Date(Date.now() - 86400000), archived: false, flagged: false, tags: ['branding'] },
 ];
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
@@ -135,7 +135,7 @@ function App() {
     const [dailyCompletionImage, setDailyCompletionImage] = useState<string | null>(null);
     const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
     const [categoryColors, setCategoryColors] = useState<Record<Category, string>>(CATEGORY_COLORS);
-
+    const [lastDeletedNote, setLastDeletedNote] = useState<Note | null>(null);
 
     // Derived/Generated states
     const [healthData, setHealthData] = useState<HealthData>({ totalWorkouts: 1, totalWorkoutMinutes: 28, workoutTypes: { 'Running': 1 }, avgSleepHours: 7.5, sleepQuality: 'good', energyLevel: 'high' });
@@ -342,14 +342,39 @@ function App() {
         const newNote: Note = {
             id: Date.now(),
             notebookId, title, content,
-            createdAt: new Date(), archived: false, flagged: false, tags: [],
+            createdAt: new Date(), updatedAt: new Date(), archived: false, flagged: false, tags: [],
         };
         setNotes(prev => [newNote, ...prev]);
         showToast(`Note "${title}" created.`);
+        return newNote;
     };
 
     const updateNote = (updatedNote: Note) => {
-        setNotes(prev => prev.map(n => n.id === updatedNote.id ? updatedNote : n));
+        setNotes(prev => prev.map(n => n.id === updatedNote.id ? {...updatedNote, updatedAt: new Date()} : n));
+    };
+
+    const undoDeleteNote = () => {
+        if (lastDeletedNote) {
+            setNotes(prev => [...prev, lastDeletedNote].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            setLastDeletedNote(null);
+            showToast('Note restored.');
+        }
+    };
+
+    const deleteNote = (noteId: number) => {
+        const noteToDelete = notes.find(n => n.id === noteId);
+        if (noteToDelete) {
+            setLastDeletedNote(noteToDelete);
+            setNotes(prev => prev.filter(n => n.id !== noteId));
+            if (selectedNote?.id === noteId) {
+                setSelectedNote(null);
+            }
+            showToast('Note moved to trash.', {
+                label: 'Undo',
+                onClick: () => undoDeleteNote()
+            });
+            triggerHapticFeedback('medium');
+        }
     };
     
     const handleSyncCalendar = async () => {
@@ -493,7 +518,7 @@ function App() {
         switch (activeScreen) {
             case 'Dashboard': return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} />;
             case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} />;
-            case 'Notes': return <Notes notes={notes} setNotes={setNotes} notebooks={notebooks} setNotebooks={setNotebooks} addInsights={setInsights} updateNote={updateNote} addTask={(title, notebookId) => addTask({title, notebookId})} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} />;
+            case 'Notes': return <Notes notes={notes} notebooks={notebooks} setNotebooks={setNotebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} />;
             case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={setActiveScreen} goals={goals} setGoals={setGoals} />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;
             case 'Kiko': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} projects={projects} healthData={healthData} addTask={(title) => addTask({title})} addNote={addNote} startChatWithContext={startChatWithContext} searchHistory={[]} setSearchHistory={()=>{}} visionHistory={[]} setVisionHistory={()=>{}} applyInsight={()=>{}} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} showToast={showToast} />;

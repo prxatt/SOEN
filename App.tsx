@@ -131,7 +131,7 @@ function App() {
     const [focusTask, setFocusTask] = useState<Task | null>(null);
     const [activeFocusBackground, setActiveFocusBackground] = useState<string>('synthwave');
     const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-    const [activeNotebookId, setActiveNotebookId] = useState<number | 'all' | 'flagged' | 'archived'>('all');
+    const [activeNotebookId, setActiveNotebookId] = useState<number | 'all' | 'flagged' | 'archived' | 'trash'>('all');
     const [dailyCompletionImage, setDailyCompletionImage] = useState<string | null>(null);
     const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
     const [categoryColors, setCategoryColors] = useState<Record<Category, string>>(CATEGORY_COLORS);
@@ -353,30 +353,45 @@ function App() {
         setNotes(prev => prev.map(n => n.id === updatedNote.id ? {...updatedNote, updatedAt: new Date()} : n));
     };
 
-    const undoDeleteNote = () => {
-        if (lastDeletedNote) {
-            setNotes(prev => [...prev, lastDeletedNote].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-            setLastDeletedNote(null);
+    const restoreNote = (noteId: number) => {
+        const noteToRestore = notes.find(n => n.id === noteId);
+        if (noteToRestore) {
+            const restoredNote = { ...noteToRestore };
+            delete restoredNote.deletedAt; // Remove the property to restore it
+            updateNote(restoredNote);
+            if (lastDeletedNote?.id === noteId) {
+                setLastDeletedNote(null);
+            }
             showToast('Note restored.');
         }
     };
 
     const deleteNote = (noteId: number) => {
         const noteToDelete = notes.find(n => n.id === noteId);
-        if (noteToDelete) {
-            setLastDeletedNote(noteToDelete);
-            setNotes(prev => prev.filter(n => n.id !== noteId));
+        if (noteToDelete && !noteToDelete.deletedAt) { // Don't re-trash a trashed note
+            const updatedNote = { ...noteToDelete, deletedAt: new Date() };
+            updateNote(updatedNote);
+            setLastDeletedNote(updatedNote); // Keep for the undo menu item
             if (selectedNote?.id === noteId) {
                 setSelectedNote(null);
             }
             showToast('Note moved to trash.', {
                 label: 'Undo',
-                onClick: () => undoDeleteNote()
+                onClick: () => restoreNote(noteId)
             });
             triggerHapticFeedback('medium');
         }
     };
     
+    const permanentlyDeleteNote = (noteId: number) => {
+        setNotes(prev => prev.filter(n => n.id !== noteId));
+        if (selectedNote?.id === noteId) {
+            setSelectedNote(null);
+        }
+        showToast('Note permanently deleted.');
+        triggerHapticFeedback('heavy');
+    };
+
     const handleSyncCalendar = async () => {
         showToast('Syncing with Google Calendar...');
         const newEvents = await syncCalendar();
@@ -518,7 +533,7 @@ function App() {
         switch (activeScreen) {
             case 'Dashboard': return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} />;
             case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} />;
-            case 'Notes': return <Notes notes={notes} notebooks={notebooks} setNotebooks={setNotebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} />;
+            case 'Notes': return <Notes notes={notes} notebooks={notebooks} setNotebooks={setNotebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} />;
             case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={setActiveScreen} goals={goals} setGoals={setGoals} />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;
             case 'Kiko': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} projects={projects} healthData={healthData} addTask={(title) => addTask({title})} addNote={addNote} startChatWithContext={startChatWithContext} searchHistory={[]} setSearchHistory={()=>{}} visionHistory={[]} setVisionHistory={()=>{}} applyInsight={()=>{}} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} showToast={showToast} />;

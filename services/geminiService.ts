@@ -165,6 +165,23 @@ export const generateCompletionSummaryWithGemini = async (task: Task): Promise<C
     }
 };
 
+export const generateTextWithGemini = async (prompt: string): Promise<string> => {
+    if (!ai) {
+        console.error("Gemini AI service is not initialized.");
+        throw new Error("Gemini AI not available.");
+    }
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        });
+        return response.text;
+    } catch (error) {
+        console.error("Error generating text with Gemini:", error);
+        throw error; // Re-throw to be handled by the orchestrator
+    }
+};
+
 export const parseCommandWithGemini = async (command: string): Promise<Partial<Task>> => {
     // This is a simplified fallback parser
     const prompt = `Parse this command: "${command}". Extract title, category, plannedDuration. Respond ONLY with a valid JSON object.`;

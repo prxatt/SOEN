@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { parseCommandWithLlama3, parseUpdateCommandWithLlama3 } from './groqService';
 import { analyzeImageWithGPT4o, generateTextWithGPT4o, generateBriefingWithGPT4o, generateActionableInsightsWithGPT4o } from './openAIService';
-import { generateImageWithImagen, parseCommandWithGemini, generateCompletionSummaryWithGemini, generateActionableInsights, getAutocompleteSuggestions } from './geminiService';
+import { generateImageWithImagen, parseCommandWithGemini, generateCompletionSummaryWithGemini, generateActionableInsights, getAutocompleteSuggestions, generateTextWithGemini } from './geminiService';
 import { Task, Note, HealthData, MissionBriefing, CompletionSummary, ActionItem, Goal, ActionableInsight } from '../types';
 import { extractJson } from "../utils/jsonUtils";
 import { inferHomeLocation } from "../utils/taskUtils";
@@ -324,7 +324,7 @@ export const kikoRequest = async (
             break;
         }
         // --- Other agents without specific failovers defined yet ---
-        case 'generate_note_text':
+        case 'generate_note_text': {
              const { instruction, text, noteContent } = payload as { instruction: 'summarize' | 'expand' | 'findActionItems' | 'createTable' | 'generateProposal', text: string, noteContent?: string };
             if (instruction === 'findActionItems') {
                 const prompt = `Analyze the following text and extract any clear, actionable tasks or to-do items. If no specific action items are found, return an empty array. Text:\n\n---\n${text}\n---`;
@@ -340,9 +340,10 @@ export const kikoRequest = async (
                 if (instruction === 'createTable') prompt = `Based on the following text, create a simple HTML table. The text is: "${text}". Only return the <table>...</table> HTML.`;
                 if (instruction === 'generateProposal') prompt = `I am Pratt from Surface Tension. Draft a short, professional proposal introduction for a new project with "${text}" (the client's name). Use the following case study content from my notes as a reference: \n\n---\n${(noteContent || '').replace(/<[^>]*>?/gm, '')}\n---\n\nThe tone should be confident, luxurious, and underground.`;
                 primaryAgent = () => generateTextWithGPT4o(prompt);
+                fallbackAgent = () => generateTextWithGemini(prompt);
             }
             break;
-        
+        }
         case 'generate_note_tags': {
             if (!ai) throw new Error("Gemini AI not available.");
             const { title, content } = payload as { title: string, content: string };

@@ -559,7 +559,8 @@ function EventDetail({
 
                         {/* Notes and Connections */}
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                            {/* Notes Textarea */}
+                            <div className="p-3 rounded-2xl col-span-2" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
                                 <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
                                     <DocumentTextIcon className="w-4 h-4"/> Notes
                                 </label>
@@ -572,7 +573,8 @@ function EventDetail({
                                     placeholder="Quick details..."
                                 />
                             </div>
-                            
+
+                            {/* Project Dropdown */}
                             <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
                                 <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
                                     <BriefcaseIcon className="w-4 h-4"/> Project
@@ -591,27 +593,48 @@ function EventDetail({
                                     ))}
                                 </select>
                             </div>
+
+                            {/* Notebook Dropdown */}
+                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                                <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
+                                    <DocumentTextIcon className="w-4 h-4"/> Notebook
+                                </label>
+                                <select 
+                                    value={editableTask.notebookId || ''} 
+                                    onChange={e => handleFieldChange('notebookId', e.target.value ? parseInt(e.target.value) : undefined)} 
+                                    className="w-full bg-transparent text-sm font-bold focus:outline-none appearance-none"
+                                    style={{ color: textColor }}
+                                >
+                                    <option value="" className="text-black bg-white">No notebook</option>
+                                    {notebooks.map(n => (
+                                        <option key={n.id} value={n.id} className="text-black bg-white">
+                                            {n.title}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            
+                            {/* Link Note Dropdown */}
+                            <div className="p-3 rounded-2xl col-span-2" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                                <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
+                                    <LinkIcon className="w-4 h-4"/> Link Note
+                                </label>
+                                <select 
+                                    value={editableTask.linkedNoteId || ''} 
+                                    onChange={e => handleFieldChange('linkedNoteId', e.target.value ? parseInt(e.target.value) : undefined)} 
+                                    className="w-full bg-transparent text-sm font-bold focus:outline-none appearance-none"
+                                    style={{ color: textColor }}
+                                >
+                                    <option value="" className="text-black bg-white">No linked note</option>
+                                    {notes.map(n => (
+                                        <option key={n.id} value={n.id} className="text-black bg-white">
+                                            {n.title.length > 50 ? `${n.title.substring(0, 50)}...` : n.title}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
-                        {/* Notebook */}
-                        <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
-                            <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
-                                <DocumentTextIcon className="w-4 h-4"/> Notebook
-                            </label>
-                            <select 
-                                value={editableTask.notebookId || ''} 
-                                onChange={e => handleFieldChange('notebookId', e.target.value ? parseInt(e.target.value) : undefined)} 
-                                className="w-full bg-transparent text-sm font-bold focus:outline-none appearance-none"
-                                style={{ color: textColor }}
-                            >
-                                <option value="" className="text-black bg-white">No notebook</option>
-                                {notebooks.map(n => (
-                                    <option key={n.id} value={n.id} className="text-black bg-white">
-                                        {n.title}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
                     </div>
 
                     {/* AI Insights */}

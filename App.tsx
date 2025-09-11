@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Import types
-import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatMessage, SearchHistoryItem, VisionHistoryItem, HealthData, TaskStatus, Category, RewardItem, CompletionSummary } from './types';
+// FIX: Import the new ChatSession type and remove the old ChatMessage type.
+import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatSession, SearchHistoryItem, VisionHistoryItem, HealthData, TaskStatus, Category, RewardItem, CompletionSummary, ChatMessage } from './types';
+
 
 // Import components
 import Navigation from './components/Navigation';
@@ -18,7 +20,9 @@ import Auth from './components/auth/Auth';
 import Onboarding from './components/Onboarding';
 import FocusMode from './components/FocusMode';
 import Toast from './components/Toast';
+import LoadingScreen from './components/LoadingScreen'; // New Loading Screen
 import { PraxisLogo } from './components/Icons';
+
 
 // Import services and utils
 import { syncCalendar } from './services/googleCalendarService';
@@ -93,11 +97,20 @@ const generateMockTasksForMonth = (year: number, month: number): Task[] => {
 };
 
 const initialTasks: Task[] = generateMockTasksForMonth(new Date().getFullYear(), new Date().getMonth());
-// Link a mock task to a note for demonstration
-const workoutTaskIndex = initialTasks.findIndex(t => t.category === 'Workout');
-if (workoutTaskIndex > -1) {
-    initialTasks[workoutTaskIndex].linkedNoteId = 104; // Links to "Workout Plan" note
-    initialTasks[workoutTaskIndex].title = "Execute Leg Day Routine";
+
+// Link a mock task to a note for demonstration on the dashboard
+const upcomingTaskIndex = initialTasks
+    .filter(t => t.status !== TaskStatus.Completed && new Date(t.startTime) >= new Date())
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+    .findIndex(t => t.id > 0); // Find the actual index in the original array
+
+if(upcomingTaskIndex > -1) {
+    const originalIndex = initialTasks.findIndex(t => t.id === initialTasks.filter(t => t.status !== TaskStatus.Completed && new Date(t.startTime) >= new Date()).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0].id);
+    if (originalIndex > -1) {
+        initialTasks[originalIndex].linkedNoteId = 101; // Link to "Initial Project Ideas"
+        initialTasks[originalIndex].priority = 'high';
+        initialTasks[originalIndex].progress = 40;
+    }
 }
 
 
@@ -108,10 +121,8 @@ const initialNotebooks: Notebook[] = [
 ];
 
 const initialNotes: Note[] = [
-    // FIX: Remove `linkedNoteId` as it does not exist on the Note type.
     { id: 101, notebookId: 1, title: 'Initial Project Ideas', content: '<p>Exploring concepts for a new AI-driven productivity tool. This note should be a bit longer to test the masonry layout. The core idea is to build a system that not only tracks tasks but actively helps in formulating strategy by connecting disparate pieces of information. It could analyze notes, calendar events, and even web browsing history to suggest project directions or highlight unseen opportunities. We need to focus on a very slick and responsive UI.</p>', createdAt: new Date(), updatedAt: new Date(), flagged: true, tags: ['idea', 'ai', 'strategy'] },
     { id: 102, notebookId: 2, title: 'Brand Guidelines', content: '<p>Core principles for the Surface Tension brand...</p>', createdAt: new Date(Date.now() - 86400000), updatedAt: new Date(Date.now() - 86400000), flagged: false, tags: ['branding', 'design'] },
-    // FIX: Remove `linkedNoteId` as it does not exist on the Note type.
     { id: 103, notebookId: 1, title: 'Q3 Roadmap', content: '<p>Focus on API integration and the new Notes module.</p>', createdAt: new Date(Date.now() - 172800000), updatedAt: new Date(Date.now() - 172800000), flagged: false, tags: ['planning', 'q3'] },
     { id: 104, notebookId: 3, title: 'Workout Plan', content: '<p>Monday: Chest, Tuesday: Back, Wednesday: Legs.</p>', createdAt: new Date(Date.now() - 259200000), updatedAt: new Date(Date.now() - 259200000), flagged: true, tags: ['health', 'fitness'] },
 ];
@@ -122,7 +133,8 @@ function App() {
     const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
-    const [uiMode, setUiMode] = useState<'dark' | 'glass'>('dark');
+    const [previousScreen, setPreviousScreen] = useState<Screen>('Dashboard');
+    const [uiMode, setUiMode] = useState<'dark' | 'glass'>('glass');
     const [activeTheme, setActiveTheme] = useState('obsidian');
     const [toast, setToast] = useState<{ message: string; id: number; action?: { label: string; onClick: () => void; } } | null>(null);
     const [scheduleInitialDate, setScheduleInitialDate] = useState<Date | undefined>(undefined);
@@ -134,7 +146,11 @@ function App() {
     const [projects, setProjects] = useState<Project[]>(initialProjects);
     const [goals, setGoals] = useState<Goal[]>([]);
     const [insights, setInsights] = useState<Insight[]>([]);
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    // FIX: Replace single chat state with chat history and active chat ID.
+    const [chatHistory, setChatHistory] = useState<ChatSession[]>([
+        { id: Date.now(), title: 'Initial Chat', messages: [], createdAt: new Date() }
+    ]);
+    const [activeChatId, setActiveChatId] = useState<number | null>(chatHistory[0]?.id || null);
     const [isAiReplying, setIsAiReplying] = useState(false);
     const [praxisFlow, setPraxisFlow] = useState(500);
     const [purchasedRewards, setPurchasedRewards] = useState<string[]>(['theme-obsidian', 'focus-synthwave']);
@@ -147,6 +163,7 @@ function App() {
     const [categoryColors, setCategoryColors] = useState<Record<Category, string>>(CATEGORY_COLORS);
     const [lastDeletedNote, setLastDeletedNote] = useState<Note | null>(null);
     const [lastDeletedNotebook, setLastDeletedNotebook] = useState<(Notebook & { associatedNoteIds?: number[] }) | null>(null);
+    const [lastDeletedChat, setLastDeletedChat] = useState<ChatSession | null>(null);
 
 
     // Derived/Generated states
@@ -156,6 +173,14 @@ function App() {
 
     const showToast = (message: string, action?: { label: string; onClick: () => void; }) => {
         setToast({ message, id: Date.now(), action });
+    };
+
+    // --- NAVIGATION ---
+    const navigateTo = (screen: Screen) => {
+        if (screen !== activeScreen) {
+            setPreviousScreen(activeScreen);
+            setActiveScreen(screen);
+        }
     };
 
     // --- EFFECTS ---
@@ -168,13 +193,13 @@ function App() {
             setIsAuthenticated(authStatus);
             setIsOnboardingComplete(onboardingStatus);
             setIsLoading(false);
-        }, 1500);
+        }, 2500); // Increased duration for new loading animation
 
         const savedTheme = localStorage.getItem('praxis-theme') || 'obsidian';
         setActiveTheme(savedTheme);
         document.documentElement.setAttribute('data-theme', savedTheme);
         
-        const savedUiMode = (localStorage.getItem('praxis-ui-mode') as 'dark' | 'glass') || 'dark';
+        const savedUiMode = (localStorage.getItem('praxis-ui-mode') as 'dark' | 'glass') || 'glass';
         setUiMode(savedUiMode);
         if (savedUiMode === 'dark') {
             document.documentElement.classList.add('dark');
@@ -301,7 +326,6 @@ function App() {
         }
     };
 
-    // FIX: Add handler for setting active focus background
     const handleSetActiveFocusBackground = (bgValue: string) => {
         const reward = REWARDS_CATALOG.find(r => r.value === bgValue && r.type === 'focus_background');
         if (reward && purchasedRewards.includes(reward.id)) {
@@ -320,7 +344,6 @@ function App() {
             showToast(`Unlocked ${reward.name}!`);
             if (reward.type === 'theme') {
                 handleSetActiveTheme(reward.value);
-            // FIX: Add logic to apply focus background on purchase
             } else if (reward.type === 'focus_background') {
                 handleSetActiveFocusBackground(reward.value);
             }
@@ -497,40 +520,115 @@ function App() {
         setTasks(prev => [...prev, ...newTasks.filter(nt => !prev.some(pt => pt.googleCalendarEventId === nt.googleCalendarEventId))]);
         showToast(`${newTasks.length} new events synced!`);
     };
+    
+    // --- KIKO CHAT HANDLERS ---
+    const handleUpdateActiveChatMessages = (newMessages: ChatMessage[]) => {
+        setChatHistory(prev =>
+            prev.map(chat =>
+                chat.id === activeChatId ? { ...chat, messages: newMessages } : chat
+            )
+        );
+    };
+
+    const handleNewChat = () => {
+        const newChat: ChatSession = {
+            id: Date.now(),
+            title: "New Chat Session",
+            messages: [],
+            createdAt: new Date(),
+        };
+        setChatHistory(prev => [newChat, ...prev].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setActiveChatId(newChat.id);
+    };
+    
+    const handleRestoreChat = (id: number) => {
+        if (lastDeletedChat && lastDeletedChat.id === id) {
+            setChatHistory(prev => [...prev, lastDeletedChat].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            setLastDeletedChat(null);
+            showToast("Chat restored.");
+        }
+    };
+
+    const handleDeleteChat = (id: number) => {
+        const chatToDelete = chatHistory.find(c => c.id === id);
+        if (chatToDelete) {
+            setLastDeletedChat(chatToDelete);
+            setTimeout(() => setLastDeletedChat(null), 6000); // Clear after 6 seconds
+            setChatHistory(prev => {
+                const newHistory = prev.filter(c => c.id !== id);
+                if (activeChatId === id) {
+                    const sortedHistory = newHistory.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                    const nextChat = sortedHistory.length > 0 ? sortedHistory[0] : null;
+                    setActiveChatId(nextChat ? nextChat.id : null);
+                }
+                return newHistory;
+            });
+            showToast("Chat moved to trash.", {
+                label: "Undo",
+                onClick: () => handleRestoreChat(id)
+            });
+        }
+    };
+
+    const handleRenameChat = (id: number, newTitle: string) => {
+        setChatHistory(prev => prev.map(c => c.id === id ? { ...c, title: newTitle } : c));
+        showToast("Chat renamed.");
+    };
+
 
     const handleSendMessage = async (message: string, attachment?: ChatMessage['attachment']) => {
         const userMessage: ChatMessage = { role: 'user', text: message, attachment };
-        setChatMessages(prev => [...prev, userMessage]);
+        const activeChat = chatHistory.find(c => c.id === activeChatId);
+        if (!activeChat) return;
+
+        const updatedMessages = [...activeChat.messages, userMessage];
+        handleUpdateActiveChatMessages(updatedMessages);
         setIsAiReplying(true);
+
         try {
-            const requestPayload = attachment 
+            const requestPayload = attachment
                 ? { taskType: 'analyze_image', payload: { ...attachment, prompt: message } }
-                : { taskType: 'generate_note_text', payload: { instruction: 'summarize', text: message } }; // Example: default chat action
+                : { taskType: 'generate_note_text', payload: { instruction: 'summarize', text: message } };
             
             const { data: responseText } = await kikoRequest(requestPayload.taskType as any, requestPayload.payload);
-
             const modelMessage: ChatMessage = { role: 'model', text: responseText };
-            setChatMessages(prev => [...prev, modelMessage]);
+            handleUpdateActiveChatMessages([...updatedMessages, modelMessage]);
+
         } catch (error) {
             console.error("Error sending message via Kiko:", error);
             const errorMessage: ChatMessage = { role: 'model', text: "Sorry, I'm having trouble connecting right now." };
-            setChatMessages(prev => [...prev, errorMessage]);
+            handleUpdateActiveChatMessages([...updatedMessages, errorMessage]);
         } finally {
             setIsAiReplying(false);
         }
     };
-    
+
     const startChatWithContext = (context: string) => {
-        setActiveScreen('Kiko');
-        const userMessage: ChatMessage = { role: 'user', text: context };
-        setChatMessages([userMessage]);
+        const newChat: ChatSession = {
+            id: Date.now(),
+            title: context.substring(0, 30) + '...',
+            messages: [],
+            createdAt: new Date(),
+        };
+        setChatHistory(prev => [newChat, ...prev]);
+        setActiveChatId(newChat.id);
+        navigateTo('Kiko');
         handleSendMessage(context);
     };
 
     const redirectToKikoAIWithChat = (history: ChatMessage[]) => {
-        setActiveScreen('Kiko');
-        setChatMessages(history);
+        const newChat: ChatSession = {
+            id: Date.now(),
+            title: history[0]?.text.substring(0, 30) + '...' || 'New Session',
+            messages: history,
+            createdAt: new Date(),
+        };
+        setChatHistory(prev => [newChat, ...prev]);
+        setActiveChatId(newChat.id);
+        navigateTo('Kiko');
     };
+    
+    // --- END KIKO HANDLERS ---
     
     const handleUndoCompleteTask = (taskToUndo: Task) => {
         if (!taskToUndo) return;
@@ -596,29 +694,45 @@ function App() {
 
     const navigateToScheduleDate = (date: Date) => {
         setScheduleInitialDate(date);
-        setActiveScreen('Schedule');
+        navigateTo('Schedule');
     };
 
     // --- RENDER LOGIC ---
     const renderScreen = () => {
         switch (activeScreen) {
-            case 'Dashboard': return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} />;
+            case 'Dashboard': return <Dashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} />;
             case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
             case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
-            // FIX: Pass the correct props to the Profile component.
-            case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={setActiveScreen} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} />;
+            case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={navigateTo} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;
-            case 'Kiko': return <PraxisAI insights={insights} setInsights={setInsights} tasks={tasks} notes={notes} notebooks={notebooks} projects={projects} healthData={healthData} addTask={(title) => addTask({title})} addNote={addNote} startChatWithContext={startChatWithContext} searchHistory={[]} setSearchHistory={()=>{}} visionHistory={[]} setVisionHistory={()=>{}} applyInsight={()=>{}} chatMessages={chatMessages} setChatMessages={setChatMessages} onSendMessage={handleSendMessage} isAiReplying={isAiReplying} showToast={showToast} />;
-            case 'Settings': return <Settings uiMode={uiMode} toggleUiMode={toggleUiMode} onSyncCalendar={handleSyncCalendar} onLogout={handleLogout} />;
-            // FIX: Pass the correct handler for setActiveFocusBackground.
-            case 'Rewards': return <Rewards onBack={() => setActiveScreen('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
+            case 'Kiko': return <PraxisAI 
+                chatHistory={chatHistory} 
+                activeChatId={activeChatId} 
+                setActiveChatId={setActiveChatId}
+                onNewChat={handleNewChat}
+                onDeleteChat={handleDeleteChat}
+                onRenameChat={handleRenameChat}
+                onSendMessage={handleSendMessage} 
+                isAiReplying={isAiReplying} 
+                previousScreen={previousScreen} 
+                notes={notes}
+                addNote={addNote}
+                updateNote={updateNote}
+                showToast={showToast}
+                goals={goals} 
+                praxisFlow={praxisFlow}
+                lastDeletedChat={lastDeletedChat}
+                onRestoreChat={handleRestoreChat}
+            />;
+            case 'Settings': return <Settings uiMode={uiMode} toggleUiMode={toggleUiMode} onSyncCalendar={handleSyncCalendar} onLogout={handleLogout} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} purchasedRewards={purchasedRewards} />;
+            case 'Rewards': return <Rewards onBack={() => navigateTo('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
-            default: return <Dashboard tasks={tasks} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} />;
+            default: return <Dashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} />;
         }
     };
     
-    if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-bg"><PraxisLogo className="w-24 h-24 text-accent animate-pulse" /></div>;
-    if (!isAuthenticated) return <Auth onLogin={handleLogin} Logo={PraxisLogo} />;
+    if (isLoading) return <LoadingScreen />;
+    if (!isAuthenticated) return <Auth onLogin={handleLogin} />;
     if (!isOnboardingComplete) return <Onboarding goals={goals} setGoals={setGoals} onComplete={handleOnboardingComplete} />;
 
     return (
@@ -627,7 +741,7 @@ function App() {
                  <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
             ) : (
                 <>
-                    <main className="max-w-6xl mx-auto px-4 pt-6 pb-20">
+                    <main className="max-w-6xl mx-auto px-4 pt-6 pb-28">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeScreen}
@@ -640,7 +754,7 @@ function App() {
                             </motion.div>
                         </AnimatePresence>
                     </main>
-                    <Navigation activeScreen={activeScreen} setScreen={setActiveScreen} />
+                    <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
                 </>
             )}
             <AnimatePresence>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { HomeIcon, CalendarIcon, DocumentTextIcon, UserCircleIcon, KikoIcon } from './Icons';
+import { HomeIcon, CalendarIcon, DocumentTextIcon, UserCircleIcon, BabyPenguinIcon } from './Icons';
 import type { Screen } from '../types';
 
 interface NavigationProps {
@@ -8,89 +8,106 @@ interface NavigationProps {
   setScreen: (screen: Screen) => void;
 }
 
-interface NavIconProps {
+interface NavButtonProps {
   Icon: React.FC<React.SVGProps<SVGSVGElement>>;
-  label: Screen;
+  screen: Screen;
+  label: string;
   isActive: boolean;
   onClick: () => void;
   imageUrl?: string;
 }
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function NavIcon({ Icon, label, isActive, onClick, imageUrl }: NavIconProps) {
+function NavButton({ Icon, screen, label, isActive, onClick, imageUrl }: NavButtonProps) {
+  const activeClasses = 'text-text';
+  const inactiveClasses = 'text-text-secondary hover:text-text';
+
   return (
-    <motion.button
+    <motion.li
       onClick={onClick}
-      whileTap={{ scale: 0.9 }}
-      className={`flex flex-col items-center justify-center w-full pt-2 pb-1 transition-colors duration-200 ease-in-out ${
-        isActive ? 'text-accent' : 'text-text-secondary hover:text-text'
-      }`}
-      aria-label={label}
+      whileTap={{ scale: 0.95 }}
+      className={`relative flex flex-col items-center justify-center w-16 h-16 rounded-full transition-colors duration-300 ease-in-out z-10 cursor-pointer
+        ${isActive ? activeClasses : inactiveClasses}
+      `}
+      aria-label={screen}
     >
-      {imageUrl ? (
-        <img src={imageUrl} alt="Profile" className={`h-6 w-6 rounded-full object-cover ring-2 ${isActive ? 'ring-accent' : 'ring-transparent'}`} />
-      ) : (
-        <Icon className="h-6 w-6" />
+      {isActive && (
+         <motion.div
+            layoutId="active-nav-indicator"
+            className="absolute inset-0 bg-white/25 dark:bg-white/15 rounded-2xl"
+            style={{ zIndex: -1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        />
       )}
-      <span className={`text-xs mt-1 ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
-    </motion.button>
+      {imageUrl ? (
+         <img src={imageUrl} alt="Profile" className={`h-8 w-8 rounded-full object-cover transition-all mb-1 ${isActive ? 'ring-2 ring-offset-2 ring-offset-zinc-900/50 ring-white/50' : 'ring-0'}`} />
+      ) : (
+        <Icon className="h-6 w-6 mb-1" />
+      )}
+      <span className="text-[10px] font-bold">{label}</span>
+      
+    </motion.li>
   );
 }
 
-const NAV_ITEMS: { label: Screen; icon: React.FC<React.SVGProps<SVGSVGElement>>; imageUrl?: string }[] = [
-  { label: 'Dashboard', icon: HomeIcon },
-  { label: 'Schedule', icon: CalendarIcon },
-  { label: 'Notes', icon: DocumentTextIcon },
-  { label: 'Profile', icon: UserCircleIcon, imageUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop' },
+
+const NAV_ITEMS: { screen: Screen; label: string; icon: React.FC<React.SVGProps<SVGSVGElement>>; imageUrl?: string }[] = [
+  { screen: 'Dashboard', label: 'Home', icon: HomeIcon },
+  { screen: 'Schedule', label: 'Schedule', icon: CalendarIcon },
+  { screen: 'Notes', label: 'Notes', icon: DocumentTextIcon },
+  { screen: 'Profile', label: 'Profile', icon: UserCircleIcon, imageUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop' },
 ];
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function Navigation({ activeScreen, setScreen }: NavigationProps) {
-  const navItemsLeft = NAV_ITEMS.slice(0, 2);
-  const navItemsRight = NAV_ITEMS.slice(2);
-  
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-16 bg-transparent backdrop-blur-lg z-50">
-      <div className="absolute inset-0 bg-bg/50 dark:bg-bg/70 border-t border-border/50"></div>
-      <div className="relative max-w-6xl mx-auto flex justify-between items-center h-full px-2">
-        <div className="flex justify-around w-2/5">
-            {navItemsLeft.map(({ label, icon }) => (
-            <NavIcon
-                key={label}
+    <nav className="fixed bottom-4 left-0 right-0 z-50 flex justify-center px-4">
+      <div className="relative w-full max-w-lg flex items-center p-2 rounded-[2.5rem] bg-zinc-900/40 dark:bg-zinc-900/60 backdrop-blur-xl shadow-2xl border border-white/10">
+        <ul className="flex items-center w-full justify-around">
+            {NAV_ITEMS.slice(0, 2).map(({ screen, icon, imageUrl, label }) => (
+            <NavButton
+                key={screen}
                 Icon={icon}
+                screen={screen}
                 label={label}
-                isActive={activeScreen === label}
-                onClick={() => setScreen(label)}
-            />
-            ))}
-        </div>
-
-        <div className="w-1/5 flex justify-center">
-            <motion.button
-                onClick={() => setScreen('Kiko')}
-                whileTap={{ scale: 0.9 }}
-                className={`relative -top-4 flex items-center justify-center h-14 w-14 rounded-full bg-accent shadow-lg shadow-accent/30 transform transition-transform duration-200 ${activeScreen === 'Kiko' ? 'scale-110' : 'hover:scale-105'}`}
-                aria-label="Kiko"
-            >
-                <KikoIcon className="h-8 w-8 text-white" />
-            </motion.button>
-        </div>
-
-        <div className="flex justify-around w-2/5">
-            {navItemsRight.map(({ label, icon, imageUrl }) => (
-            <NavIcon
-                key={label}
-                Icon={icon}
-                label={label}
-                isActive={activeScreen === label}
-                onClick={() => setScreen(label)}
+                isActive={activeScreen === screen}
+                onClick={() => setScreen(screen)}
                 imageUrl={imageUrl}
             />
             ))}
-        </div>
+
+            <li className="relative w-16 h-16 flex justify-center items-center">
+                 <motion.button
+                    onClick={() => setScreen('Kiko')}
+                    whileTap={{ scale: 0.9 }}
+                    animate={{
+                        scale: [1, 1.05, 1],
+                    }}
+                    transition={{
+                        duration: 2.5,
+                        ease: "easeInOut",
+                        repeat: Infinity,
+                    }}
+                    className={`relative flex items-center justify-center w-16 h-16 rounded-2xl transition-all duration-300 ease-in-out text-white bg-gradient-to-br from-accent to-purple-600 shadow-lg shadow-accent/40 -translate-y-4 border-4 border-bg`}
+                    aria-label="Kiko AI"
+                >
+                    <BabyPenguinIcon className="h-9 w-9" />
+                </motion.button>
+            </li>
+            
+            {NAV_ITEMS.slice(2).map(({ screen, icon, imageUrl, label }) => (
+            <NavButton
+                key={screen}
+                Icon={icon}
+                screen={screen}
+                label={label}
+                isActive={activeScreen === screen}
+                onClick={() => setScreen(screen)}
+                imageUrl={imageUrl}
+            />
+            ))}
+        </ul>
       </div>
     </nav>
   );
-};
+}
 
 export default Navigation;

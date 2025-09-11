@@ -11,7 +11,6 @@ interface RewardsProps {
     activeTheme: string;
     setActiveTheme: (themeValue: string) => void;
     onPurchase: (reward: RewardItem) => void;
-    // FIX: Add missing props for focus backgrounds to resolve type errors.
     activeFocusBackground: string;
     setActiveFocusBackground: (bgValue: string) => void;
 }
@@ -25,7 +24,6 @@ const getThemeGradient = (themeValue: string) => {
         case 'aurelian': return 'linear-gradient(135deg, #fbbf24, #f59e0b)';
         case 'crimson': return 'linear-gradient(135deg, #f87171, #dc2626)';
         case 'oceanic': return 'linear-gradient(135deg, #38bdf8, #0ea5e9)';
-        // FIX: Add gradients for focus backgrounds for consistent card previews.
         case 'lofi': return 'linear-gradient(135deg, #4f46e5, #1e293b)';
         default: return 'linear-gradient(135deg, #6b7280, #374151)';
     }
@@ -36,7 +34,6 @@ const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
     const colorMap: { [key: string]: string } = {
         'obsidian': '#4b5563', 'synthwave': '#EC4899', 'solarpunk': '#a3e635',
         'luxe': '#fde047', 'aurelian': '#fbbf24', 'crimson': '#f87171', 'oceanic': '#38bdf8',
-        // FIX: Add focus background colors to the map for correct text color calculation.
         'lofi': '#4f46e5'
     };
     const checkColor = colorMap[hexColor] || '#6b7280';
@@ -88,7 +85,6 @@ function RewardCard({ item, isPurchased, isActive, canAfford, onPurchase, onAppl
                     <SparklesIcon className="w-5 h-5" /> {item.cost}
                 </p>
                 {isPurchased ? (
-                    // FIX: Update logic to allow applying focus_backgrounds as well as themes.
                     (item.type === 'theme' || item.type === 'focus_background') ? (
                         isActive ? (
                              <span className="font-semibold text-sm px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>Applied</span>
@@ -111,7 +107,6 @@ function RewardCard({ item, isPurchased, isActive, canAfford, onPurchase, onAppl
 
 function Rewards({ onBack, praxisFlow, purchasedRewards, activeTheme, setActiveTheme, onPurchase, activeFocusBackground, setActiveFocusBackground }: RewardsProps) {
     const themes = REWARDS_CATALOG.filter(r => r.type === 'theme');
-    // FIX: Add logic to display focus background rewards.
     const focusBackgrounds = REWARDS_CATALOG.filter(r => r.type === 'focus_background');
 
     return (
@@ -142,7 +137,6 @@ function Rewards({ onBack, praxisFlow, purchasedRewards, activeTheme, setActiveT
                     </div>
                 </div>
 
-                {/* FIX: Add a new section for focus background rewards. */}
                 <div>
                     <h3 className="text-xl font-semibold mb-4 px-2">Focus Backgrounds</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

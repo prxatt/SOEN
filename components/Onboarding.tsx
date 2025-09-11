@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// FIX: Import Variants type from framer-motion.
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Goal } from '../types';
-import { XMarkIcon, SparklesIcon, FlagIcon, DocumentTextIcon, ChevronRightIcon, CalendarIcon, HeartIcon, RocketIcon } from './Icons';
+import { XMarkIcon, SparklesIcon, FlagIcon, DocumentTextIcon, ChevronRightIcon, HeartIcon, RocketIcon } from './Icons';
 
 interface OnboardingProps {
     goals: Goal[];
@@ -9,13 +10,13 @@ interface OnboardingProps {
     onComplete: () => void;
 }
 
-const modalVariants = {
-    hidden: { opacity: 0, scale: 0.95, y: 20 },
-    visible: { opacity: 1, scale: 1, y: 0 },
-    exit: { opacity: 0, scale: 0.95, y: -20 },
+// FIX: Explicitly type cardVariants with Variants to fix type inference issue with the 'ease' property.
+const cardVariants: Variants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+    exit: { opacity: 0, y: -30, transition: { duration: 0.3, ease: 'easeIn' } },
 };
 
-// FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
     const [step, setStep] = useState(0);
     const [longTermGoal, setLongTermGoal] = useState('');
@@ -36,7 +37,6 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
             setGoals(prev => [newGoal, ...prev]);
         }
         if (userHobbies.trim()) {
-            // In a real app, this would be saved to a user profile
             localStorage.setItem('praxis-user-hobbies', userHobbies.trim());
         }
         onComplete();
@@ -44,35 +44,35 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
 
     const steps = [
         {
-            icon: <SparklesIcon className="w-16 h-16 text-accent" />,
+            icon: <SparklesIcon />,
             title: "Welcome to Praxis",
-            content: "Your AI-powered partner for turning knowledge into action. Connect your learning to your goals, and your goals to your daily schedule."
+            content: "Your AI-powered partner for turning knowledge into action. Let's set up your command center."
         },
         {
-            icon: <FlagIcon className="w-16 h-16 text-accent" />,
+            icon: <FlagIcon />,
             title: "Define Your Vision",
-            content: "Everything starts with your goals. Use the Goals Hub to set your short, mid, and long-term ambitions. Praxis will use these as the foundation for its insights.",
+            content: "Everything starts with ambition. Praxis uses your goals as the foundation for its strategic insights.",
             isInput: false
         },
         {
-            icon: <DocumentTextIcon className="w-16 h-16 text-accent" />,
+            icon: <DocumentTextIcon />,
             title: "Build Your Second Brain",
-            content: "Your Notes are more than just a place to write. Praxis reads them to find connections, suggest ideas, and generate projects, turning thoughts into assets.",
+            content: "Your notes are more than text. Praxis analyzes them to find connections, suggest ideas, and turn thoughts into assets.",
             isInput: false
         },
         {
-            icon: <HeartIcon className="w-16 h-16 text-accent" />,
+            icon: <HeartIcon />,
             title: "Personalize Your Experience",
-            content: "Praxis works best when it knows you. What do you do for fun? This helps us tailor future rewards and interactions.",
+            content: "Praxis works best when it knows you. What are some of your hobbies or interests?",
             isInput: true,
             value: userHobbies,
             setter: setUserHobbies,
-            placeholder: "e.g., Boxing, DJing, exploring art galleries..."
+            placeholder: "e.g., Boxing, DJing, art galleries..."
         },
         {
-            icon: <RocketIcon className="w-16 h-16 text-accent" />,
+            icon: <RocketIcon />,
             title: "What is your ultimate goal?",
-            content: "Let's set your primary long-term objective. This will become the heart of your Praxis mind map.",
+            content: "Let's set your primary long-term objective. This will become the heart of your Praxis strategy.",
             isInput: true,
             value: longTermGoal,
             setter: setLongTermGoal,
@@ -80,52 +80,84 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
         }
     ];
 
+    const currentStepData = steps[step];
+
     return (
-        <div className="fixed inset-0 bg-bg z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-bg z-50 flex items-center justify-center p-4 transition-colors">
              <AnimatePresence mode="wait">
                 <motion.div
                     key={step}
-                    variants={modalVariants}
+                    variants={cardVariants}
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="card rounded-2xl shadow-xl w-full max-w-md p-8 text-center"
+                    className="bg-card/80 dark:bg-zinc-900/50 backdrop-blur-xl border border-border rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8 flex flex-col text-center relative overflow-hidden min-h-[500px]"
                 >
-                    {steps[step].icon && <div className="mx-auto mb-6">{steps[step].icon}</div>}
-                    <h2 className="text-2xl font-bold font-display mb-4">{steps[step].title}</h2>
-                    <p className="text-text-secondary mb-8">{steps[step].content}</p>
+                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-accent/10 via-transparent to-accent/5 dark:from-accent/5 dark:to-accent/0" />
+                    <div className="absolute -top-16 -left-16 text-card opacity-5 dark:opacity-[0.02] pointer-events-none">
+                       {React.cloneElement(currentStepData.icon, { className: "w-64 h-64" })}
+                    </div>
 
-                    {steps[step].isInput ? (
-                         <div className="w-full">
-                             <input 
-                                type="text"
-                                value={steps[step].value}
-                                onChange={(e) => (steps[step].setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)}
-                                placeholder={steps[step].placeholder}
-                                className="w-full text-center bg-bg border border-border rounded-lg shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent"
-                            />
+                    <div className="relative z-10 flex flex-col flex-grow">
+                        <div className="flex-grow">
+                            <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4">{currentStepData.title}</h2>
+                            <p className="text-base sm:text-lg text-text-secondary mb-8 max-w-md mx-auto">{currentStepData.content}</p>
+
+                            {currentStepData.isInput && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 10 }} 
+                                    animate={{ opacity: 1, y: 0 }} 
+                                    className="w-full max-w-sm mx-auto"
+                                >
+                                    <input 
+                                        type="text"
+                                        value={currentStepData.value}
+                                        onChange={(e) => (currentStepData.setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)}
+                                        placeholder={currentStepData.placeholder}
+                                        className="w-full text-center bg-bg/80 border border-border rounded-xl shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent text-lg"
+                                    />
+                                </motion.div>
+                            )}
                         </div>
-                    ) : null}
 
-                    {step < steps.length - 1 ? (
-                         <button onClick={handleNext} className="mt-4 w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-2">
-                            Next <ChevronRightIcon className="w-5 h-5"/>
-                        </button>
-                    ) : (
-                        <button onClick={handleFinish} className="mt-4 w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg shadow-md transition-all duration-200">
-                            Let's Begin
-                        </button>
-                    )}
-
-                     <div className="flex justify-center mt-6 gap-2">
-                        {steps.map((_, i) => (
-                            <div key={i} className={`w-2 h-2 rounded-full transition-colors ${i === step ? 'bg-accent' : 'bg-gray-300 dark:bg-border'}`} />
-                        ))}
+                        <div className="mt-auto pt-8">
+                             <div className="flex justify-center gap-2 mb-6">
+                                {steps.map((_, i) => (
+                                    <div key={i} className="flex-1 h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                                        <motion.div
+                                            className="h-full rounded-full bg-accent"
+                                            initial={{ width: "0%" }}
+                                            animate={{ width: i < step ? "100%" : i === step ? "50%" : "0%" }}
+                                            transition={{ duration: 0.5, ease: "easeInOut" }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {step < steps.length - 1 ? (
+                                <motion.button 
+                                    onClick={handleNext} 
+                                    className="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl shadow-lg shadow-accent/20 transition-all duration-200 flex items-center justify-center gap-2"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    Next <ChevronRightIcon className="w-5 h-5"/>
+                                </motion.button>
+                            ) : (
+                                <motion.button 
+                                    onClick={handleFinish} 
+                                    className="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl shadow-lg shadow-accent/20 transition-all duration-200"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    Let's Begin
+                                </motion.button>
+                            )}
+                        </div>
                     </div>
                 </motion.div>
             </AnimatePresence>
-            <button onClick={onComplete} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-accent rounded-full">
+            <button onClick={onComplete} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-accent rounded-full bg-card/50 backdrop-blur-sm">
                 <XMarkIcon className="w-6 h-6"/>
             </button>
         </div>

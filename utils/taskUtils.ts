@@ -2,7 +2,6 @@ import { Task, Category, TaskStatus } from '../types';
 import { LEARNING_MULTIPLIER } from '../constants';
 
 export const getActualDuration = (task: Task): number => {
-// FIX: 'Category' is a type, not an enum. Compare to the string literal 'Learning'.
     if(task.category === 'Learning') {
         return task.plannedDuration * LEARNING_MULTIPLIER;
     }

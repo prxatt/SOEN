@@ -413,10 +413,7 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
                         )}
 
                         <div className="grid grid-cols-2 gap-3">
-                            <div 
-                                className="p-3 rounded-2xl"
-                                style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
-                            >
+                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
                                 <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
                                     <DocumentTextIcon className="w-4 h-4"/> Notes
                                 </label>
@@ -430,12 +427,9 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
                                 />
                             </div>
                             
-                            <div 
-                                className="p-3 rounded-2xl"
-                                style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
-                            >
+                             <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
                                 <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
-                                    <DocumentTextIcon className="w-4 h-4"/> Link Notes
+                                    <LinkIcon className="w-4 h-4"/> Link Note
                                 </label>
                                 <select 
                                     value={taskDetails.linkedNoteId || ''} 
@@ -443,9 +437,9 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
                                     className="w-full bg-transparent text-sm font-bold focus:outline-none appearance-none"
                                     style={{ color: textColor }}
                                 >
-                                    <option value="">No linked note</option>
-                                    {notes.map(note => (
-                                        <option key={note.id} value={note.id}>
+                                    <option value="" className="text-black bg-white">No linked note</option>
+                                    {notes.filter(n => !n.deletedAt).map(note => (
+                                        <option key={note.id} value={note.id} className="text-black bg-white">
                                             {note.title.length > 20 ? note.title.slice(0, 20) + '...' : note.title}
                                         </option>
                                     ))}

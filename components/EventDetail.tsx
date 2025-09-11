@@ -574,9 +574,9 @@ function EventDetail({
                         </div>
 
                         {/* Notes and Connections */}
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3">
                             {/* Notes Textarea */}
-                            <div className="p-3 rounded-2xl col-span-2" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
                                 <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
                                     <DocumentTextIcon className="w-4 h-4"/> Notes
                                 </label>
@@ -590,48 +590,8 @@ function EventDetail({
                                 />
                             </div>
 
-                            {/* Project Dropdown */}
+                             {/* Link Note Dropdown */}
                             <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
-                                <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
-                                    <BriefcaseIcon className="w-4 h-4"/> Project
-                                </label>
-                                <select 
-                                    value={editableTask.projectId || ''} 
-                                    onChange={e => handleFieldChange('projectId', e.target.value ? parseInt(e.target.value) : undefined)} 
-                                    className="w-full bg-transparent text-sm font-bold focus:outline-none appearance-none"
-                                    style={{ color: textColor }}
-                                >
-                                    <option value="">No project</option>
-                                    {projects.map(p => (
-                                        <option key={p.id} value={p.id} className="text-black bg-white">
-                                            {p.title}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Notebook Dropdown */}
-                            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
-                                <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
-                                    <DocumentTextIcon className="w-4 h-4"/> Notebook
-                                </label>
-                                <select 
-                                    value={editableTask.notebookId || ''} 
-                                    onChange={e => handleFieldChange('notebookId', e.target.value ? parseInt(e.target.value) : undefined)} 
-                                    className="w-full bg-transparent text-sm font-bold focus:outline-none appearance-none"
-                                    style={{ color: textColor }}
-                                >
-                                    <option value="" className="text-black bg-white">No notebook</option>
-                                    {notebooks.map(n => (
-                                        <option key={n.id} value={n.id} className="text-black bg-white">
-                                            {n.title}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            
-                            {/* Link Note Dropdown */}
-                            <div className="p-3 rounded-2xl col-span-2" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
                                 <label className="flex items-center gap-1.5 font-semibold opacity-70 mb-1.5 text-sm">
                                     <LinkIcon className="w-4 h-4"/> Link Note
                                 </label>
@@ -642,7 +602,7 @@ function EventDetail({
                                     style={{ color: textColor }}
                                 >
                                     <option value="" className="text-black bg-white">No linked note</option>
-                                    {notes.map(n => (
+                                    {notes.filter(n => !n.deletedAt).map(n => (
                                         <option key={n.id} value={n.id} className="text-black bg-white">
                                             {n.title.length > 50 ? `${n.title.substring(0, 50)}...` : n.title}
                                         </option>

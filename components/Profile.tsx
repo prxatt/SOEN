@@ -170,7 +170,7 @@ function Profile({ praxisFlow, setScreen, goals, setGoals, activeFocusBackground
                 </button>
             </motion.div>
         </div>
-    </div>
+    </motion.div>
   );
 };
 

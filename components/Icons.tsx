@@ -795,6 +795,22 @@ export const ArrowPathIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     </svg>
 );
 
+// FIX: Add missing ArrowRightIcon for use in Dashboard.
+export const ArrowRightIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
+    </svg>
+);
+
 // Specialized Icons
 export const GiftIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     <svg 
@@ -1305,6 +1321,7 @@ export default {
     ArrowDownTrayIcon,
     ArrowUpOnSquareIcon,
     ArrowPathIcon,
+    ArrowRightIcon,
     
     // Specialized
     GiftIcon,

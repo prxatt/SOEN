@@ -28,12 +28,12 @@ export const applyWatermark = (base64Image: string): Promise<string> => {
             ctx.textAlign = 'left';
             ctx.fillText(dateStr, margin, canvas.height - margin);
 
-            // --- Add Watermark Text (Bottom Right) ---
-            const watermarkText = 'PRAXIS AI by Surface Tension';
-            ctx.font = `bold ${fontSize * 0.9}px "Instrument Sans", sans-serif`;
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.textAlign = 'right';
-            const x = canvas.width - margin;
+            // --- Add Watermark Text (Bottom Center) ---
+            const watermarkText = 'Praxis AI';
+            ctx.font = `bold ${fontSize * 0.8}px "Instrument Sans", sans-serif`;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.textAlign = 'center';
+            const x = canvas.width / 2;
             const y = canvas.height - margin;
             ctx.fillText(watermarkText, x, y);
 

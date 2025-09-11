@@ -9,7 +9,6 @@ interface ProfileProps {
     setScreen: (screen: Screen) => void;
     goals: Goal[];
     setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
-    // FIX: Add missing props to handle focus background selection.
     activeFocusBackground: string;
     setActiveFocusBackground: (bgValue: string) => void;
     purchasedRewards: string[];
@@ -124,7 +123,6 @@ function Profile({ praxisFlow, setScreen, goals, setGoals, activeFocusBackground
                 <GoalsHub goals={goals} setGoals={setGoals} />
             </motion.div>
 
-            {/* FIX: Add Focus Background selector section */}
             <motion.div
                 className="card p-6 rounded-2xl shadow-sm"
                 initial={{ opacity: 0, y: 20 }}

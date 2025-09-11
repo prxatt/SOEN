@@ -119,6 +119,15 @@ export interface ChatMessage {
     };
 }
 
+// FIX: Add a new type for Chat History to support multiple chat sessions.
+export interface ChatSession {
+    id: number;
+    title: string;
+    messages: ChatMessage[];
+    createdAt: Date;
+}
+
+
 export interface SearchResult {
     text: string;
     sources: { title: string; uri: string }[];

@@ -199,5 +199,38 @@ export const parseCommandWithGemini = async (command: string): Promise<Partial<T
 // Placeholder for other functions from the original file to prevent import errors
 export const performInternetSearch = async (query: string): Promise<any> => ({ text: 'Search results not available.', sources: [] });
 export const generateProjectStatusReport = async (project: Project, notes: Note[]): Promise<any> => ({ summary: "Report not available." });
-export const getChatContextualPrompts = (tab: string): string[] => ["Summarize my day.", "What's my top priority?"];
+export const getChatContextualPrompts = (screen: string): string[] => {
+    switch (screen) {
+        case 'Dashboard':
+            return [
+                "Summarize my day's performance.",
+                "What's the most important task left today?",
+                "Suggest a new short-term goal based on today's focus."
+            ];
+        case 'Schedule':
+            return [
+                "Find free time for a 1-hour meeting tomorrow.",
+                "What are my priorities for this week?",
+                "Create a new 'Deep Work' session for Friday morning."
+            ];
+        case 'Notes':
+            return [
+                "Find notes related to 'Praxis AI strategy'.",
+                "Create a new note summarizing my last meeting.",
+                "Draft an email based on my 'Brand Guidelines' note."
+            ];
+        case 'Profile':
+            return [
+                "How can I earn more Flow points?",
+                "Review my long-term goals with me.",
+                "What theme should I unlock next?"
+            ];
+        default:
+            return [
+                "Summarize my day.",
+                "What's my top priority?",
+                "Help me brainstorm ideas for a new project."
+            ];
+    }
+};
 export const getChatFollowUp = async (messages: ChatMessage[]): Promise<string> => "I'm ready for your next question.";

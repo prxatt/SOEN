@@ -1,12 +1,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Cog6ToothIcon, GoogleCalendarIcon, ChevronRightIcon, SparklesIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleLeftEllipsisIcon } from './Icons';
+import { Cog6ToothIcon, GoogleCalendarIcon, ChevronRightIcon, SparklesIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleLeftEllipsisIcon, CheckIcon } from './Icons';
+import { REWARDS_CATALOG } from '../constants';
 
 interface SettingsProps {
     uiMode: 'dark' | 'glass';
     toggleUiMode: () => void;
     onSyncCalendar: () => void;
     onLogout: () => void;
+    activeTheme: string;
+    setActiveTheme: (themeValue: string) => void;
+    purchasedRewards: string[];
 }
 
 interface SettingsRowProps {
@@ -16,6 +20,19 @@ interface SettingsRowProps {
   onClick?: () => void;
   action?: React.ReactNode;
 }
+
+const getThemeGradient = (themeValue: string) => {
+    switch (themeValue) {
+        case 'obsidian': return 'linear-gradient(135deg, #4b5563, #111827)';
+        case 'synthwave': return 'linear-gradient(135deg, #EC4899, #7c3aed)';
+        case 'solarpunk': return 'linear-gradient(135deg, #a3e635, #16a34a)';
+        case 'luxe': return 'linear-gradient(135deg, #fde047, #eab308)';
+        case 'aurelian': return 'linear-gradient(135deg, #fbbf24, #f59e0b)';
+        case 'crimson': return 'linear-gradient(135deg, #f87171, #dc2626)';
+        case 'oceanic': return 'linear-gradient(135deg, #38bdf8, #0ea5e9)';
+        default: return 'linear-gradient(135deg, #6b7280, #374151)';
+    }
+};
 
 function SettingsRow({ icon, title, subtitle, onClick, action }: SettingsRowProps) {
   const Component = onClick ? 'button' : 'div';
@@ -37,9 +54,11 @@ function SettingsRow({ icon, title, subtitle, onClick, action }: SettingsRowProp
   );
 }
 
-function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout }: SettingsProps) {
+function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme, setActiveTheme, purchasedRewards }: SettingsProps) {
+  const purchasedThemes = REWARDS_CATALOG.filter(r => r.type === 'theme' && purchasedRewards.includes(r.id));
+
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="h-full overflow-y-auto pb-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-h-[calc(100vh-8.5rem)] overflow-y-auto pb-4 pr-2 -mr-2">
       <div className="mb-8">
         <h2 className="text-3xl font-bold font-display flex items-center gap-2"><Cog6ToothIcon className="w-8 h-8"/> Settings</h2>
         <p className="text-text-secondary">Manage your Praxis experience.</p>
@@ -82,6 +101,32 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout }: SettingsPr
                         ><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${uiMode === 'dark' ? 'translate-x-6' : 'translate-x-1'}`} /></button>
                     }
                 />
+                <div className="border-t border-border/50 my-1 mx-2"></div>
+                <div className="w-full flex items-center justify-between text-left p-4">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 bg-bg rounded-lg">
+                            <SparklesIcon className="w-6 h-6 text-accent" />
+                        </div>
+                        <div>
+                            <h4 className="font-semibold">App Theme</h4>
+                            <p className="text-sm text-text-secondary">Select your active color theme.</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap justify-end items-center gap-2 max-w-[12rem]">
+                        {purchasedThemes.map(theme => (
+                            <button
+                                key={theme.id}
+                                onClick={() => setActiveTheme(theme.value)}
+                                className={`w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center ${activeTheme === theme.value ? 'ring-2 ring-offset-2 ring-offset-card ring-accent' : 'hover:scale-110'}`}
+                                style={{ background: getThemeGradient(theme.value) }}
+                                aria-label={`Select ${theme.name} theme`}
+                            >
+                                {activeTheme === theme.value && <CheckIcon className="w-5 h-5 text-white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}/>}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="border-t border-border/50 my-1 mx-2"></div>
                  <SettingsRow 
                     icon={<SparklesIcon className="w-6 h-6 text-purple-400" />}
                     title="Notifications"

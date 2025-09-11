@@ -1,5 +1,6 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+// FIX: Import Variants for typing framer-motion animation variants.
+import { motion, Variants } from 'framer-motion';
 import { Project } from '../types';
 import { PlusCircleIcon, BriefcaseIcon } from './Icons';
 
@@ -8,7 +9,8 @@ interface ProjectsProps {
     setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
 }
 
-const containerVariants = {
+// FIX: Explicitly type animation variants with the Variants type for better type safety and to prevent potential type inference issues.
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -16,7 +18,7 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { y: 20, opacity: 0 },
   visible: { y: 0, opacity: 1 },
 };

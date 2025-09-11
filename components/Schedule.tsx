@@ -123,19 +123,21 @@ function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDa
 
     return (
         <div 
-          className="rounded-3xl p-4 sm:p-6 h-full flex"
+          className="rounded-3xl p-4 sm:p-6 h-full flex flex-col sm:flex-row"
           style={{ backgroundColor: bgColor, color: textColor }}
         >
-            <div className="w-1/3 flex-shrink-0 pr-4 flex flex-col justify-between">
+            <div className="w-full sm:w-1/3 flex-shrink-0 sm:pr-4 flex flex-row sm:flex-col justify-between items-center sm:items-start sm:justify-between mb-4 sm:mb-0">
                 <div>
                     <div className="flex items-center justify-between">
                          <p className="font-semibold">{dayOfWeek}</p>
                          {isToday && <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{backgroundColor: 'rgba(0,0,0,0.2)'}}>Today</span>}
                     </div>
-                    <p className="text-7xl font-bold font-display tracking-tighter leading-none mt-1">{monthNum}.{day}</p>
-                    <p className="text-7xl font-bold font-display tracking-tight leading-none opacity-60">{month}</p>
+                    <div className="flex items-baseline sm:block gap-2">
+                        <p className="text-6xl sm:text-7xl font-bold font-display tracking-tighter leading-none sm:mt-1">{monthNum}.{day}</p>
+                        <p className="text-3xl sm:text-7xl font-bold font-display tracking-tight leading-none sm:opacity-60">{month}</p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex sm:flex-row items-center sm:items-start gap-2">
                     <button onClick={handlePrevDay} className="p-2 rounded-full transition-colors" style={{backgroundColor: 'rgba(0,0,0,0.1)'}} aria-label="Previous day">
                         <ChevronLeftIcon className="w-6 h-6"/>
                     </button>
@@ -145,9 +147,9 @@ function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDa
                 </div>
             </div>
 
-            <div className="w-2/3 pl-4 border-l min-h-0" style={{borderColor: `${textColor === 'white' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`}}>
+            <div className="w-full sm:w-2/3 sm:pl-4 sm:border-l border-current/20 flex-1 min-h-0">
                 {tasks.length > 0 ? (
-                    <div className="h-full overflow-y-auto pr-2 -mr-2">
+                    <div className="h-full overflow-y-auto hide-scrollbar">
                         <div className="space-y-4">
                             {tasks.map(task => <TaskCard key={task.id} task={task} categoryColors={categoryColors} onSelect={onSelectTask} />)}
                         </div>
@@ -172,6 +174,8 @@ interface MiniTimelineProps {
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors }: MiniTimelineProps) {
+    const timelineRef = useRef<HTMLDivElement>(null);
+    
     const tasksByHour = useMemo(() => {
         const groups: Record<number, Task[]> = {};
         tasks.forEach(task => {
@@ -189,9 +193,23 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors }: Min
     for (let i = displayStartHour; i <= displayEndHour; i++) {
         visibleHours.push(i);
     }
+    
+    useEffect(() => {
+        if (timelineRef.current && tasks.length > 0) {
+            const firstTaskHour = new Date(tasks[0].startTime).getHours();
+            const scrollToIndex = Math.max(0, firstTaskHour - displayStartHour);
+            
+            // Assuming each hour block is w-24 (6rem) with gap-2 (0.5rem) = 6.5rem total
+            // Using pixels for more accuracy, assuming 1rem = 16px. 6 * 16 + 8 = 104px per block.
+            const blockWidth = (6 * 16) + 8;
+            const scrollPosition = scrollToIndex * blockWidth;
+            
+            timelineRef.current.scrollTo({ left: scrollPosition, behavior: 'auto' });
+        }
+    }, [tasks]);
 
     return (
-        <div className="flex h-full gap-2 pl-4 -mr-4 overflow-x-auto pb-2">
+        <div ref={timelineRef} className="flex h-full gap-2 overflow-x-auto hide-scrollbar">
             {visibleHours.map(hour => (
                 <div key={hour} className="flex flex-col items-center flex-shrink-0 w-24">
                     <div className="text-center border-b w-full pb-1" style={{ borderColor: `${textColor}40`}}>
@@ -267,7 +285,7 @@ function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDay
                 <p className="text-6xl font-bold font-display tracking-tighter leading-none mt-1">{day}</p>
                 <p className="text-6xl font-bold font-display tracking-tight leading-none opacity-60">{month}</p>
             </div>
-            <div className="w-2/3">
+            <div className="w-2/3 overflow-hidden">
                 <MiniTimeline tasks={safeTasks} textColor={textColor} date={date} onAddTask={onAddTask} categoryColors={categoryColors}/>
             </div>
         </div>
@@ -278,12 +296,13 @@ interface CalendarViewProps {
   tasks: Task[];
   categoryColors: Record<Category, string>;
   onAddTask: (date: Date, hour: number) => void;
+  selectedDate: Date;
 }
 
-function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
-    const [currentMonthDate, setCurrentMonthDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+function CalendarView({ tasks, categoryColors, onAddTask, selectedDate }: CalendarViewProps) {
+    const [currentMonthDate, setCurrentMonthDate] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
     const listRef = useRef<HTMLDivElement>(null);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const isFirstRender = useRef(true);
     const [isAnimating, setIsAnimating] = useState(false);
     const [animationDirection, setAnimationDirection] = useState(1); // 1 for next, -1 for prev
 
@@ -319,28 +338,36 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
             return newDate;
         });
     }, [isAnimating]);
-
-    const handleAnimationComplete = () => {
-        setIsAnimating(false);
-        // This logic now reliably runs after the initial render animation is complete.
-        if (isInitialLoad && listRef.current) {
-            const today = new Date();
-            // Only scroll if the calendar is showing the current month.
-            if (currentMonthDate.getFullYear() === today.getFullYear() && currentMonthDate.getMonth() === today.getMonth()) {
-                const todayStr = today.toISOString().split('T')[0];
-                const todayElement = listRef.current.querySelector(`[data-date='${todayStr}']`) as HTMLElement;
-                if (todayElement) {
-                    todayElement.scrollIntoView({
-                        behavior: 'auto', // Instant scroll on first load
-                        block: 'center',
-                    });
-                }
-            }
-            // Ensure this logic only runs once on the very first load.
-            setIsInitialLoad(false);
-        }
-    };
     
+    useEffect(() => {
+        // This effect runs only once on mount to scroll to the initial date.
+        if (!listRef.current) return;
+    
+        const targetDateStr = selectedDate.toISOString().split('T')[0];
+        const targetElement = listRef.current.querySelector(`[data-date='${targetDateStr}']`) as HTMLElement;
+    
+        if (targetElement) {
+            const timer = setTimeout(() => {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }, 450); // Wait for mount animation to complete.
+            return () => clearTimeout(timer);
+        }
+    }, []); // Empty dependency array ensures it runs only once.
+
+    useEffect(() => {
+        // This effect scrolls to the top when the month changes, but not on the initial render.
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+        if (listRef.current) {
+            listRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [currentMonthDate]);
+
     const dayElements = useMemo(() => {
         const year = currentMonthDate.getFullYear();
         const month = currentMonthDate.getMonth();
@@ -372,13 +399,6 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
         }
         return elements;
     }, [currentMonthDate, tasksByDate, categoryColors, onAddTask]);
-
-    useEffect(() => {
-        // This effect handles scrolling to the top when navigating between months.
-        if (!isInitialLoad && listRef.current) {
-            listRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    }, [currentMonthDate, isInitialLoad]);
 
     let prevMonth = '...';
     let currentMonthName = 'Loading';
@@ -425,12 +445,12 @@ function CalendarView({ tasks, categoryColors, onAddTask }: CalendarViewProps) {
                     <motion.div
                         key={currentMonthDate.toISOString()}
                         ref={listRef}
-                        className="h-full overflow-y-auto pr-2 -mr-2"
+                        className="h-full overflow-y-auto hide-scrollbar"
                         initial={{ opacity: 0, y: 30 * animationDirection }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -30 * animationDirection }}
                         transition={{ duration: 0.4, ease: 'easeInOut' }}
-                        onAnimationComplete={handleAnimationComplete}
+                        onAnimationComplete={() => setIsAnimating(false)}
                     >
                         <div className="space-y-3">
                             {dayElements}
@@ -520,7 +540,12 @@ function Schedule(props: ScheduleProps) {
                               changeDate={changeDate}
                            />
                         ) : (
-                            <CalendarView tasks={tasks} categoryColors={categoryColors} onAddTask={handleOpenNewTaskModal} />
+                            <CalendarView 
+                                tasks={tasks} 
+                                categoryColors={categoryColors} 
+                                onAddTask={handleOpenNewTaskModal} 
+                                selectedDate={selectedDate}
+                            />
                         )}
                     </motion.div>
                 </AnimatePresence>

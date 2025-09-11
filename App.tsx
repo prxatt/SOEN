@@ -58,7 +58,13 @@ const generateMockTasksForMonth = (year: number, month: number): Task[] => {
 
         for (let i = 0; i < tasksPerDay; i++) {
             const category = DEFAULT_CATEGORIES[Math.floor(Math.random() * DEFAULT_CATEGORIES.length)];
-            const hour = Math.floor(Math.random() * 12) + 8; // 8am - 7pm
+            let hour;
+            // On every 3rd day, ensure the first task starts in the afternoon to test timeline scrolling
+            if (day % 3 === 0 && i === 0) {
+                hour = Math.floor(Math.random() * 5) + 13; // 1pm - 5pm
+            } else {
+                hour = Math.floor(Math.random() * 12) + 8; // 8am - 7pm
+            }
             const minute = [0, 15, 30, 45][Math.floor(Math.random() * 4)];
             const startTime = new Date(year, month, day, hour, minute);
 

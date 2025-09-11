@@ -64,8 +64,15 @@ function Notes(props: NotesProps) {
         notebooks, addNote, showToast, selectedNote, setSelectedNote, activeNotebookId, setActiveNotebookId
     } = props;
     
-    const [displayMode, setDisplayMode] = useState<'notes' | 'notebooks'>('notes');
+    const [displayMode, setDisplayMode] = useState<'notes' | 'notebooks'>(
+        () => (localStorage.getItem('praxis-notes-view-mode') as 'notes' | 'notebooks') || 'notes'
+    );
     const [selectedNoteIds, setSelectedNoteIds] = useState<number[]>([]);
+
+    const handleSetDisplayMode = (mode: 'notes' | 'notebooks') => {
+        setDisplayMode(mode);
+        localStorage.setItem('praxis-notes-view-mode', mode);
+    };
     
     const handleSelectNote = (note: Note) => {
         if (note.deletedAt || selectedNoteIds.length > 0) return;
@@ -104,7 +111,7 @@ function Notes(props: NotesProps) {
         
         if (!targetNotebookId) {
             showToast("Please create a notebook first.");
-            setDisplayMode('notebooks');
+            handleSetDisplayMode('notebooks');
             return;
         }
         
@@ -143,8 +150,8 @@ function Notes(props: NotesProps) {
                     <motion.div key="main-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col h-full">
                         <div className="flex justify-between items-center mb-4 flex-shrink-0">
                             <div className="flex items-center gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-full">
-                                <button onClick={() => { setActiveNotebookId('all'); setDisplayMode('notes'); }} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${displayMode === 'notes' && activeNotebookId === 'all' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>All Notes</button>
-                                <button onClick={() => setDisplayMode('notebooks')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${displayMode === 'notebooks' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Notebooks</button>
+                                <button onClick={() => { setActiveNotebookId('all'); handleSetDisplayMode('notes'); }} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${displayMode === 'notes' && activeNotebookId === 'all' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>All Notes</button>
+                                <button onClick={() => handleSetDisplayMode('notebooks')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${displayMode === 'notebooks' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Notebooks</button>
                                 <AnimatePresence>
                                 {viewingNotebook && displayMode === 'notes' && (
                                     <motion.div initial={{width:0, opacity: 0}} animate={{width:'auto', opacity: 1}} exit={{width:0, opacity: 0}}>
@@ -172,7 +179,7 @@ function Notes(props: NotesProps) {
                                             {...props} 
                                             onSelectNotebook={(nb) => {
                                                 setActiveNotebookId(nb.id);
-                                                setDisplayMode('notes');
+                                                handleSetDisplayMode('notes');
                                             }} 
                                         />
                                     )}

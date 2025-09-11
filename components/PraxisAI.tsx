@@ -259,9 +259,9 @@ function ChatInterface(props: {
                     <MenuItem icon={<ArrowUpOnSquareIcon className="w-4 h-4"/>} label="Add to Existing Note..." onClick={() => setIsNoteModalOpen(true)} />
                 </Menu>
             </div>
-            <div className="flex-grow overflow-y-auto p-4 sm:p-6 space-y-6">
+            <div className="flex-grow overflow-y-auto hide-scrollbar p-4 sm:p-6 space-y-6">
                 {activeChat.messages.length === 0 && (
-                     <div className="text-center py-8 text-text-secondary animate-fade-in flex flex-col items-center justify-center h-full">
+                     <div className="text-center text-text-secondary animate-fade-in flex flex-col items-center justify-center h-full">
                         <BabyPenguinIcon className="w-24 h-24 mx-auto mb-4 text-accent/20" />
                         <h3 className="text-2xl font-bold font-display text-text">Kiko is ready.</h3>
                         <p className="text-base mt-2">Your strategic partner is listening.</p>
@@ -361,42 +361,31 @@ function PraxisAI(props: PraxisAIProps) {
     <div className="flex flex-col h-[calc(100vh-8.5rem)]">
       <div className="flex justify-between items-center flex-shrink-0 mb-4 px-2">
         <h2 className="text-3xl font-bold font-display flex items-center gap-3">
-             <button onClick={() => setIsHistoryVisible(!isHistoryVisible)} className="p-2 md:hidden mr-2 rounded-lg bg-card hover:bg-border">
+             <button onClick={() => setIsHistoryVisible(!isHistoryVisible)} className="p-2 mr-2 rounded-lg bg-card hover:bg-border">
                 <Bars3Icon className="w-6 h-6"/>
             </button>
             <BabyPenguinIcon className="w-8 h-8 text-accent" /> Kiko AI
         </h2>
       </div>
 
-      <div className="card rounded-3xl shadow-sm flex-grow min-h-0 overflow-hidden flex">
-        <div className="hidden md:flex">
-             <ChatHistorySidebar 
-                chatHistory={chatHistory} 
-                activeChatId={activeChatId} 
-                setActiveChatId={setActiveChatId}
-                onNewChat={onNewChat}
-                onRenameChat={onRenameChat}
-                onDeleteChat={onDeleteChat}
-                isAiReplying={props.isAiReplying}
-                lastDeletedChat={lastDeletedChat}
-                onRestoreChat={onRestoreChat}
-            />
+      <div className="card rounded-3xl shadow-sm flex-grow min-h-0 overflow-hidden">
+        <div className="flex h-full">
+            {activeChat ? (
+                <ChatInterface 
+                    {...props} 
+                    activeChat={activeChat}
+                    onRename={(newTitle) => onRenameChat(activeChat.id, newTitle)}
+                    onAddToNote={handleAddToNote}
+                    onNewNoteFromChat={handleNewNoteFromChat}
+                />
+            ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-center text-text-secondary">
+                    <BabyPenguinIcon className="w-16 h-16 mb-4"/>
+                    <p className="font-semibold">No active chat.</p>
+                    <p>Select a conversation or start a new one.</p>
+                </div>
+            )}
         </div>
-        {activeChat ? (
-             <ChatInterface 
-                {...props} 
-                activeChat={activeChat}
-                onRename={(newTitle) => onRenameChat(activeChat.id, newTitle)}
-                onAddToNote={handleAddToNote}
-                onNewNoteFromChat={handleNewNoteFromChat}
-             />
-        ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center text-text-secondary">
-                <BabyPenguinIcon className="w-16 h-16 mb-4"/>
-                <p className="font-semibold">No active chat.</p>
-                <p>Select a conversation or start a new one.</p>
-            </div>
-        )}
       </div>
 
       <AnimatePresence>
@@ -404,7 +393,7 @@ function PraxisAI(props: PraxisAIProps) {
             <motion.div
                 initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="fixed top-0 left-0 bottom-0 w-72 bg-bg z-50 md:hidden shadow-lg border-r border-border"
+                className="fixed top-0 left-0 bottom-0 w-72 bg-bg z-50 shadow-lg border-r border-border"
             >
                 <button onClick={() => setIsHistoryVisible(false)} className="absolute top-2 right-2 p-2 rounded-full"><XMarkIcon className="w-6 h-6"/></button>
                  <ChatHistorySidebar 

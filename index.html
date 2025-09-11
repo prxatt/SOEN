@@ -176,6 +176,15 @@
         background-size: 400% 400%;
         animation: gradient-shift 15s ease infinite;
     }
+    
+    /* Invisible Scrollbar Utility */
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .hide-scrollbar {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
+    }
   </style>
   <script type="importmap">
 {

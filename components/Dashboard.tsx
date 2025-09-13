@@ -51,11 +51,11 @@ const Header = ({ tasksTodayCount }: { tasksTodayCount: number }) => {
     const today = new Date();
     return (
         <motion.div variants={itemVariants} className="col-span-full mb-2">
-            <p className="text-lg text-text-secondary">{today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-            <h1 className="text-4xl font-bold font-display text-text">
+            <p className="text-base sm:text-lg text-text-secondary">{today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+            <h1 className="text-3xl sm:text-4xl font-bold font-display text-text">
                 {getGreeting()}, Pratt.
             </h1>
-            <p className="text-xl font-display text-text-secondary mt-1">
+            <p className="text-lg sm:text-xl font-display text-text-secondary mt-1">
                 You have {tasksTodayCount} mission{tasksTodayCount !== 1 ? 's' : ''} today.
             </p>
         </motion.div>
@@ -78,7 +78,7 @@ const AgendaCard = ({ todayTasks, tomorrowTasks, navigateToScheduleDate, categor
     };
 
     return (
-        <motion.div variants={itemVariants} className="card rounded-3xl p-4 sm:p-6 col-span-full md:col-span-2 row-span-2 flex flex-col">
+        <motion.div variants={itemVariants} className="card rounded-3xl p-4 sm:p-6 col-span-full lg:col-span-2 row-span-2 flex flex-col w-full">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 p-1 bg-bg rounded-full">
                     <button onClick={() => setActiveTab('today')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeTab === 'today' ? 'bg-zinc-800 text-white' : 'text-text-secondary'}`}>
@@ -129,7 +129,7 @@ const AgendaCard = ({ todayTasks, tomorrowTasks, navigateToScheduleDate, categor
 
 const MissionBriefingCard = ({ briefing, isLoading }: { briefing: MissionBriefing, isLoading: boolean }) => {
     return (
-        <motion.div variants={itemVariants} className="card rounded-3xl p-4 sm:p-6 col-span-full md:col-span-1 row-span-2 flex flex-col bg-gradient-to-br from-card to-zinc-900/50 dark:from-zinc-900 dark:to-black/50">
+        <motion.div variants={itemVariants} className="card rounded-3xl p-4 sm:p-6 col-span-full lg:col-span-1 row-span-2 flex flex-col bg-gradient-to-br from-card to-zinc-900/50 dark:from-zinc-900 dark:to-black/50 w-full">
             <h3 className="text-xl font-bold font-display flex items-center gap-2 mb-2">
                 <BrainCircuitIcon className="w-6 h-6 text-accent"/> Mission Briefing
             </h3>
@@ -184,7 +184,7 @@ const FocusBreakdownCard = ({ todayTasks, categoryColors }: { todayTasks: Task[]
     if (focusData.length === 0) return null;
 
     return (
-        <motion.div variants={itemVariants} className="card rounded-3xl p-4 sm:p-6 col-span-full md:col-span-2">
+        <motion.div variants={itemVariants} className="card rounded-3xl p-4 sm:p-6 col-span-full lg:col-span-2 w-full">
             <h3 className="text-lg font-bold font-display mb-2">Today's Focus</h3>
              <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
@@ -215,7 +215,7 @@ const RecentNoteCard = ({ notes, setScreen }: { notes: Note[], setScreen: (s: Sc
         <motion.button 
             variants={itemVariants} 
             onClick={() => setScreen('Notes')}
-            className="card rounded-3xl p-4 sm:p-6 col-span-full md:col-span-1 text-left"
+            className="card rounded-3xl p-4 sm:p-6 col-span-full lg:col-span-1 text-left w-full"
             whileHover={{ y: -5 }}
         >
             <h3 className="text-lg font-bold font-display mb-2 flex items-center gap-2"><DocumentTextIcon className="w-5 h-5 text-accent"/> Recent Note</h3>
@@ -250,7 +250,7 @@ export default function Dashboard(props: DashboardProps) {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
             <Header tasksTodayCount={todayTasks.length} />
             

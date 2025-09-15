@@ -149,9 +149,13 @@ function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDa
 
             <div className="w-full sm:w-2/3 sm:pl-4 sm:border-l border-current/20 flex-1 min-h-0">
                 {tasks.length > 0 ? (
-                    <div className="h-full overflow-y-auto hide-scrollbar">
+                    <div className="h-full overflow-y-auto hide-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
                         <div className="space-y-4">
-                            {tasks.map(task => <TaskCard key={task.id} task={task} categoryColors={categoryColors} onSelect={onSelectTask} />)}
+                            {tasks.map(task => (
+                                <React.Fragment key={task.id}>
+                                    <TaskCard task={task} categoryColors={categoryColors} onSelect={onSelectTask} />
+                                </React.Fragment>
+                            ))}
                         </div>
                     </div>
                 ) : (
@@ -169,12 +173,16 @@ interface MiniTimelineProps {
   textColor: string;
   date: Date;
   onAddTask: (date: Date, hour: number) => void;
+  onMoveTask: (taskId: number, date: Date, hour: number) => void;
   categoryColors: Record<Category, string>;
 }
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors }: MiniTimelineProps) {
+function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors, onMoveTask }: MiniTimelineProps) {
     const timelineRef = useRef<HTMLDivElement>(null);
+    const [activeHourIndex, setActiveHourIndex] = useState<number | null>(null);
+    const [selectedTaskForMove, setSelectedTaskForMove] = useState<number | null>(null);
+    const longPressTimerRef = useRef<number | null>(null);
     
     const tasksByHour = useMemo(() => {
         const groups: Record<number, Task[]> = {};
@@ -211,19 +219,45 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors }: Min
     return (
         <div ref={timelineRef} className="flex h-full gap-2 overflow-x-auto hide-scrollbar">
             {visibleHours.map(hour => (
-                <div key={hour} className="flex flex-col items-center flex-shrink-0 w-24">
+                <div key={hour} className="flex flex-col items-center flex-shrink-0 w-24" onDragOver={(e) => { e.preventDefault(); }} onDrop={(e) => {
+                    e.preventDefault();
+                    const data = e.dataTransfer.getData('application/praxis-task-id') || e.dataTransfer.getData('text/plain');
+                    const taskId = Number(data);
+                    if (!isNaN(taskId)) onMoveTask(taskId, date, hour);
+                }} onTouchEnd={() => {
+                    if (selectedTaskForMove != null) {
+                        onMoveTask(selectedTaskForMove, date, hour);
+                        setSelectedTaskForMove(null);
+                    }
+                }}>
                     <div className="text-center border-b w-full pb-1" style={{ borderColor: `${textColor}40`}}>
                         <span className="text-xs font-semibold">{hour % 12 === 0 ? 12 : hour % 12}{hour < 12 ? ' am' : ' pm'}</span>
                     </div>
-                    <div className="flex-grow w-full pt-2 space-y-1.5 min-h-[6rem]">
-                        {(tasksByHour[hour] || []).map(task => (
-                             <div key={task.id} className="p-1.5 rounded-lg text-xs break-words" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                                {task.title}
-                             </div>
-                        ))}
-                        <button onClick={() => onAddTask(date, hour)} className="w-full flex justify-center items-center h-8 rounded-lg transition-colors hover:bg-black/20" style={{ backgroundColor: 'rgba(0,0,0,0.1)'}}>
-                            <PlusIcon className="w-4 h-4" style={{ color: textColor, opacity: 0.7 }} />
-                        </button>
+                    <div className="flex-grow w-full pt-2 space-y-1.5 min-h-[6rem]" onClick={() => setActiveHourIndex(activeHourIndex === hour ? null : hour)}>
+                        {(tasksByHour[hour] || []).map(task => {
+                            const pillColor = categoryColors[task.category] || '#6B7280';
+                            const textOnPill = getTextColorForBackground(pillColor) === 'white' ? '#ffffff' : '#111827';
+                            return (
+                                <div key={task.id} className="p-1.5 rounded-lg text-xs break-words cursor-grab active:cursor-grabbing select-none" style={{ backgroundColor: pillColor, color: textOnPill }} draggable onDragStart={(e) => {
+                                    e.dataTransfer.setData('application/praxis-task-id', String(task.id));
+                                    e.dataTransfer.setData('text/plain', String(task.id));
+                                }} onTouchStart={() => {
+                                    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+                                    longPressTimerRef.current = window.setTimeout(() => {
+                                        setSelectedTaskForMove(task.id);
+                                    }, 350);
+                                }} onTouchEnd={() => {
+                                    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+                                }}>
+                                    {task.title}
+                                </div>
+                            );
+                        })}
+                        {activeHourIndex === hour && (
+                            <button onClick={() => onAddTask(date, hour)} className="w-full flex justify-center items-center h-8 rounded-lg transition-colors" style={{ backgroundColor: 'rgba(0,0,0,0.15)'}} aria-label="Add task here">
+                                <PlusIcon className="w-4 h-4" style={{ color: textColor, opacity: 0.8 }} />
+                            </button>
+                        )}
                     </div>
                 </div>
             ))}
@@ -236,9 +270,10 @@ interface CalendarDayCardProps {
   tasks: Task[];
   categoryColors: Record<Category, string>;
   onAddTask: (date: Date, hour: number) => void;
+  onMoveTask: (taskId: number, date: Date, hour: number) => void;
 }
 
-function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDayCardProps) {
+function CalendarDayCard({ date, tasks, categoryColors, onAddTask, onMoveTask }: CalendarDayCardProps) {
     // Defensive programming for date and tasks
     if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
         return (
@@ -286,7 +321,7 @@ function CalendarDayCard({ date, tasks, categoryColors, onAddTask }: CalendarDay
                 <p className="text-6xl font-bold font-display tracking-tight leading-none opacity-60">{month}</p>
             </div>
             <div className="w-2/3 overflow-hidden">
-                <MiniTimeline tasks={safeTasks} textColor={textColor} date={date} onAddTask={onAddTask} categoryColors={categoryColors}/>
+                <MiniTimeline tasks={safeTasks} textColor={textColor} date={date} onAddTask={onAddTask} onMoveTask={onMoveTask} categoryColors={categoryColors}/>
             </div>
         </div>
     );
@@ -296,10 +331,11 @@ interface CalendarViewProps {
   tasks: Task[];
   categoryColors: Record<Category, string>;
   onAddTask: (date: Date, hour: number) => void;
+  onMoveTask: (taskId: number, date: Date, hour: number) => void;
   selectedDate: Date;
 }
 
-function CalendarView({ tasks, categoryColors, onAddTask, selectedDate }: CalendarViewProps) {
+function CalendarView({ tasks, categoryColors, onAddTask, onMoveTask, selectedDate }: CalendarViewProps) {
     const [currentMonthDate, setCurrentMonthDate] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
     const listRef = useRef<HTMLDivElement>(null);
     const isFirstRender = useRef(true);
@@ -379,7 +415,7 @@ function CalendarView({ tasks, categoryColors, onAddTask, selectedDate }: Calend
 
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         
-        const elements: JSX.Element[] = [];
+        const elements: any[] = [];
         for (let day = 1; day <= daysInMonth; day++) {
             try {
                 const date = new Date(year, month, day);
@@ -390,7 +426,9 @@ function CalendarView({ tasks, categoryColors, onAddTask, selectedDate }: Calend
                 const dailyTasks = (tasksByDate[dateStr] || []).sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
                 const uniqueKey = `${year}-${month}-${day}`;
                 elements.push(
-                    <CalendarDayCard key={uniqueKey} date={date} tasks={dailyTasks} categoryColors={categoryColors} onAddTask={onAddTask}/>
+                    <React.Fragment key={uniqueKey}>
+                        <CalendarDayCard date={date} tasks={dailyTasks} categoryColors={categoryColors} onAddTask={onAddTask} onMoveTask={onMoveTask}/>
+                    </React.Fragment>
                 );
             } catch (error) {
                 console.error(`Failed to generate day card for ${year}-${month}-${day}:`, error);
@@ -398,7 +436,7 @@ function CalendarView({ tasks, categoryColors, onAddTask, selectedDate }: Calend
             }
         }
         return elements;
-    }, [currentMonthDate, tasksByDate, categoryColors, onAddTask]);
+    }, [currentMonthDate, tasksByDate, categoryColors, onAddTask, onMoveTask]);
 
     let prevMonth = '...';
     let currentMonthName = 'Loading';
@@ -509,8 +547,10 @@ function Schedule(props: ScheduleProps) {
         handleOpenNewTaskModal(dateForModal);
     }, [view, selectedDate, handleOpenNewTaskModal]);
 
+    // Note: swipe gestures removed to avoid interfering with scrolling. Use the toggle buttons.
+
     return (
-        <div className="h-full max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="h-full flex flex-col overflow-hidden">
              <div className="flex justify-between items-center mb-6 flex-shrink-0">
                 <div className="flex items-center gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-full">
                     <button onClick={() => setView('today')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'today' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Today</button>
@@ -521,34 +561,33 @@ function Schedule(props: ScheduleProps) {
                 </button>
             </div>
 
-            <div className="flex-1 min-h-0">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={view}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="h-full"
-                    >
-                        {view === 'today' ? (
-                           <TodayView 
-                              selectedDate={selectedDate}
-                              tasks={tasksForSelectedDate}
-                              categoryColors={categoryColors}
-                              onSelectTask={setSelectedTask}
-                              changeDate={changeDate}
-                           />
-                        ) : (
-                            <CalendarView 
-                                tasks={tasks} 
-                                categoryColors={categoryColors} 
-                                onAddTask={handleOpenNewTaskModal} 
-                                selectedDate={selectedDate}
-                            />
-                        )}
-                    </motion.div>
-                </AnimatePresence>
+            <div className="flex-1 min-h-0 overflow-hidden">
+                <div className={`${view === 'today' ? 'block' : 'hidden'} h-full min-h-0`}>
+                    <TodayView 
+                        selectedDate={selectedDate}
+                        tasks={tasksForSelectedDate}
+                        categoryColors={categoryColors}
+                        onSelectTask={setSelectedTask}
+                        changeDate={changeDate}
+                    />
+                </div>
+                <div className={`${view === 'month' ? 'block' : 'hidden'} h-full min-h-0`}>
+                    <CalendarView 
+                        tasks={tasks} 
+                        categoryColors={categoryColors} 
+                        onAddTask={handleOpenNewTaskModal} 
+                        onMoveTask={(taskId, date, hour) => {
+                            setTasks(prev => prev.map(t => {
+                                if (t.id !== taskId) return t;
+                                const newStart = new Date(date);
+                                newStart.setHours(hour, 0, 0, 0);
+                                return { ...t, startTime: newStart };
+                            }).sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()));
+                            showToast('Task rescheduled.');
+                        }}
+                        selectedDate={selectedDate}
+                    />
+                </div>
             </div>
 
              <AnimatePresence>

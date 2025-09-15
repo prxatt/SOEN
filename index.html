@@ -135,6 +135,7 @@
     body {
       color: var(--color-text);
       background-color: var(--color-bg);
+      overflow-x: hidden; /* Prevent horizontal scroll on mobile */
     }
 
     .card {
@@ -203,5 +204,12 @@
 </head>
   <body class="transition-colors duration-300 font-sans">
     <div id="root"></div>
+    <script>
+      // Global event bridge for starting Daily Mode without prop drilling
+      window.addEventListener('praxis:start-daily-mode', () => {
+        const evt = new CustomEvent('praxis:bridge', { detail: { type: 'startDailyMode' } });
+        window.dispatchEvent(evt);
+      });
+    </script>
   </body>
 </html>

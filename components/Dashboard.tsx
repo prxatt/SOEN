@@ -47,17 +47,87 @@ const getGreeting = () => {
   return "Good evening";
 };
 
-const Header = ({ tasksTodayCount }: { tasksTodayCount: number }) => {
+function WeatherMini() {
+    const [loading, setLoading] = useState(true);
+    const [tempC, setTempC] = useState<number | null>(null);
+    const [code, setCode] = useState<number | null>(null);
+
+    const codeToLabel = (wmo?: number) => {
+        if (wmo == null) return '—';
+        if (wmo === 0) return 'Clear';
+        if (wmo <= 3) return 'Partly Cloudy';
+        if (wmo === 45 || wmo === 48) return 'Fog';
+        if (wmo >= 51 && wmo <= 57) return 'Drizzle';
+        if (wmo >= 61 && wmo <= 67) return 'Rain';
+        if (wmo >= 71 && wmo <= 77) return 'Snow';
+        if (wmo >= 80 && wmo <= 82) return 'Showers';
+        if (wmo >= 95) return 'Storm';
+        return 'Weather';
+    };
+
+    React.useEffect(() => {
+        const fallback = { lat: 37.7749, lon: -122.4194 }; // SF fallback
+        const fetchWeather = async (lat: number, lon: number) => {
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`;
+                const res = await fetch(url);
+                const data = await res.json();
+                setTempC(data?.current?.temperature_2m ?? null);
+                setCode(data?.current?.weather_code ?? null);
+            } catch (e) {
+                // ignore
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+                () => fetchWeather(fallback.lat, fallback.lon),
+                { maximumAge: 600000, timeout: 8000 }
+            );
+        } else {
+            fetchWeather(fallback.lat, fallback.lon);
+        }
+    }, []);
+
+    return (
+        <div className="card rounded-2xl px-4 py-3 flex items-center gap-3 border border-border min-w-[180px]">
+            <div className="flex flex-col leading-tight">
+                <span className="text-xs font-semibold text-text-secondary">Weather</span>
+                <span className="text-sm font-semibold">{loading ? '—' : codeToLabel(code || undefined)}</span>
+            </div>
+            <div className="ml-auto text-right">
+                <span className="text-2xl font-display font-bold">{loading || tempC == null ? '—' : Math.round(tempC)}°</span>
+            </div>
+        </div>
+    );
+}
+
+const Header = ({ tasksTodayCount, onStartDailyMode }: { tasksTodayCount: number, onStartDailyMode: () => void }) => {
     const today = new Date();
     return (
         <motion.div variants={itemVariants} className="col-span-full mb-2">
-            <p className="text-lg text-text-secondary">{today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-            <h1 className="text-4xl font-bold font-display text-text">
-                {getGreeting()}, Pratt.
-            </h1>
-            <p className="text-xl font-display text-text-secondary mt-1">
-                You have {tasksTodayCount} mission{tasksTodayCount !== 1 ? 's' : ''} today.
-            </p>
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <p className="text-lg text-text-secondary">{today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                    <h1 className="text-5xl sm:text-6xl font-bold font-display text-text tracking-tight leading-tight mt-1">
+                        {getGreeting()}, Pratt.
+                    </h1>
+                    <p className="text-lg sm:text-xl font-display text-text-secondary mt-2">
+                        You have {tasksTodayCount} mission{tasksTodayCount !== 1 ? 's' : ''} today.
+                    </p>
+                    <div className="mt-4">
+                        <button onClick={onStartDailyMode} className="px-5 py-2.5 rounded-full bg-accent text-white font-semibold hover:bg-accent-hover transition-colors shadow-sm">
+                            Start Daily Mode
+                        </button>
+                    </div>
+                </div>
+                <div className="hidden md:block">
+                    <WeatherMini />
+                </div>
+            </div>
         </motion.div>
     );
 };
@@ -80,30 +150,30 @@ const AgendaCard = ({ todayTasks, tomorrowTasks, navigateToScheduleDate, categor
     return (
         <motion.div variants={itemVariants} className="card rounded-3xl p-4 sm:p-6 col-span-full md:col-span-2 row-span-2 flex flex-col">
             <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 p-1 bg-bg rounded-full">
-                    <button onClick={() => setActiveTab('today')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeTab === 'today' ? 'bg-zinc-800 text-white' : 'text-text-secondary'}`}>
+                <div className="flex items-center gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-full">
+                    <button onClick={() => setActiveTab('today')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeTab === 'today' ? 'bg-black text-white' : 'text-zinc-600 dark:text-zinc-300 hover:text-text'}`}>
                         Today ({todayTasks.length})
                     </button>
-                    <button onClick={() => setActiveTab('tomorrow')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeTab === 'tomorrow' ? 'bg-zinc-800 text-white' : 'text-text-secondary'}`}>
+                    <button onClick={() => setActiveTab('tomorrow')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeTab === 'tomorrow' ? 'bg-black text-white' : 'text-zinc-600 dark:text-zinc-300 hover:text-text'}`}>
                         Tomorrow ({tomorrowTasks.length})
                     </button>
                 </div>
                 {nextTask && (
                     <button 
                         onClick={() => setFocusTask(nextTask)}
-                        className="text-sm font-semibold px-4 py-2 bg-accent text-white rounded-full hover:bg-accent-hover transition-colors flex items-center gap-2"
+                        className="text-sm font-semibold px-4 py-2 bg-accent text-white rounded-full hover:bg-accent-hover transition-colors flex items-center gap-2 shadow-sm"
                     >
                         Focus <ArrowRightIcon className="w-4 h-4"/>
                     </button>
                 )}
             </div>
-            <div className="flex-1 overflow-y-auto -mr-2 pr-2 space-y-3">
+            <div className="flex-1 overflow-y-auto -mr-2 pr-2 space-y-2">
                 {tasksToShow.length > 0 ? tasksToShow.map(task => (
                     <motion.button 
                         key={task.id} 
                         onClick={() => handleTaskClick(task)}
-                        className="w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-colors hover:bg-bg/50"
-                        style={{ backgroundColor: `${categoryColors[task.category]}20` }}
+                        className="w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-colors border border-border hover:bg-bg/60"
+                        style={{ backgroundColor: `${(categoryColors[task.category] || '#000000')}4D` }}
                         whileHover={{ scale: 1.02 }}
                     >
                         <div className="flex flex-col items-center">
@@ -228,6 +298,88 @@ const RecentNoteCard = ({ notes, setScreen }: { notes: Note[], setScreen: (s: Sc
     );
 }
 
+const SmartPrioritiesCard = ({ tasks, categoryColors, navigateToScheduleDate, setFocusTask }: { tasks: Task[], categoryColors: Record<Category, string>, navigateToScheduleDate: (d: Date)=>void, setFocusTask: (t: Task|null)=>void }) => {
+    const items = useMemo(() => {
+        const today = new Date();
+        const tomorrow = new Date();
+        tomorrow.setDate(today.getDate() + 1);
+        const dayStr = (d: Date) => d.toDateString();
+        const score: Record<'low'|'medium'|'high', number> = { low: 1, medium: 2, high: 3 } as const;
+        return tasks
+            .filter(t => [dayStr(today), dayStr(tomorrow)].includes(new Date(t.startTime).toDateString()) && t.status !== 'Completed')
+            .sort((a,b) => {
+                const s = (score[b.priority || 'medium'] - score[a.priority || 'medium']);
+                if (s !== 0) return s;
+                return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+            })
+            .slice(0, 5);
+    }, [tasks]);
+
+    if (items.length === 0) return null;
+
+    return (
+        <motion.div variants={itemVariants} className="card rounded-3xl p-4 sm:p-6 col-span-full md:col-span-2">
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-bold font-display">Smart Priorities</h3>
+                {items[0] && (
+                    <button
+                        onClick={() => setFocusTask(items[0])}
+                        className="text-sm font-semibold px-3 py-1.5 rounded-full text-white shadow-sm"
+                        style={{ backgroundColor: categoryColors[items[0].category] || 'var(--color-accent)' }}
+                    >
+                        Focus Next
+                    </button>
+                )}
+            </div>
+            <ul className="divide-y divide-border/40">
+                {items.map((t) => (
+                    <li key={t.id} className="py-3 flex items-center gap-3 rounded-xl px-2 -mx-2 hover:bg-bg/40 transition-colors">
+                        <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: categoryColors[t.category] }}/>
+                        <button
+                            onClick={() => navigateToScheduleDate(new Date(t.startTime))}
+                            className="flex-1 text-left"
+                        >
+                            <p className="font-semibold leading-tight">{t.title}</p>
+                            <p className="text-xs text-text-secondary">
+                                {new Date(t.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} • {t.category} • {(t.priority || 'medium').toUpperCase()}
+                            </p>
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </motion.div>
+    );
+};
+
+const QuickActionsCard = ({ navigateToScheduleDate, setScreen, nextTask, setFocusTask }: { navigateToScheduleDate: (d: Date)=>void, setScreen: (s: Screen)=>void, nextTask: Task | undefined, setFocusTask: (t: Task|null)=>void }) => {
+    const today = new Date();
+    return (
+        <motion.div variants={itemVariants} className="card rounded-3xl p-4 sm:p-6 col-span-full md:col-span-1">
+            <h3 className="text-lg font-bold font-display mb-3">Quick Actions</h3>
+            <div className="grid grid-cols-1 gap-2">
+                <button
+                    onClick={() => window.dispatchEvent(new CustomEvent('praxis:start-daily-mode'))}
+                    className="w-full px-4 py-2 rounded-xl bg-accent text-white font-semibold hover:bg-accent-hover transition-colors flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <SparklesIcon className="w-4 h-4"/> Start Daily Mode
+                </button>
+                <button
+                    onClick={() => navigateToScheduleDate(today)}
+                    className="w-full px-4 py-2 rounded-xl bg-bg hover:bg-bg/70 transition-colors border border-border ring-1 ring-border/40 flex items-center justify-center gap-2"
+                >
+                    <CalendarDaysIcon className="w-4 h-4"/> Open Today in Schedule
+                </button>
+                <button
+                    onClick={() => setScreen('Notes')}
+                    className="w-full px-4 py-2 rounded-xl bg-bg hover:bg-bg/70 transition-colors border border-border ring-1 ring-border/40 flex items-center justify-center gap-2"
+                >
+                    <DocumentTextIcon className="w-4 h-4"/> Open Notes
+                </button>
+            </div>
+        </motion.div>
+    );
+};
+
 export default function Dashboard(props: DashboardProps) {
     const { tasks, notes, briefing, isBriefingLoading, navigateToScheduleDate, categoryColors, setFocusTask, setScreen } = props;
     
@@ -245,6 +397,8 @@ export default function Dashboard(props: DashboardProps) {
         .sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()), 
     [tasks, tomorrow]);
 
+    const nextTask = useMemo(() => todayTasks.find(t => t.status !== 'Completed'), [todayTasks]);
+
     return (
         <motion.div
             variants={containerVariants}
@@ -252,7 +406,7 @@ export default function Dashboard(props: DashboardProps) {
             animate="visible"
             className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
-            <Header tasksTodayCount={todayTasks.length} />
+            <Header tasksTodayCount={todayTasks.length} onStartDailyMode={() => (window.dispatchEvent(new CustomEvent('praxis:start-daily-mode')))} />
             
             <AgendaCard 
                 todayTasks={todayTasks} 
@@ -267,6 +421,10 @@ export default function Dashboard(props: DashboardProps) {
             <FocusBreakdownCard todayTasks={todayTasks} categoryColors={categoryColors} />
 
             <RecentNoteCard notes={notes} setScreen={setScreen} />
+
+            <SmartPrioritiesCard tasks={tasks} categoryColors={categoryColors} navigateToScheduleDate={navigateToScheduleDate} setFocusTask={setFocusTask} />
+
+            <QuickActionsCard navigateToScheduleDate={navigateToScheduleDate} setScreen={setScreen} nextTask={nextTask} setFocusTask={setFocusTask} />
 
             {props.dailyCompletionImage && (
                 <motion.div variants={itemVariants} className="card rounded-3xl p-4 col-span-full overflow-hidden relative aspect-[2/1]">

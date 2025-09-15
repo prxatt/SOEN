@@ -9,6 +9,7 @@ import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatSession, Sear
 // Import components
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
+import DailyMode from './components/DailyMode';
 import Schedule from './components/Schedule';
 import Notes from './components/Notes';
 import Profile from './components/Profile';
@@ -162,6 +163,7 @@ function App() {
     const [purchasedRewards, setPurchasedRewards] = useState<string[]>(['theme-obsidian', 'focus-synthwave']);
     const [focusTask, setFocusTask] = useState<Task | null>(null);
     const [activeFocusBackground, setActiveFocusBackground] = useState<string>('synthwave');
+    const [isDailyModeOpen, setIsDailyModeOpen] = useState<boolean>(false);
     const [selectedNote, setSelectedNote] = useState<Note | null>(null);
     const [activeNotebookId, setActiveNotebookId] = useState<number | 'all' | 'flagged' | 'trash'>('all');
     const [dailyCompletionImage, setDailyCompletionImage] = useState<string | null>(null);
@@ -229,6 +231,13 @@ function App() {
                 localStorage.removeItem('dailyReward');
             }
         }
+    }, []);
+
+    // Listen for global event to open Daily Mode (triggered from Dashboard CTA)
+    useEffect(() => {
+        const handler = () => setIsDailyModeOpen(true);
+        window.addEventListener('praxis:open-daily-mode', handler);
+        return () => window.removeEventListener('praxis:open-daily-mode', handler);
     }, []);
 
     useEffect(() => {
@@ -763,6 +772,18 @@ function App() {
                     <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
                 </>
             )}
+            <AnimatePresence>
+                {isDailyModeOpen && (
+                    <DailyMode
+                        tasks={tasks}
+                        onClose={() => setIsDailyModeOpen(false)}
+                        onStartFocus={(task) => {
+                            setFocusTask(task);
+                            setIsDailyModeOpen(false);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
             <AnimatePresence>
                 {toast && <Toast key={toast.id} message={toast.message} action={toast.action} onClose={() => setToast(null)} />}
             </AnimatePresence>

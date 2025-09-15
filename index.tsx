@@ -25,3 +25,12 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Bridge browser events to React app using a simple dispatch on window
+// This avoids prop drilling for one-off global actions like starting Daily Mode.
+window.addEventListener('praxis:bridge', (e: any) => {
+  if (e?.detail?.type === 'startDailyMode') {
+    // Signal to App via a custom event that it can listen for
+    window.dispatchEvent(new Event('praxis:open-daily-mode'));
+  }
+});

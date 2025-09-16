@@ -183,6 +183,7 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors, onMov
     const [activeHourIndex, setActiveHourIndex] = useState<number | null>(null);
     const [selectedTaskForMove, setSelectedTaskForMove] = useState<number | null>(null);
     const longPressTimerRef = useRef<number | null>(null);
+    const hasLongPressedRef = useRef<boolean>(false);
     
     const tasksByHour = useMemo(() => {
         const groups: Record<number, Task[]> = {};
@@ -214,6 +215,11 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors, onMov
             
             timelineRef.current.scrollTo({ left: scrollPosition, behavior: 'auto' });
         }
+        return () => {
+            if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+            hasLongPressedRef.current = false;
+            setSelectedTaskForMove(null);
+        };
     }, [tasks]);
 
     return (
@@ -225,10 +231,16 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors, onMov
                     const taskId = Number(data);
                     if (!isNaN(taskId)) onMoveTask(taskId, date, hour);
                 }} onTouchEnd={() => {
-                    if (selectedTaskForMove != null) {
+                    if (hasLongPressedRef.current && selectedTaskForMove != null) {
                         onMoveTask(selectedTaskForMove, date, hour);
-                        setSelectedTaskForMove(null);
                     }
+                    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+                    hasLongPressedRef.current = false;
+                    setSelectedTaskForMove(null);
+                }} onTouchCancel={() => {
+                    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+                    hasLongPressedRef.current = false;
+                    setSelectedTaskForMove(null);
                 }}>
                     <div className="text-center border-b w-full pb-1" style={{ borderColor: `${textColor}40`}}>
                         <span className="text-xs font-semibold">{hour % 12 === 0 ? 12 : hour % 12}{hour < 12 ? ' am' : ' pm'}</span>
@@ -241,13 +253,25 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors, onMov
                                 <div key={task.id} className="p-1.5 rounded-lg text-xs break-words cursor-grab active:cursor-grabbing select-none" style={{ backgroundColor: pillColor, color: textOnPill }} draggable onDragStart={(e) => {
                                     e.dataTransfer.setData('application/praxis-task-id', String(task.id));
                                     e.dataTransfer.setData('text/plain', String(task.id));
-                                }} onTouchStart={() => {
+                                }} onTouchStart={(e) => {
+                                    e.stopPropagation();
                                     if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+                                    hasLongPressedRef.current = false;
                                     longPressTimerRef.current = window.setTimeout(() => {
+                                        hasLongPressedRef.current = true;
                                         setSelectedTaskForMove(task.id);
                                     }, 350);
-                                }} onTouchEnd={() => {
+                                }} onTouchEnd={(e) => {
+                                    e.stopPropagation();
                                     if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+                                    // If the touch ends on the same pill, do not trigger a move.
+                                    hasLongPressedRef.current = false;
+                                    setSelectedTaskForMove(null);
+                                }} onTouchCancel={(e) => {
+                                    e.stopPropagation();
+                                    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+                                    hasLongPressedRef.current = false;
+                                    setSelectedTaskForMove(null);
                                 }}>
                                     {task.title}
                                 </div>

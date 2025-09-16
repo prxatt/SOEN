@@ -38,19 +38,41 @@ export const PraxisLogo: React.FC<IconProps & MotionProps> = ({ size = 24, ...pr
     </motion.svg>
 );
 
-// Navigation Icons - Enhanced with consistent styling
+// Navigation Icons - Minimal Luxury Design
 export const HomeIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     <svg 
         xmlns="http://www.w3.org/2000/svg" 
         fill="none" 
         viewBox="0 0 24 24" 
-        strokeWidth={1.5} 
-        stroke="currentColor"
         width={size}
         height={size}
         {...props}
     >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.5 1.5 0 012.12 0l8.955 8.955M3 10.5v9A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-9" />
+        <defs>
+            <linearGradient id="homeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#A855F7" />
+                <stop offset="100%" stopColor="#7C3AED" />
+            </linearGradient>
+            <filter id="homeShadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feDropShadow dx="0.5" dy="0.5" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.2"/>
+            </filter>
+        </defs>
+        
+        {/* House base - minimal design */}
+        <path d="M2.25 12l8.954-8.955a1.5 1.5 0 012.12 0l8.955 8.955M3 10.5v9A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-9" 
+              fill="url(#homeGradient)" 
+              filter="url(#homeShadow)"
+              stroke="currentColor" 
+              strokeWidth={1.2} 
+              strokeLinecap="round" 
+              strokeLinejoin="round" />
+        
+        {/* Minimal door */}
+        <rect x="10.5" y="16.5" width="3" height="4" fill="currentColor" opacity="0.2" rx="0.5"/>
+        
+        {/* Minimal windows */}
+        <rect x="6.5" y="12.5" width="2.5" height="2.5" fill="currentColor" opacity="0.15" rx="0.3"/>
+        <rect x="15" y="12.5" width="2.5" height="2.5" fill="currentColor" opacity="0.15" rx="0.3"/>
     </svg>
 );
 
@@ -59,13 +81,40 @@ export const CalendarIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
         xmlns="http://www.w3.org/2000/svg" 
         fill="none" 
         viewBox="0 0 24 24" 
-        strokeWidth={1.5} 
-        stroke="currentColor"
         width={size}
         height={size}
         {...props}
     >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25m10.5-2.25v2.25m-10.5 0L3 5.25v13.5a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18.75V5.25c0-.98-.56-1.84-1.37-2.18L17.25 3H6.75z" />
+        <defs>
+            <linearGradient id="calendarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#06B6D4" />
+                <stop offset="100%" stopColor="#0891B2" />
+            </linearGradient>
+            <filter id="calendarShadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feDropShadow dx="0.5" dy="0.5" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.2"/>
+            </filter>
+        </defs>
+        
+        {/* Calendar base - minimal design */}
+        <path d="M6.75 3v2.25m10.5-2.25v2.25m-10.5 0L3 5.25v13.5a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18.75V5.25c0-.98-.56-1.84-1.37-2.18L17.25 3H6.75z" 
+              fill="url(#calendarGradient)" 
+              filter="url(#calendarShadow)"
+              stroke="currentColor" 
+              strokeWidth={1.2} 
+              strokeLinecap="round" 
+              strokeLinejoin="round" />
+        
+        {/* Minimal calendar rings */}
+        <circle cx="6.75" cy="4.125" r="0.8" fill="currentColor" opacity="0.4"/>
+        <circle cx="17.25" cy="4.125" r="0.8" fill="currentColor" opacity="0.4"/>
+        
+        {/* Minimal grid dots */}
+        <circle cx="8" cy="9" r="0.3" fill="currentColor" opacity="0.3"/>
+        <circle cx="12" cy="9" r="0.3" fill="currentColor" opacity="0.3"/>
+        <circle cx="16" cy="9" r="0.3" fill="currentColor" opacity="0.3"/>
+        <circle cx="8" cy="13" r="0.3" fill="currentColor" opacity="0.3"/>
+        <circle cx="12" cy="13" r="0.3" fill="currentColor" opacity="0.3"/>
+        <circle cx="16" cy="13" r="0.3" fill="currentColor" opacity="0.3"/>
     </svg>
 );
 
@@ -74,13 +123,38 @@ export const DocumentTextIcon: React.FC<IconProps> = ({ size = 24, ...props }) =
         xmlns="http://www.w3.org/2000/svg" 
         fill="none" 
         viewBox="0 0 24 24" 
-        strokeWidth={1.5} 
-        stroke="currentColor"
         width={size}
         height={size}
         {...props}
     >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+        <defs>
+            <linearGradient id="documentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#F59E0B" />
+                <stop offset="100%" stopColor="#D97706" />
+            </linearGradient>
+            <filter id="documentShadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feDropShadow dx="0.5" dy="0.5" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.2"/>
+            </filter>
+        </defs>
+        
+        {/* Document base - minimal design */}
+        <path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" 
+              fill="url(#documentGradient)" 
+              filter="url(#documentShadow)"
+              stroke="currentColor" 
+              strokeWidth={1.2} 
+              strokeLinecap="round" 
+              strokeLinejoin="round" />
+        
+        {/* Minimal document fold */}
+        <path d="M13.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25v3.375h5.25z" 
+              fill="currentColor" 
+              opacity="0.15"/>
+        
+        {/* Minimal text lines */}
+        <rect x="7.5" y="12" width="7" height="0.8" fill="currentColor" opacity="0.4" rx="0.4"/>
+        <rect x="7.5" y="15" width="5" height="0.8" fill="currentColor" opacity="0.4" rx="0.4"/>
+        <rect x="7.5" y="18" width="6" height="0.8" fill="currentColor" opacity="0.4" rx="0.4"/>
     </svg>
 );
 
@@ -89,13 +163,34 @@ export const UserCircleIcon: React.FC<IconProps> = ({ size = 24, ...props }) => 
         xmlns="http://www.w3.org/2000/svg" 
         fill="none" 
         viewBox="0 0 24 24" 
-        strokeWidth={1.5} 
-        stroke="currentColor"
         width={size}
         height={size}
         {...props}
     >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
+        <defs>
+            <linearGradient id="userGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#22C55E" />
+                <stop offset="100%" stopColor="#16A34A" />
+            </linearGradient>
+            <filter id="userShadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feDropShadow dx="0.5" dy="0.5" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.2"/>
+            </filter>
+        </defs>
+        
+        {/* User circle base - minimal design */}
+        <path d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" 
+              fill="url(#userGradient)" 
+              filter="url(#userShadow)"
+              stroke="currentColor" 
+              strokeWidth={1.2} 
+              strokeLinecap="round" 
+              strokeLinejoin="round" />
+        
+        {/* Minimal user head highlight */}
+        <circle cx="12" cy="9.75" r="2.5" fill="currentColor" opacity="0.08"/>
+        
+        {/* Minimal user body highlight */}
+        <path d="M12 15.75c-2 0-3.5 1-4.5 2.5" fill="currentColor" opacity="0.08"/>
     </svg>
 );
 
@@ -123,18 +218,40 @@ export const KikoIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
 
 export const BabyPenguinIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     <svg 
-        viewBox="0 0 64 64" 
+        viewBox="0 0 24 24" 
         fill="none" 
         xmlns="http://www.w3.org/2000/svg"
         width={size}
         height={size}
         {...props}
     >
-        <path d="M32 2C16.536 2 4 16.536 4 32C4 47.464 16.536 62 32 62C47.464 62 60 47.464 60 32C60 16.536 47.464 2 32 2Z" fill="currentColor" />
-        <path d="M48 32C48 40.8366 40.8366 48 32 48C23.1634 48 16 40.8366 16 32C16 23.1634 23.1634 16 32 16C40.8366 16 48 23.1634 48 32Z" fill="white" />
-        <circle cx="26" cy="30" r="4" fill="currentColor" />
-        <circle cx="38" cy="30" r="4" fill="currentColor" />
-        <path d="M32 38C34.2091 38 36 36.2091 36 34C36 31.7909 34.2091 30 32 30C29.7909 30 28 31.7909 28 34C28 36.2091 29.7909 38 32 38Z" fill="#F97316" />
+        {/* Penguin body - dark grey/black */}
+        <path d="M12 2C8.5 2 6 4.5 6 8C6 8.5 6.1 9 6.2 9.5C6.1 10 6 10.5 6 11C6 14.5 8.5 17 12 17C15.5 17 18 14.5 18 11C18 10.5 17.9 10 17.8 9.5C17.9 9 18 8.5 18 8C18 4.5 15.5 2 12 2Z" fill="#2D3748" />
+        
+        {/* Penguin belly - white */}
+        <path d="M12 4C9.5 4 8 5.5 8 8C8 8.2 8.1 8.4 8.1 8.6C8.1 8.8 8 9 8 9.2C8 11.7 9.5 13.2 12 13.2C14.5 13.2 16 11.7 16 9.2C16 9 15.9 8.8 15.9 8.6C15.9 8.4 16 8.2 16 8C16 5.5 14.5 4 12 4Z" fill="white" />
+        
+        {/* Eyes - black */}
+        <circle cx="10" cy="7" r="1.2" fill="#1A202C" />
+        <circle cx="14" cy="7" r="1.2" fill="#1A202C" />
+        
+        {/* Eye highlights - white */}
+        <circle cx="10.3" cy="6.7" r="0.4" fill="white" />
+        <circle cx="14.3" cy="6.7" r="0.4" fill="white" />
+        
+        {/* Beak - orange */}
+        <path d="M12 9.5C11.5 9.5 11 9.2 10.8 8.8C10.6 8.4 10.8 8 11.2 7.8C11.6 7.6 12 7.8 12.2 8.2C12.4 8.6 12.2 9 11.8 9.2C11.6 9.4 11.3 9.5 12 9.5Z" fill="#F97316" />
+        
+        {/* Wings - dark grey */}
+        <path d="M8 10.5C7.5 10.5 7 10.2 6.8 9.8C6.6 9.4 6.8 9 7.2 8.8C7.6 8.6 8 8.8 8.2 9.2C8.4 9.6 8.2 10 7.8 10.2C7.6 10.4 7.3 10.5 8 10.5Z" fill="#2D3748" />
+        <path d="M16 10.5C16.5 10.5 17 10.2 17.2 9.8C17.4 9.4 17.2 9 16.8 8.8C16.4 8.6 16 8.8 15.8 9.2C15.6 9.6 15.8 10 16.2 10.2C16.4 10.4 16.7 10.5 16 10.5Z" fill="#2D3748" />
+        
+        {/* Feet - orange */}
+        <path d="M10.5 15.5C10.2 15.5 9.9 15.3 9.8 15C9.7 14.7 9.9 14.4 10.2 14.3C10.5 14.2 10.8 14.4 10.9 14.7C11 15 10.8 15.3 10.5 15.4C10.4 15.5 10.4 15.5 10.5 15.5Z" fill="#F97316" />
+        <path d="M13.5 15.5C13.8 15.5 14.1 15.3 14.2 15C14.3 14.7 14.1 14.4 13.8 14.3C13.5 14.2 13.2 14.4 13.1 14.7C13 15 13.2 15.3 13.5 15.4C13.6 15.5 13.6 15.5 13.5 15.5Z" fill="#F97316" />
+        
+        {/* Grey shading on body for realism */}
+        <path d="M12 3C9.5 3 7.5 4.5 7.5 7.5C7.5 8 7.6 8.5 7.7 9C7.6 9.5 7.5 10 7.5 10.5C7.5 13 9 14.5 12 14.5C15 14.5 16.5 13 16.5 10.5C16.5 10 16.4 9.5 16.3 9C16.4 8.5 16.5 8 16.5 7.5C16.5 4.5 14.5 3 12 3Z" fill="#4A5568" opacity="0.3" />
     </svg>
 );
 

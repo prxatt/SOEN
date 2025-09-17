@@ -1,11 +1,12 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HomeIcon, CalendarIcon, DocumentTextIcon, UserCircleIcon, BabyPenguinIcon } from './Icons';
+import { HomeIcon, CalendarIcon, DocumentTextIcon, UserCircleIcon, BabyPenguinIcon, BellIcon } from './Icons';
 import type { Screen } from '../types';
 
 interface NavigationProps {
   activeScreen: Screen;
   setScreen: (screen: Screen) => void;
+  notificationCount?: number;
 }
 
 interface NavButtonProps {
@@ -42,10 +43,10 @@ function NavButton({ Icon, label, isActive, onClick, color, collapsed }: NavButt
             className={`transition-all duration-300 ${
               collapsed ? 'w-4 h-4' : 'w-5 h-5'
             }`} 
-            style={{ 
+          style={{
               color: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.9)',
               filter: isActive ? `drop-shadow(0 0 6px ${color}60)` : 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))'
-            }} 
+          }}
           />
           {isActive && (
             <motion.div
@@ -62,7 +63,7 @@ function NavButton({ Icon, label, isActive, onClick, color, collapsed }: NavButt
         {!collapsed && (
           <span className="text-sm font-semibold tracking-wide text-white truncate">
             {label}
-          </span>
+        </span>
         )}
       </motion.button>
     </li>
@@ -81,7 +82,7 @@ const PROFILE_ITEMS: { screen: Screen; label: string; icon: React.FC<React.SVGPr
   { screen: 'Settings', label: 'Settings', icon: UserCircleIcon, color: '#6B7280' },
 ];
 
-function Navigation({ activeScreen, setScreen }: NavigationProps) {
+function Navigation({ activeScreen, setScreen, notificationCount = 0 }: NavigationProps) {
   const [collapsed, setCollapsed] = useState<boolean>(true);
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
@@ -113,7 +114,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
     }
   }, [collapsed]);
 
-  // Auto-collapse after inactivity
+  // Auto-collapse after inactivity and on screen changes
   useEffect(() => {
     if (!collapsed) {
       const timer = setTimeout(() => {
@@ -125,6 +126,12 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
     }
   }, [collapsed, activeScreen]);
 
+  // Auto-collapse when screen changes
+  useEffect(() => {
+    setCollapsed(true);
+    setShowProfileDropdown(false);
+  }, [activeScreen]);
+
   // Close profile dropdown when collapsed
   useEffect(() => {
     if (collapsed) {
@@ -135,7 +142,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
   return (
     <>
       {/* Desktop/Tablet sidebar */}
-      <aside className="hidden md:flex fixed left-4 top-4 bottom-4 z-40">
+      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 z-40">
         <div 
           ref={navRef}
           className={`h-full ${collapsed ? 'w-14' : 'w-64'} rounded-r-3xl bg-gradient-to-b from-black/30 to-black/20 backdrop-blur-xl border border-white/30 shadow-2xl p-1.5 flex flex-col transition-all duration-500 ease-out overflow-hidden`}
@@ -183,7 +190,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
           </div>
 
           {/* Navigation Items */}
-          <ul className="space-y-1.5 flex-1 overflow-y-auto">
+          <ul className="space-y-1.5 flex-1 overflow-y-auto overflow-x-hidden">
             {NAV_ITEMS.map(({ screen, label, icon, color }) => (
               <NavButton
                 key={screen}
@@ -197,10 +204,22 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
             ))}
           </ul>
 
+          {/* Notifications Button */}
+          <div className="mt-auto mb-4">
+            <NavButton
+              Icon={BellIcon}
+              label={notificationCount > 0 ? "Notifications" : ""}
+              isActive={activeScreen === 'Notifications'}
+              onClick={() => setScreen('Notifications')}
+              color="#9CA3AF"
+              collapsed={collapsed}
+            />
+          </div>
+
           {/* Profile Dropdown - Desktop only */}
-          <div className="mt-auto">
+          <div>
             <div className="relative">
-              <motion.button
+            <motion.button
                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                 className={`w-full rounded-2xl text-white font-semibold shadow-lg transition-all duration-300 ${
                   collapsed ? 'h-10 flex items-center justify-center' : 'h-12 flex items-center justify-center gap-3'
@@ -225,8 +244,8 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </motion.div>
-                )}
-              </motion.button>
+              )}
+            </motion.button>
 
               {/* Profile Dropdown Menu */}
               <AnimatePresence>
@@ -276,6 +295,8 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
           >
             {collapsed ? '→' : '←'}
           </motion.button>
+
+          {/* Notifications Icon - Bottom Right */}
         </div>
       </aside>
 
@@ -323,6 +344,8 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
                 collapsed
               />
             ))}
+
+            {/* Mobile Notifications Button */}
 
             {/* Mobile Profile Button */}
             <NavButton

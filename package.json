@@ -1,8 +1,11 @@
 {
-  "name": "praxis-by-surface-tension",
+  "name": "praxis-ai",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "AI-Powered Operating System for Creative Entrepreneurs - Proprietary Software",
+  "author": "Praxis AI",
+  "license": "PROPRIETARY",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

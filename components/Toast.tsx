@@ -24,10 +24,10 @@ function Toast({ message, onClose, action }: ToastProps) {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 50, scale: 0.3 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 20, scale: 0.5 }}
-      className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] p-3 rounded-xl shadow-lg flex items-center gap-3 bg-card text-text border border-border"
+      initial={{ opacity: 0, x: 50, y: -20, scale: 0.95 }}
+      animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 40, y: -10, scale: 0.95 }}
+      className="fixed top-6 right-6 z-[100] p-3 rounded-xl shadow-lg flex items-center gap-3 bg-card text-text border border-border"
       role="alert"
     >
       <SparklesIcon className="w-5 h-5 text-accent flex-shrink-0" />

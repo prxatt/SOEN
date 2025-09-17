@@ -7,7 +7,7 @@
 
 **⚠️ PRIVATE REPOSITORY - PROPRIETARY SOFTWARE**
 
-This repository contains proprietary software developed exclusively for commercial purposes. All rights reserved.
+This repository contains proprietary software developed exclusively for commercial purposes by Surface Tension LLC. All rights reserved.
 
 ---
 
@@ -95,7 +95,7 @@ To run this project locally, you will need to have Node.js and a package manager
 
 This software is proprietary and confidential. No part of this software may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the copyright owner.
 
-**Copyright © 2025 Praxis AI. All rights reserved.**
+**Copyright © 2025 Surface Tension LLC. All rights reserved.**
 
 ---
 

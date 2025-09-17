@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "AI-Powered Operating System for Creative Entrepreneurs - Proprietary Software",
-  "author": "Praxis AI",
+  "author": "Surface Tension LLC",
   "license": "PROPRIETARY",
   "scripts": {
     "dev": "vite",

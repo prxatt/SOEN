@@ -7,6 +7,7 @@ import {
     HeartIcon, BoltIcon, ClockIcon, PlayIcon, HomeIcon,
     UserCircleIcon, BabyPenguinIcon, GiftIcon
 } from './Icons';
+import IntegratedHealthInsights from './IntegratedHealthInsights';
 import './UnifiedDashboard.css';
 
 interface UnifiedDashboardProps {
@@ -49,8 +50,6 @@ const TABS = [
     { id: 'dashboard', label: 'Dashboard', icon: HomeIcon, color: UNIFIED_COLORS.tabs.dashboard },
     { id: 'schedule', label: 'Schedule', icon: CalendarDaysIcon, color: UNIFIED_COLORS.tabs.schedule },
     { id: 'notes', label: 'Notes', icon: DocumentTextIcon, color: UNIFIED_COLORS.tabs.notes },
-    { id: 'health', label: 'Health', icon: HeartIcon, color: UNIFIED_COLORS.tabs.health },
-    { id: 'habits', label: 'Habits', icon: BoltIcon, color: UNIFIED_COLORS.tabs.habits },
     { id: 'profile', label: 'Profile', icon: UserCircleIcon, color: UNIFIED_COLORS.tabs.profile }
 ] as const;
 
@@ -118,12 +117,49 @@ function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, 
     const completedToday = todayTasks.filter(t => t.status === 'Completed').length;
     const completionRate = todayTasks.length > 0 ? Math.round((completedToday / todayTasks.length) * 100) : 0;
 
+    // Daily greeting with time-based message
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 17) return 'Good Afternoon';
+        return 'Good Evening';
+    };
+
+    // Philosophical quotes for daily inspiration
+    const dailyQuotes = [
+        "The best way to find yourself is to lose yourself in the service of others.",
+        "No act of kindness, no matter how small, is ever wasted.",
+        "Love and kindness are never wasted. They always make a difference.",
+        "Be yourself; everyone else is already taken. But make sure that self is kind.",
+        "The meaning of life is to find your gift. The purpose of life is to give it away.",
+        "In a world where you can be anything, be kind. It costs nothing but means everything."
+    ];
+
+    const todayQuote = dailyQuotes[new Date().getDate() % dailyQuotes.length];
+
     return (
         <motion.div variants={itemVariants} className="space-y-6">
-            {/* Welcome Section */}
-            <div className="text-center py-8">
-                <h1 className="text-4xl font-bold text-white mb-2">Welcome Back</h1>
-                <p className="text-gray-400 text-lg">Ready to tackle your day?</p>
+            {/* Daily Greeting with Integrated Health & Habits Insights */}
+            <div className="text-center py-8 bg-gradient-to-br from-slate-800/30 to-slate-900/30 rounded-3xl border border-white/10 backdrop-blur-sm">
+                <h1 className="text-5xl font-bold text-white mb-4">{getGreeting()}</h1>
+                <p className="text-gray-300 text-lg italic max-w-2xl mx-auto leading-relaxed">
+                    "{todayQuote}"
+                </p>
+                <div className="mt-4 text-sm text-gray-400">
+                    {new Date().toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric',
+                        year: 'numeric'
+                    })}
+                </div>
+                
+                {/* Integrated Health & Habits Insights */}
+                <IntegratedHealthInsights 
+                    healthData={healthData} 
+                    notes={notes} 
+                    tasks={tasks} 
+                />
             </div>
 
             {/* Stats Grid */}
@@ -283,60 +319,6 @@ function NotesContent({ notes }: { notes: Note[] }) {
     );
 }
 
-// Health Content Component
-function HealthContent({ healthData }: { healthData: HealthData }) {
-    return (
-        <motion.div variants={itemVariants} className="space-y-6">
-            <div className="text-center py-8">
-                <h1 className="text-4xl font-bold text-white mb-2">Health</h1>
-                <p className="text-gray-400 text-lg">Track your wellness</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                    <h3 className="text-white font-semibold text-lg mb-4">Steps Today</h3>
-                    <p className="text-3xl font-bold text-white">{healthData.stepsToday}</p>
-                    <p className="text-gray-400 text-sm">Goal: 10,000 steps</p>
-                </div>
-
-                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                    <h3 className="text-white font-semibold text-lg mb-4">Sleep Hours</h3>
-                    <p className="text-3xl font-bold text-white">{healthData.sleepHours}</p>
-                    <p className="text-gray-400 text-sm">Last night</p>
-                </div>
-            </div>
-        </motion.div>
-    );
-}
-
-// Habits Content Component
-function HabitsContent({ healthData }: { healthData: HealthData }) {
-    return (
-        <motion.div variants={itemVariants} className="space-y-6">
-            <div className="text-center py-8">
-                <h1 className="text-4xl font-bold text-white mb-2">Habits</h1>
-                <p className="text-gray-400 text-lg">Build better routines</p>
-            </div>
-
-            <div className="space-y-4">
-                {healthData.habits.map((habit, index) => (
-                    <div key={index} className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-white font-semibold text-lg">{habit.name}</h3>
-                            <span className="text-gray-400 text-sm">{habit.streak} day streak</span>
-                        </div>
-                        <div className="w-full bg-gray-700 rounded-full h-2">
-                            <div 
-                                className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${habit.completionRate}%` }}
-                            />
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </motion.div>
-    );
-}
 
 // Profile Content Component
 function ProfileContent() {
@@ -386,10 +368,6 @@ export default function UnifiedDashboard(props: UnifiedDashboardProps) {
                 return <ScheduleContent tasks={tasks} categoryColors={categoryColors} onCompleteTask={onCompleteTask} />;
             case 'notes':
                 return <NotesContent notes={notes} />;
-            case 'health':
-                return <HealthContent healthData={healthData} />;
-            case 'habits':
-                return <HabitsContent healthData={healthData} />;
             case 'profile':
                 return <ProfileContent />;
             default:

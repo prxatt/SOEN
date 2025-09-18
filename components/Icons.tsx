@@ -272,6 +272,34 @@ export const SparklesIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     </svg>
 );
 
+// Simple Bell Icon for Notifications
+export const BellIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 24 24" 
+        width={size}
+        height={size}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        {...props}
+    >
+        <defs>
+            <linearGradient id="bellGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.6" />
+            </linearGradient>
+        </defs>
+        <path 
+            d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.248 24.248 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+            fill="url(#bellGradient)"
+        />
+        <circle cx="18" cy="6" r="2.5" fill="currentColor" opacity="0.8" />
+    </svg>
+);
+
 export const CheckCircleIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     <svg 
         xmlns="http://www.w3.org/2000/svg" 

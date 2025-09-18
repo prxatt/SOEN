@@ -7,14 +7,23 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
+// Only register the Service Worker in production builds.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // FIX: Using an explicitly relative path is more robust for sandboxed environments.
-    navigator.serviceWorker.register('./sw.js').then(registration => {
-      console.log('SW registered: ', registration);
-    }).catch(registrationError => {
-      console.log('SW registration failed: ', registrationError);
-    });
+    if (import.meta.env && import.meta.env.PROD) {
+      navigator.serviceWorker.register('./sw.js').then(registration => {
+        console.log('SW registered: ', registration);
+      }).catch(registrationError => {
+        console.log('SW registration failed: ', registrationError);
+      });
+    } else {
+      // In development, ensure any previously installed SWs are unregistered
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(reg => {
+          reg.unregister().then(() => console.log('Unregistered stale SW in dev'));
+        });
+      }).catch(() => {});
+    }
   });
 }
 

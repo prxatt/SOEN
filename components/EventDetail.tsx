@@ -620,7 +620,7 @@ function EventDetail({
                                                 const [h, m] = e.target.value.split(':');
                                                 const d = new Date(editableTask.startTime);
                                                 d.setHours(parseInt(h), parseInt(m));
-                                                handleFieldChange('startTime', d);
+                                                handleFieldChange('startTime', d.toISOString());
                                             }}
                                             className="w-full bg-transparent text-sm font-bold focus:outline-none"
                                             style={{ color: textColor }}

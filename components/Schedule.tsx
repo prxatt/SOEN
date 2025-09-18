@@ -624,7 +624,7 @@ function Schedule(props: ScheduleProps) {
             const newEndMs = newStart.getTime() + task.plannedDuration * 60000;
             // Next cursor = end + 15min
             cursor = new Date(newEndMs + fifteenMinMs);
-            return { ...task, startTime: newStart } as Task;
+            return { ...task, startTime: newStart.toISOString() } as Task;
         });
 
         // Merge back into all tasks
@@ -678,7 +678,7 @@ function Schedule(props: ScheduleProps) {
                                 if (t.id !== taskId) return t;
                                 const newStart = new Date(date);
                                 newStart.setHours(hour, 0, 0, 0);
-                                return { ...t, startTime: newStart };
+                                return { ...t, startTime: newStart.toISOString() };
                             }).sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()));
                             showToast('Task rescheduled.');
                         }}

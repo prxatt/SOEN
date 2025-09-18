@@ -107,10 +107,16 @@ function Profile({ praxisFlow, setScreen, goals, setGoals, activeFocusBackground
                             {praxisFlow} Flow
                         </p>
                     </div>
-                    <button onClick={() => setScreen('Rewards')} className="flex items-center gap-2 font-semibold text-white bg-accent hover:bg-accent-hover px-6 py-3 rounded-lg transition-colors text-base">
-                        <GiftIcon className="w-5 h-5" />
-                        <span>Rewards Hub</span>
-                    </button>
+                    <div className="flex gap-3">
+                        <button onClick={() => setScreen('Rewards')} className="flex items-center gap-2 font-semibold text-white bg-accent hover:bg-accent-hover px-4 py-2 rounded-lg transition-colors text-sm">
+                            <GiftIcon className="w-4 h-4" />
+                            <span>Rewards</span>
+                        </button>
+                        <button onClick={() => setScreen('Settings')} className="flex items-center gap-2 font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors text-sm">
+                            <Cog6ToothIcon className="w-4 h-4" />
+                            <span>Settings</span>
+                        </button>
+                    </div>
                 </div>
             </motion.div>
 

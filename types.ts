@@ -1,6 +1,15 @@
 // types.ts
 
-export type Screen = 'Dashboard' | 'Schedule' | 'Notes' | 'Profile' | 'Kiko' | 'Settings' | 'Rewards' | 'Projects' | 'Focus';
+export type Screen = 'Dashboard' | 'Schedule' | 'Notes' | 'Profile' | 'Kiko' | 'Settings' | 'Rewards' | 'Projects' | 'Focus' | 'Notifications';
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: Date;
+  type?: 'info' | 'success' | 'warning' | 'error';
+  action?: { label: string; onClick: () => void };
+}
 
 export type Category = 'Workout' | 'Learning' | 'Meeting' | 'Prototyping' | 'Editing' | 'Personal' | 'Admin' | 'Deep Work';
 
@@ -15,7 +24,7 @@ export interface Task {
   id: number;
   title: string;
   category: Category;
-  startTime: Date;
+  startTime: string;
   plannedDuration: number; // in minutes
   actualDuration?: number; // in minutes
   status: TaskStatus;

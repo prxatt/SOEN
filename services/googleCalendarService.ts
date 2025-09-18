@@ -13,7 +13,7 @@ export const syncCalendar = async (): Promise<Partial<Task>[]> => {
         {
             title: "Client Proposal Review",
             category: "Meeting",
-            startTime: new Date(new Date().setHours(14, 0, 0, 0)),
+            startTime: new Date(new Date().setHours(14, 0, 0, 0)).toISOString(),
             plannedDuration: 60,
             googleCalendarEventId: "gcal-mock-1",
             isVirtual: true,
@@ -22,7 +22,7 @@ export const syncCalendar = async (): Promise<Partial<Task>[]> => {
         {
             title: "Dentist Appointment",
             category: "Meeting",
-            startTime: new Date(new Date().setDate(new Date().getDate() + 2)),
+            startTime: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString(),
             plannedDuration: 45,
             googleCalendarEventId: "gcal-mock-2",
             location: "123 Smile Street, San Francisco, CA"

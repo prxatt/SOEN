@@ -83,7 +83,15 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
     const currentStepData = steps[step];
 
     return (
-        <div className="fixed inset-0 bg-bg z-50 flex items-center justify-center p-4 transition-colors">
+        <div className="fixed inset-0 bg-white dark:bg-black z-50 flex items-center justify-center p-4 transition-colors">
+            <style>{`
+                body {
+                    background: #FAFAFA !important;
+                }
+                html.dark body {
+                    background: #000000 !important;
+                }
+            `}</style>
              <AnimatePresence mode="wait">
                 <motion.div
                     key={step}
@@ -91,17 +99,17 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="bg-card/80 dark:bg-zinc-900/50 backdrop-blur-xl border border-border rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8 flex flex-col text-center relative overflow-hidden min-h-[500px]"
+                    className="bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8 flex flex-col text-center relative overflow-hidden min-h-[500px]"
                 >
                     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-accent/10 via-transparent to-accent/5 dark:from-accent/5 dark:to-accent/0" />
-                    <div className="absolute -top-16 -left-16 text-card opacity-5 dark:opacity-[0.02] pointer-events-none">
+                    <div className="absolute -top-16 -left-16 text-black/5 dark:text-white/5 opacity-50 pointer-events-none">
                        {React.cloneElement(currentStepData.icon, { className: "w-64 h-64" })}
                     </div>
 
                     <div className="relative z-10 flex flex-col flex-grow">
                         <div className="flex-grow">
-                            <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4">{currentStepData.title}</h2>
-                            <p className="text-base sm:text-lg text-text-secondary mb-8 max-w-md mx-auto">{currentStepData.content}</p>
+                            <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4 text-black dark:text-white">{currentStepData.title}</h2>
+                            <p className="text-base sm:text-lg text-black/70 dark:text-white/70 mb-8 max-w-md mx-auto">{currentStepData.content}</p>
 
                             {currentStepData.isInput && (
                                 <motion.div 
@@ -114,7 +122,7 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
                                         value={currentStepData.value}
                                         onChange={(e) => (currentStepData.setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)}
                                         placeholder={currentStepData.placeholder}
-                                        className="w-full text-center bg-bg/80 border border-border rounded-xl shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent text-lg"
+                                        className="w-full text-center bg-white/80 dark:bg-black/80 border border-black/20 dark:border-white/20 rounded-xl shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent text-lg text-black dark:text-white"
                                     />
                                 </motion.div>
                             )}
@@ -157,7 +165,7 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
                     </div>
                 </motion.div>
             </AnimatePresence>
-            <button onClick={onComplete} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-accent rounded-full bg-card/50 backdrop-blur-sm">
+            <button onClick={onComplete} className="absolute top-4 right-4 p-2 text-black/70 dark:text-white/70 hover:text-accent rounded-full bg-white/50 dark:bg-black/50 backdrop-blur-sm">
                 <XMarkIcon className="w-6 h-6"/>
             </button>
         </div>

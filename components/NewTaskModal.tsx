@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Category, TaskStatus, Project, Note } from '../types';
-import { SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, ClockIcon, LinkIcon, ArrowPathIcon } from './Icons';
+import { SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, ClockIcon, LinkIcon, ArrowPathIcon, LightBulbIcon, HeartIcon, RocketIcon, UserIcon, ChartBarIcon, FlagIcon } from './Icons';
 import { getAutocompleteSuggestions } from '../services/geminiService';
 import { parseTaskFromString } from '../services/kikoAIService';
 import { getTopCategories } from '../utils/taskUtils';
@@ -57,12 +57,34 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
     const [highlightedFields, setHighlightedFields] = useState<string[]>([]);
     const [aiSummary, setAiSummary] = useState<string | null>(null);
     const [locationSuggestions, setLocationSuggestions] = useState<{place_name: string; address: string}[]>([]);
+    const [showTempMessage, setShowTempMessage] = useState(true);
 
     const titleInputRef = useRef<HTMLInputElement>(null);
     const topCategories = useMemo(() => getTopCategories(allTasks, 5), [allTasks]);
     const otherCategories = useMemo(() => categories.filter(c => !topCategories.includes(c) && c !== taskDetails.category), [categories, topCategories, taskDetails.category]);
 
     useEffect(() => { titleInputRef.current?.focus(); }, []);
+    
+    // Show temp message for new tasks
+    useEffect(() => {
+        const timer = setTimeout(() => setShowTempMessage(false), 3000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Get category icon
+    const getCategoryIcon = (category: Category) => {
+        switch (category) {
+            case 'Meeting': return <VideoCameraIcon className="w-5 h-5" />;
+            case 'Learning': return <LightBulbIcon className="w-5 h-5" />;
+            case 'Workout': return <HeartIcon className="w-5 h-5" />;
+            case 'Prototyping': return <RocketIcon className="w-5 h-5" />;
+            case 'Editing': return <DocumentTextIcon className="w-5 h-5" />;
+            case 'Personal': return <UserIcon className="w-5 h-5" />;
+            case 'Admin': return <BriefcaseIcon className="w-5 h-5" />;
+            case 'Deep Work': return <ChartBarIcon className="w-5 h-5" />;
+            default: return <BriefcaseIcon className="w-5 h-5" />;
+        }
+    };
     
     const debouncedParse = useCallback(debounce(async (title: string) => {
         if (!title.startsWith('/') || title.length < 4) {
@@ -203,8 +225,20 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
                             </div>
                             
                             <div className="border-l border-current/20 pl-3">
-                                <h2 className="text-2xl font-bold font-display">New Task</h2>
-                                <p className="opacity-70 mt-0.5 text-sm">Use "/" for AI magic...</p>
+                                <div className="flex items-center gap-2">
+                                    {getCategoryIcon(taskDetails.category!)}
+                                    <h2 className="text-2xl font-bold font-display">New Task</h2>
+                                </div>
+                                {showTempMessage && (
+                                    <motion.p 
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="opacity-70 mt-0.5 text-sm"
+                                    >
+                                        ✨ Kiko is ready to help you organize your day
+                                    </motion.p>
+                                )}
                             </div>
                         </div>
                         
@@ -231,7 +265,7 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
                                     backgroundColor: 'rgba(0,0,0,0.1)',
                                     color: textColor,
                                 }}
-                                placeholder="/meeting w/ Apoorva @ 3pm for 90min"
+                                placeholder="Enter task title..."
                             />
                             {isParsing && (
                                 <SparklesIcon 

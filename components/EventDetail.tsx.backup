@@ -552,7 +552,7 @@ function EventDetail({
                             </AnimatePresence>
                         </div>
                     ) : (
-                        // Edit Mode - Compact for viewport
+                        // Edit Mode - Same as before but with proper viewport sizing
                         <div className="space-y-3">
                             {/* Title */}
                             <div className="relative">
@@ -620,7 +620,7 @@ function EventDetail({
                                                 const [h, m] = e.target.value.split(':');
                                                 const d = new Date(editableTask.startTime);
                                                 d.setHours(parseInt(h), parseInt(m));
-                                                handleFieldChange('startTime', d.toISOString());
+                                                handleFieldChange('startTime', d);
                                             }}
                                             className="w-full bg-transparent text-sm font-bold focus:outline-none"
                                             style={{ color: textColor }}
@@ -723,8 +723,7 @@ function EventDetail({
                                     />
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
                     {/* Action Buttons */}
                     <div className="flex gap-3 pt-6">

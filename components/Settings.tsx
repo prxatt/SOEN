@@ -11,6 +11,8 @@ interface SettingsProps {
     activeTheme: string;
     setActiveTheme: (themeValue: string) => void;
     purchasedRewards: string[];
+    browserPushEnabled: boolean;
+    setBrowserPushEnabled: (enabled: boolean) => void;
 }
 
 interface SettingsRowProps {
@@ -54,7 +56,7 @@ function SettingsRow({ icon, title, subtitle, onClick, action }: SettingsRowProp
   );
 }
 
-function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme, setActiveTheme, purchasedRewards }: SettingsProps) {
+function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme, setActiveTheme, purchasedRewards, browserPushEnabled, setBrowserPushEnabled }: SettingsProps) {
   const purchasedThemes = REWARDS_CATALOG.filter(r => r.type === 'theme' && purchasedRewards.includes(r.id));
 
   return (
@@ -129,8 +131,29 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                 <div className="border-t border-border/50 my-1 mx-2"></div>
                  <SettingsRow 
                     icon={<SparklesIcon className="w-6 h-6 text-purple-400" />}
-                    title="Notifications"
-                    subtitle="Proactive suggestions, daily briefing"
+                    title="Browser Push Notifications"
+                    subtitle="Get notifications even when Praxis is closed"
+                    action={
+                        <button
+                            onClick={async () => {
+                                if (!browserPushEnabled && 'Notification' in window) {
+                                    const permission = await Notification.requestPermission();
+                                    if (permission === 'granted') {
+                                        setBrowserPushEnabled(true);
+                                        localStorage.setItem('praxis-browser-push', 'true');
+                                    }
+                                } else {
+                                    setBrowserPushEnabled(false);
+                                    localStorage.setItem('praxis-browser-push', 'false');
+                                }
+                            }}
+                            role="switch" 
+                            aria-checked={browserPushEnabled}
+                            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${browserPushEnabled ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}
+                        >
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${browserPushEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    }
                 />
             </div>
         </div>

@@ -103,10 +103,11 @@ interface TodayViewProps {
   categoryColors: Record<Category, string>;
   onSelectTask: (task: Task) => void;
   changeDate: (amount: number) => void;
+  onReorderTasks: (orderedTaskIds: number[]) => void;
 }
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDate }: TodayViewProps) {
+function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDate, onReorderTasks }: TodayViewProps) {
     const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
     const day = String(selectedDate.getDate()).padStart(2, '0');
     const monthNum = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -121,9 +122,29 @@ function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDa
     const handlePrevDay = () => changeDate(-1);
     const handleNextDay = () => changeDate(1);
 
+    // Drag-and-drop reordering handlers
+    const [draggingId, setDraggingId] = useState<number | null>(null);
+
+    const handleDragStart = (taskId: number) => setDraggingId(taskId);
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+    };
+    const handleDropOn = (targetId: number) => {
+        if (draggingId == null || draggingId === targetId) return;
+        const ids = tasks.map(t => t.id);
+        const fromIndex = ids.indexOf(draggingId);
+        const toIndex = ids.indexOf(targetId);
+        if (fromIndex === -1 || toIndex === -1) return;
+        const newIds = [...ids];
+        const [moved] = newIds.splice(fromIndex, 1);
+        newIds.splice(toIndex, 0, moved);
+        onReorderTasks(newIds);
+        setDraggingId(null);
+    };
+
     return (
         <div 
-          className="rounded-3xl p-4 sm:p-6 h-full flex flex-col sm:flex-row"
+          className="rounded-3xl p-4 sm:p-6 h-full flex flex-col sm:flex-row overflow-hidden"
           style={{ backgroundColor: bgColor, color: textColor }}
         >
             <div className="w-full sm:w-1/3 flex-shrink-0 sm:pr-4 flex flex-row sm:flex-col justify-between items-center sm:items-start sm:justify-between mb-4 sm:mb-0">
@@ -152,9 +173,15 @@ function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDa
                     <div className="h-full overflow-y-auto hide-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
                         <div className="space-y-4">
                             {tasks.map(task => (
-                                <React.Fragment key={task.id}>
-                                    <TaskCard task={task} categoryColors={categoryColors} onSelect={onSelectTask} />
-                                </React.Fragment>
+                                <div
+                                  key={task.id}
+                                  draggable
+                                  onDragStart={() => handleDragStart(task.id)}
+                                  onDragOver={handleDragOver}
+                                  onDrop={() => handleDropOn(task.id)}
+                                >
+                                  <TaskCard task={task} categoryColors={categoryColors} onSelect={onSelectTask} />
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -360,7 +387,10 @@ interface CalendarViewProps {
 }
 
 function CalendarView({ tasks, categoryColors, onAddTask, onMoveTask, selectedDate }: CalendarViewProps) {
-    const [currentMonthDate, setCurrentMonthDate] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    const [currentMonthDate, setCurrentMonthDate] = useState(() => {
+        const today = new Date();
+        return new Date(today.getFullYear(), today.getMonth(), 1);
+    });
     const listRef = useRef<HTMLDivElement>(null);
     const isFirstRender = useRef(true);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -400,10 +430,11 @@ function CalendarView({ tasks, categoryColors, onAddTask, onMoveTask, selectedDa
     }, [isAnimating]);
     
     useEffect(() => {
-        // This effect runs only once on mount to scroll to the initial date.
+        // This effect runs only once on mount to scroll to the current date.
         if (!listRef.current) return;
     
-        const targetDateStr = selectedDate.toISOString().split('T')[0];
+        const today = new Date();
+        const targetDateStr = today.toISOString().split('T')[0];
         const targetElement = listRef.current.querySelector(`[data-date='${targetDateStr}']`) as HTMLElement;
     
         if (targetElement) {
@@ -485,7 +516,7 @@ function CalendarView({ tasks, categoryColors, onAddTask, onMoveTask, selectedDa
     }
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-hidden">
             <div className="flex justify-between items-center text-xl font-bold p-2 mb-4 flex-shrink-0">
                 <span className="text-text-secondary/50 font-medium">{prevMonth}</span>
                 <div className="flex items-center gap-3 text-2xl font-display">
@@ -530,6 +561,7 @@ function Schedule(props: ScheduleProps) {
     const [view, setView] = useState<ScheduleView>('today');
     const [selectedDate, setSelectedDate] = useState(initialDate || new Date());
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [isEventDetailOpen, setIsEventDetailOpen] = useState(false);
     const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
     const [prefillDateForModal, setPrefillDateForModal] = useState<Date>(new Date());
 
@@ -570,11 +602,48 @@ function Schedule(props: ScheduleProps) {
         const dateForModal = view === 'month' ? new Date() : new Date(selectedDate.getTime());
         handleOpenNewTaskModal(dateForModal);
     }, [view, selectedDate, handleOpenNewTaskModal]);
+    const reorderTodayTasks = useCallback((orderedTaskIds: number[]) => {
+        // Recompute start times preserving plannedDuration and adding 15 min gaps
+        const dayStr = selectedDate.toDateString();
+        const tasksForDay = tasks
+          .filter(t => new Date(t.startTime).toDateString() === dayStr)
+          .reduce<Record<number, Task>>((acc, t) => { acc[t.id] = t; return acc; }, {});
+
+        // Determine initial start time: use the earliest among the reordered list's original times
+        const sortedOriginal = orderedTaskIds
+          .map(id => tasksForDay[id])
+          .filter(Boolean)
+          .sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        const baseStart = sortedOriginal.length > 0 ? new Date(sortedOriginal[0].startTime) : new Date(selectedDate);
+
+        let cursor = new Date(baseStart);
+        const fifteenMinMs = 15 * 60 * 1000;
+
+        const updatedForDay = orderedTaskIds.map(id => tasksForDay[id]).filter(Boolean).map(task => {
+            const newStart = new Date(cursor);
+            const newEndMs = newStart.getTime() + task.plannedDuration * 60000;
+            // Next cursor = end + 15min
+            cursor = new Date(newEndMs + fifteenMinMs);
+            return { ...task, startTime: newStart.toISOString() } as Task;
+        });
+
+        // Merge back into all tasks
+        setTasks(prev => prev
+          .map(t => {
+            const idx = updatedForDay.findIndex(u => u.id === t.id);
+            if (idx !== -1) return updatedForDay[idx];
+            return t;
+          })
+          .sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+        );
+
+        showToast('Today reordered with 15 min gaps.');
+    }, [tasks, selectedDate, setTasks, showToast]);
 
     // Note: swipe gestures removed to avoid interfering with scrolling. Use the toggle buttons.
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="h-full flex flex-col">
              <div className="flex justify-between items-center mb-6 flex-shrink-0">
                 <div className="flex items-center gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-full">
                     <button onClick={() => setView('today')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'today' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Today</button>
@@ -585,14 +654,18 @@ function Schedule(props: ScheduleProps) {
                 </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0">
                 <div className={`${view === 'today' ? 'block' : 'hidden'} h-full min-h-0`}>
                     <TodayView 
                         selectedDate={selectedDate}
                         tasks={tasksForSelectedDate}
                         categoryColors={categoryColors}
-                        onSelectTask={setSelectedTask}
+                        onSelectTask={(task) => {
+                            setSelectedTask(task);
+                            setIsEventDetailOpen(true);
+                        }}
                         changeDate={changeDate}
+                        onReorderTasks={reorderTodayTasks}
                     />
                 </div>
                 <div className={`${view === 'month' ? 'block' : 'hidden'} h-full min-h-0`}>
@@ -605,7 +678,7 @@ function Schedule(props: ScheduleProps) {
                                 if (t.id !== taskId) return t;
                                 const newStart = new Date(date);
                                 newStart.setHours(hour, 0, 0, 0);
-                                return { ...t, startTime: newStart };
+                                return { ...t, startTime: newStart.toISOString() };
                             }).sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()));
                             showToast('Task rescheduled.');
                         }}
@@ -615,7 +688,7 @@ function Schedule(props: ScheduleProps) {
             </div>
 
              <AnimatePresence>
-                {selectedTask && (
+                {selectedTask && isEventDetailOpen && (
                     <EventDetail 
                         task={selectedTask}
                         allTasks={tasks}
@@ -633,12 +706,17 @@ function Schedule(props: ScheduleProps) {
                         onComplete={() => {
                             onCompleteTask(selectedTask.id, selectedTask.plannedDuration);
                             setSelectedTask(null);
+                            setIsEventDetailOpen(false);
                         }}
                         onUndoCompleteTask={(task) => {
                             props.onUndoCompleteTask(task);
                             setSelectedTask(null);
+                            setIsEventDetailOpen(false);
                         }}
-                        onClose={() => setSelectedTask(null)}
+                        onClose={() => {
+                            setSelectedTask(null);
+                            setIsEventDetailOpen(false);
+                        }}
                         redirectToKikoAIWithChat={props.redirectToKikoAIWithChat}
                         addNote={props.addNote}
                         triggerInsightGeneration={props.triggerInsightGeneration}

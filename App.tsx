@@ -3,11 +3,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 // Import types
 // FIX: Import the new ChatSession type and remove the old ChatMessage type.
-import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatSession, SearchHistoryItem, VisionHistoryItem, HealthData, TaskStatus, Category, RewardItem, CompletionSummary, ChatMessage } from './types';
+import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatSession, SearchHistoryItem, VisionHistoryItem, HealthData, TaskStatus, Category, RewardItem, CompletionSummary, ChatMessage, NotificationItem } from './types';
 
 
 // Import components
 import Navigation from './components/Navigation';
+import Notifications from './components/Notifications';
 import Dashboard from './components/Dashboard';
 import DashboardOptimized from './components/DashboardOptimized';
 import DailyMode from './components/DailyMode';
@@ -123,9 +124,10 @@ if(upcomingTaskIndex > -1) {
 
 
 const initialNotebooks: Notebook[] = [
-    { id: 1, title: 'Praxis AI', color: '#A855F7' },
-    { id: 2, title: 'Surface Tension', color: '#3B82F6' },
-    { id: 3, title: 'Personal', color: '#10B981' },
+    { id: 1, title: 'Quick Notes', color: '#F59E0B' },
+    { id: 2, title: 'Praxis AI', color: '#A855F7' },
+    { id: 3, title: 'Surface Tension', color: '#3B82F6' },
+    { id: 4, title: 'Personal', color: '#10B981' },
 ];
 
 const initialNotes: Note[] = [
@@ -173,6 +175,16 @@ function App() {
     const [lastDeletedNote, setLastDeletedNote] = useState<Note | null>(null);
     const [lastDeletedNotebook, setLastDeletedNotebook] = useState<(Notebook & { associatedNoteIds?: number[] }) | null>(null);
     const [lastDeletedChat, setLastDeletedChat] = useState<ChatSession | null>(null);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([
+        {
+            id: 1,
+            title: "Welcome to Praxis AI",
+            message: "Your productivity journey starts here! Kiko is ready to help you organize your day.",
+            timestamp: new Date(),
+            type: 'info'
+        }
+    ]);
+    const [browserPushEnabled, setBrowserPushEnabled] = useState<boolean>(false);
 
 
     // Derived/Generated states
@@ -182,6 +194,22 @@ function App() {
 
     const showToast = (message: string, action?: { label: string; onClick: () => void; }) => {
         setToast({ message, id: Date.now(), action });
+        
+        // Save to notifications store
+        const notification: NotificationItem = {
+            id: `toast-${Date.now()}`,
+            title: 'Praxis Update',
+            message,
+            timestamp: new Date(),
+            type: 'info',
+            action
+        };
+        setNotifications(prev => [notification, ...prev].slice(0, 50)); // Keep last 50 notifications
+        
+        // Send browser push notification if enabled
+        if (browserPushEnabled && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification('Praxis AI', { body: message, icon: '/icon.svg' });
+        }
     };
 
     // --- NAVIGATION ---
@@ -218,6 +246,10 @@ function App() {
 
         const savedFocusBg = localStorage.getItem('praxis-focus-bg') || 'synthwave';
         setActiveFocusBackground(savedFocusBg);
+
+        // Load browser push setting
+        const savedPushEnabled = localStorage.getItem('praxis-browser-push') === 'true';
+        setBrowserPushEnabled(savedPushEnabled);
 
         // Restore daily reward image if it's for today
         const savedReward = localStorage.getItem('dailyReward');
@@ -421,6 +453,10 @@ function App() {
             ...task,
         };
         setTasks(prev => [newTask, ...prev]);
+        
+        // Create Quick Note for the task
+        createQuickNoteForTask(newTask);
+        
         showToast(`Task "${newTask.title}" added!`);
         triggerHapticFeedback('success');
     };
@@ -471,7 +507,7 @@ function App() {
     };
 
     // --- DATA HANDLERS (NOTES) ---
-    const addNote = (title: string, content: string, notebookId: number) => {
+    const addNote = (title: string, content: string, notebookId: number = 1) => { // Default to Quick Notes
         const newNote: Note = {
             id: Date.now(),
             notebookId, title, content,
@@ -480,6 +516,31 @@ function App() {
         setNotes(prev => [newNote, ...prev]);
         showToast(`Note "${title}" created.`);
         return newNote;
+    };
+
+    // Helper function to create Quick Note for task
+    const createQuickNoteForTask = (task: Task) => {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // Check if there are other Quick Notes for the same day
+        const todayNotes = notes.filter(n => n.notebookId === 1 && 
+            new Date(n.createdAt).toDateString() === now.toDateString());
+        
+        const title = todayNotes.length > 0 
+            ? `Task: ${task.title} - ${dateStr} ${timeStr}`
+            : `Task: ${task.title} - ${dateStr}`;
+        
+        const content = `<p><strong>Task Details:</strong></p>
+            <p>Category: ${task.category}</p>
+            <p>Duration: ${task.plannedDuration} minutes</p>
+            <p>Priority: ${task.priority || 'medium'}</p>
+            ${task.location ? `<p>Location: ${task.location}</p>` : ''}
+            ${task.notes ? `<p><strong>Notes:</strong> ${task.notes}</p>` : ''}
+            <p><em>Created automatically from task</em></p>`;
+        
+        return addNote(title, content, 1);
     };
 
     const updateNote = (updatedNote: Note, options?: { silent?: boolean }) => {
@@ -740,7 +801,8 @@ function App() {
                 lastDeletedChat={lastDeletedChat}
                 onRestoreChat={handleRestoreChat}
             />;
-            case 'Settings': return <Settings uiMode={uiMode} toggleUiMode={toggleUiMode} onSyncCalendar={handleSyncCalendar} onLogout={handleLogout} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} purchasedRewards={purchasedRewards} />;
+            case 'Settings': return <Settings uiMode={uiMode} toggleUiMode={toggleUiMode} onSyncCalendar={handleSyncCalendar} onLogout={handleLogout} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} purchasedRewards={purchasedRewards} browserPushEnabled={browserPushEnabled} setBrowserPushEnabled={setBrowserPushEnabled} />;
+            case 'Notifications': return <Notifications items={notifications} />;
             case 'Rewards': return <Rewards onBack={() => navigateTo('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
             default: return <Dashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={handleCompleteTask} />;
@@ -757,7 +819,7 @@ function App() {
                  <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
             ) : (
                 <>
-                    <main className="max-w-6xl mx-auto px-4 pt-6 pb-28">
+                    <main className="max-w-6xl mx-auto px-4 pt-6 pb-28 md:ml-16">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeScreen}
@@ -770,7 +832,7 @@ function App() {
                             </motion.div>
                         </AnimatePresence>
                     </main>
-                    <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
+                    <Navigation activeScreen={activeScreen} setScreen={navigateTo} notificationCount={notifications.length} />
                 </>
             )}
             <AnimatePresence>

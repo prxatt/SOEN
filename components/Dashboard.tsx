@@ -489,9 +489,9 @@ const Header = ({ tasksTodayCount, nextTask, categoryColors, tasks, healthData, 
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.6, delay: 0.1 }}
                             >
-                                {getGreeting()}, Pratt.
+                        {getGreeting()}, Pratt.
                             </motion.h1>
-
+                            
                             {/* Significantly Enlarged Next Task Section - Clickable */}
                             <motion.div
                                 className="space-y-4"
@@ -554,7 +554,7 @@ const Header = ({ tasksTodayCount, nextTask, categoryColors, tasks, healthData, 
                                         </div>
                                         
                                         {/* Subtle click indicator */}
-                                        <motion.div
+                            <motion.div 
                                             className="flex items-center gap-2 text-sm text-indigo-300/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                                             initial={{ x: -10 }}
                                             animate={{ x: 0 }}
@@ -685,7 +685,7 @@ const Header = ({ tasksTodayCount, nextTask, categoryColors, tasks, healthData, 
                     </div>
 
                     {/* Condensed Praxis Rewards System */}
-                    <div className="mb-8">
+                    <div className="mb-4">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-4">
                                 {/* Enhanced 3D Trophy Icon */}
@@ -809,61 +809,181 @@ const Header = ({ tasksTodayCount, nextTask, categoryColors, tasks, healthData, 
                                 </div>
                             </div>
                         </div>
+                        
+                        {/* Enhanced Data Visualization Section */}
+                        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {/* 3D Progress Sphere */}
+                            <motion.div
+                                className="relative p-4 rounded-2xl bg-slate-900/40 border border-slate-700/30 backdrop-blur-sm"
+                                whileHover={{ scale: 1.02 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <div className="flex items-center justify-center mb-3">
+                                    <motion.div
+                                        className="relative w-16 h-16"
+                                        animate={{ rotateY: [0, 360] }}
+                                        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                                        style={{ transformStyle: 'preserve-3d' }}
+                                    >
+                                        {/* 3D Sphere Base */}
+                                        <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 rounded-full shadow-lg"></div>
+                                        <div className="absolute inset-1 bg-gradient-to-br from-cyan-300 via-blue-400 to-indigo-500 rounded-full"></div>
+                                        <div className="absolute inset-2 bg-gradient-to-br from-cyan-200 via-blue-300 to-indigo-400 rounded-full"></div>
+                                        <div className="absolute inset-3 bg-gradient-to-br from-white via-cyan-100 to-blue-200 rounded-full opacity-80"></div>
+                                        
+                                        {/* Progress Ring */}
+                                        <motion.div
+                                            className="absolute inset-0 border-4 border-transparent border-t-white/60 rounded-full"
+                                            animate={{ rotate: [0, 360] }}
+                                            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                        />
+                                    </motion.div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-lg font-bold text-white">{completionRate}%</div>
+                                    <div className="text-xs text-slate-400">Daily Progress</div>
+                                </div>
+                            </motion.div>
+
+                            {/* 3D Energy Cube */}
+                            <motion.div
+                                className="relative p-4 rounded-2xl bg-slate-900/40 border border-slate-700/30 backdrop-blur-sm"
+                                whileHover={{ scale: 1.02 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <div className="flex items-center justify-center mb-3">
+                                    <motion.div
+                                        className="relative w-16 h-16"
+                                        animate={{ 
+                                            rotateX: [0, 15, -15, 0],
+                                            rotateY: [0, 25, -25, 0]
+                                        }}
+                                        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                                        style={{ transformStyle: 'preserve-3d' }}
+                                    >
+                                        {/* 3D Cube */}
+                                        <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-lg shadow-xl transform rotate-12"></div>
+                                        <div className="absolute inset-1 bg-gradient-to-br from-yellow-300 via-orange-400 to-red-400 rounded-lg transform -rotate-6"></div>
+                                        <div className="absolute inset-2 bg-gradient-to-br from-yellow-200 via-orange-300 to-red-300 rounded-lg"></div>
+                                        
+                                        {/* Energy Pulses */}
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-r from-yellow-300/40 to-orange-300/40 rounded-lg"
+                                            animate={{ opacity: [0.4, 0.8, 0.4] }}
+                                            transition={{ duration: 2, repeat: Infinity }}
+                                        />
+                                    </motion.div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-lg font-bold text-white">{energyLevel > 80 ? 'High' : energyLevel > 60 ? 'Med' : 'Low'}</div>
+                                    <div className="text-xs text-slate-400">Energy Level</div>
+                                </div>
+                            </motion.div>
+
+                            {/* 3D Streak Diamond */}
+                            <motion.div
+                                className="relative p-4 rounded-2xl bg-slate-900/40 border border-slate-700/30 backdrop-blur-sm"
+                                whileHover={{ scale: 1.02 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <div className="flex items-center justify-center mb-3">
+                                    <motion.div
+                                        className="relative w-16 h-16"
+                                        animate={{ 
+                                            rotateZ: [0, 180, 360],
+                                            scale: [1, 1.1, 1]
+                                        }}
+                                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                                        style={{ transformStyle: 'preserve-3d' }}
+                                    >
+                                        {/* Diamond Shape */}
+                                        <div className="absolute inset-4 bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 transform rotate-45 shadow-lg"></div>
+                                        <div className="absolute inset-5 bg-gradient-to-br from-purple-300 via-pink-400 to-red-400 transform rotate-45"></div>
+                                        <div className="absolute inset-6 bg-gradient-to-br from-white via-purple-100 to-pink-200 transform rotate-45 opacity-80"></div>
+                                        
+                                        {/* Sparkle Effect */}
+                                        {[...Array(4)].map((_, i) => (
+                                            <motion.div
+                                                key={i}
+                                                className="absolute w-1 h-1 bg-white rounded-full"
+                                                style={{
+                                                    top: `${20 + i * 15}%`,
+                                                    left: `${20 + i * 15}%`,
+                                                }}
+                                                animate={{
+                                                    opacity: [0, 1, 0],
+                                                    scale: [0.5, 1.2, 0.5]
+                                                }}
+                                                transition={{
+                                                    duration: 1.5,
+                                                    repeat: Infinity,
+                                                    delay: i * 0.3
+                                                }}
+                                            />
+                                        ))}
+                                    </motion.div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-lg font-bold text-white">{streakData}</div>
+                                    <div className="text-xs text-slate-400">Day Streak</div>
+                                </div>
+                            </motion.div>
+                        </div>
                     </div>
 
                     {/* Kiko's Enhanced Wisdom Section - Seamless Integration */}
                     <motion.div 
                         className="pt-4"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.6 }}
-                    >
-                        <div className="flex items-start gap-4">
-                            <motion.div
-                                className="w-10 h-10 flex items-center justify-center text-2xl"
-                                animate={{ 
-                                    rotate: [0, 8, -8, 0],
-                                    scale: [1, 1.1, 1]
-                                }}
-                                transition={{ 
-                                    duration: 4,
-                                    repeat: Infinity,
-                                    repeatDelay: 6
-                                }}
                             >
-                                🐧
-                            </motion.div>
-                            <div className="flex-1">
+                        <div className="flex items-start gap-4">
+                                    <motion.div
+                                className="w-10 h-10 flex items-center justify-center text-2xl"
+                                        animate={{ 
+                                    rotate: [0, 8, -8, 0],
+                                            scale: [1, 1.1, 1]
+                                        }}
+                                        transition={{ 
+                                    duration: 4,
+                                            repeat: Infinity,
+                                    repeatDelay: 6
+                                        }}
+                                    >
+                                        🐧
+                                    </motion.div>
+                                    <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-3">
                                     <h3 className="text-base font-semibold text-white">Kiko's Daily Insight</h3>
                                     <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 capitalize">
-                                        {wisdom.type}
-                                    </span>
-                                </div>
-                                {wisdomLoading ? (
-                                    <div className="space-y-2">
+                                                {wisdom.type}
+                                            </span>
+                    </div>
+                                        {wisdomLoading ? (
+                                            <div className="space-y-2">
                                         <div className="h-3 bg-slate-700/50 rounded animate-pulse"></div>
                                         <div className="h-3 bg-slate-700/50 rounded animate-pulse w-4/5"></div>
-                                    </div>
-                                ) : (
-                                    <div>
-                                        <motion.p 
-                                            className="text-slate-200 leading-relaxed mb-2 text-sm font-medium"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ duration: 0.5 }}
-                                        >
-                                            "{wisdom.quote}"
-                                        </motion.p>
-                                        <p className="text-xs text-slate-400">{wisdom.context}</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </motion.div>
                 </div>
-            </div>
-            
+                                        ) : (
+                                            <div>
+                                                <motion.p 
+                                            className="text-slate-200 leading-relaxed mb-2 text-sm font-medium"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    transition={{ duration: 0.5 }}
+                                                >
+                                                    "{wisdom.quote}"
+                                                </motion.p>
+                                        <p className="text-xs text-slate-400">{wisdom.context}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </motion.div>
+                </div>
+                        </div>
+                        
             {/* Task Details Modal */}
             <AnimatePresence>
                 {showTaskModal && nextTask && (
@@ -909,8 +1029,8 @@ const Header = ({ tasksTodayCount, nextTask, categoryColors, tasks, healthData, 
                                             <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
                                             {nextTask.plannedDuration} min
                                         </span>
-                                    </div>
-                                </div>
+                        </div>
+                    </div>
                                 <motion.button
                                     onClick={() => setShowTaskModal(false)}
                                     className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
@@ -991,8 +1111,8 @@ const Header = ({ tasksTodayCount, nextTask, categoryColors, tasks, healthData, 
                                             <span className="text-slate-400">Category:</span>
                                             <span className="ml-2 text-white font-medium">{nextTask.category}</span>
                                         </div>
-                                    </div>
-                                </div>
+                </div>
+            </div>
                             </motion.div>
                         </motion.div>
                     </motion.div>
@@ -2262,7 +2382,14 @@ export default function Dashboard(props: DashboardProps) {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full"
+            className="min-h-screen w-full bg-slate-950 dark:bg-slate-950"
+            style={{ margin: 0, padding: 0 }}
+        >
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-0 min-h-screen"
+                style={{ 
+                    backgroundColor: '#0f172a', // slate-950
+                    gridTemplateRows: 'auto 1fr auto'
+                }}
         >
             {/* Header with Kiko's Wisdom and Animated Weather */}
             <Header 
@@ -2306,6 +2433,7 @@ export default function Dashboard(props: DashboardProps) {
             {allTasksCompleted && (
                 <DailyImageCard imageUrl={props.dailyCompletionImage} />
             )}
+            </div>
         </motion.div>
     );
 }

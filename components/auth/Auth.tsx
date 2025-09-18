@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Login from './Login';
 import Signup from './Signup';
@@ -10,17 +10,47 @@ interface AuthProps {
 
 function Auth({ onLogin }: AuthProps) {
     const [isLoginView, setIsLoginView] = useState(true);
+    const [keysPressed, setKeysPressed] = useState(new Set<string>());
+
+    // Keyboard bypass for testing: C + 1 + 0
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            setKeysPressed(prev => new Set(prev).add(event.key.toLowerCase()));
+        };
+
+        const handleKeyUp = (event: KeyboardEvent) => {
+            setKeysPressed(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(event.key.toLowerCase());
+                return newSet;
+            });
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+
+    useEffect(() => {
+        // Check if C, 1, and 0 are all pressed
+        if (keysPressed.has('c') && keysPressed.has('1') && keysPressed.has('0')) {
+            console.log('🚀 Testing bypass activated!');
+            onLogin();
+        }
+    }, [keysPressed, onLogin]);
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-white dark:bg-black">
              <style>{`
                 body {
-                    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-                    background-size: 400% 400%;
-                    animation: gradient-shift 15s ease infinite;
+                    background: #FAFAFA !important;
                 }
                 html.dark body {
-                    background: #101010;
+                    background: #000000 !important;
                 }
             `}</style>
             <motion.div 
@@ -29,9 +59,9 @@ function Auth({ onLogin }: AuthProps) {
                 transition={{ duration: 0.5 }}
                 className="text-center mb-8"
             >
-                <PraxisLogo className="w-16 h-16 mx-auto mb-3 text-text" />
-                <h1 className="text-4xl font-bold font-display text-text">Welcome to Praxis</h1>
-                <p className="text-md text-text-secondary">Your AI-powered command center.</p>
+                <PraxisLogo className="w-16 h-16 mx-auto mb-3 text-black dark:text-white" />
+                <h1 className="text-4xl font-bold font-display text-black dark:text-white">Welcome to Praxis</h1>
+                <p className="text-md text-black/70 dark:text-white/70">Your AI-powered command center.</p>
             </motion.div>
                 
             <motion.div 
@@ -58,9 +88,20 @@ function Auth({ onLogin }: AuthProps) {
                 transition={{ delay: 0.5 }}
                 className="text-center mt-6"
             >
-                <button onClick={() => setIsLoginView(!isLoginView)} className="text-sm font-medium text-text-secondary hover:text-accent transition-colors">
+                <button onClick={() => setIsLoginView(!isLoginView)} className="text-sm font-medium text-black/70 dark:text-white/70 hover:text-accent transition-colors">
                     {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Login"}
                 </button>
+                {/* Testing bypass indicator */}
+                {(keysPressed.has('c') || keysPressed.has('1') || keysPressed.has('0')) && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mt-2 text-xs text-accent"
+                    >
+                        Testing bypass: {Array.from(keysPressed).join(' + ')} 
+                        {keysPressed.has('c') && keysPressed.has('1') && keysPressed.has('0') ? ' ✓' : ''}
+                    </motion.div>
+                )}
             </motion.div>
         </div>
     );

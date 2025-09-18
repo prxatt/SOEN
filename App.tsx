@@ -9,6 +9,7 @@ import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatSession, Sear
 // Import components
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
+import DashboardOptimized from './components/DashboardOptimized';
 import DailyMode from './components/DailyMode';
 import Schedule from './components/Schedule';
 import Notes from './components/Notes';
@@ -78,7 +79,7 @@ const generateMockTasksForMonth = (year: number, month: number): Task[] => {
                 id: tasks.length + 1,
                 title: taskTitlesByCategory[category][Math.floor(Math.random() * taskTitlesByCategory[category].length)],
                 category,
-                startTime,
+                startTime: startTime.toISOString(),
                 plannedDuration: [30, 45, 60, 90, 120][Math.floor(Math.random() * 5)],
                 status,
                 priority: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
@@ -414,7 +415,7 @@ function App() {
         const newTask: Task = {
             id: Date.now(),
             status: TaskStatus.Pending,
-            startTime: new Date(),
+            startTime: new Date().toISOString(),
             category: 'Personal',
             plannedDuration: 60,
             ...task,
@@ -715,7 +716,7 @@ function App() {
     // --- RENDER LOGIC ---
     const renderScreen = () => {
         switch (activeScreen) {
-            case 'Dashboard': return <Dashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} />;
+            case 'Dashboard': return <Dashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={handleCompleteTask} />;
             case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
             case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
             case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={navigateTo} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} />;
@@ -742,7 +743,7 @@ function App() {
             case 'Settings': return <Settings uiMode={uiMode} toggleUiMode={toggleUiMode} onSyncCalendar={handleSyncCalendar} onLogout={handleLogout} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} purchasedRewards={purchasedRewards} />;
             case 'Rewards': return <Rewards onBack={() => navigateTo('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
-            default: return <Dashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} />;
+            default: return <Dashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={handleCompleteTask} />;
         }
     };
     
@@ -785,7 +786,7 @@ function App() {
                 )}
             </AnimatePresence>
             <AnimatePresence>
-                {toast && <Toast key={toast.id} message={toast.message} action={toast.action} onClose={() => setToast(null)} />}
+                {toast && <Toast message={toast.message} action={toast.action} onClose={() => setToast(null)} />}
             </AnimatePresence>
         </div>
     );

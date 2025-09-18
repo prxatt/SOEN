@@ -18,15 +18,13 @@ const pathVariants: Variants = {
 
 function LoadingScreen() {
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white dark:bg-black">
         <style>{`
             body {
-                background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-                background-size: 400% 400%;
-                animation: gradient-shift 15s ease infinite;
+                background: #FAFAFA !important;
             }
             html.dark body {
-                background: #101010;
+                background: #000000 !important;
             }
         `}</style>
         <motion.div
@@ -35,7 +33,7 @@ function LoadingScreen() {
             transition={{ duration: 0.5 }}
         >
             <PraxisLogo 
-                className="w-24 h-24 text-white" 
+                className="w-24 h-24 text-black dark:text-white" 
                 variants={{
                     hidden: { opacity: 0 },
                     visible: {
@@ -61,7 +59,7 @@ function LoadingScreen() {
             </PraxisLogo>
         </motion.div>
          <motion.p 
-            className="mt-4 text-white/80 font-semibold"
+            className="mt-4 text-black/80 dark:text-white/80 font-semibold"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1, duration: 0.5 }}

@@ -19,24 +19,24 @@ function Login({ onLogin }: LoginProps) {
                 <div>
                     <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-1">Email</label>
                     <input type="email" id="email" name="email" required 
-                           className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent" />
+                           className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors" />
                 </div>
                 <div>
-                    <label htmlFor="password"className="block text-sm font-medium text-text-secondary mb-1">Password</label>
+                    <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-1">Password</label>
                     <input type="password" id="password" name="password" required 
-                           className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent" />
+                           className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors" />
                 </div>
 
                 <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                        <input type="checkbox" id="remember-me" className="h-4 w-4 rounded border-border bg-bg text-accent focus:ring-accent"/>
+                        <input type="checkbox" id="remember-me" className="h-4 w-4 rounded border-border bg-bg text-black focus:ring-black focus:ring-offset-0"/>
                         <label htmlFor="remember-me" className="text-text-secondary">Remember me</label>
                     </div>
-                    <a href="#" className="font-medium text-accent hover:underline">Forgot Password?</a>
+                    <a href="#" className="font-medium text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:underline transition-colors">Forgot Password?</a>
                 </div>
 
                 <button type="submit" 
-                        className="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-all duration-200">
+                        className="w-full py-3 px-4 bg-black hover:bg-gray-800 text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-all duration-200 border border-gray-800 hover:border-gray-600">
                     Login
                 </button>
             </form>

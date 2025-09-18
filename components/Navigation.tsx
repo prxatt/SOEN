@@ -23,7 +23,7 @@ interface NavButtonProps {
 const BRAND_COLORS = {
   primary: '#000000',      // Pure black
   secondary: '#FAFAFA',    // Off-white
-  accent: '#A855F7',       // Purple accent
+  accent: '#000000',       // Black accent for brand cohesion
   surface: '#1A1A1A',      // Dark surface
   border: '#333333',       // Border color
   text: {

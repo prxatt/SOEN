@@ -10,6 +10,7 @@ import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatSession, Sear
 import Navigation from './components/Navigation';
 import Notifications from './components/Notifications';
 import Dashboard from './components/Dashboard';
+import UnifiedDashboard from './components/UnifiedDashboard';
 import DashboardOptimized from './components/DashboardOptimized';
 import DailyMode from './components/DailyMode';
 import Schedule from './components/Schedule';
@@ -805,7 +806,7 @@ function App() {
             case 'Notifications': return <Notifications items={notifications} />;
             case 'Rewards': return <Rewards onBack={() => navigateTo('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
-            default: return <Dashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={handleCompleteTask} />;
+            default: return <UnifiedDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} />;
         }
     };
     
@@ -819,7 +820,7 @@ function App() {
                  <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
             ) : (
                 <>
-                    <main className="max-w-6xl mx-auto px-4 pt-6 pb-28 md:ml-16">
+                    <main className="w-full">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeScreen}
@@ -832,7 +833,10 @@ function App() {
                             </motion.div>
                         </AnimatePresence>
                     </main>
-                    <Navigation activeScreen={activeScreen} setScreen={navigateTo} notificationCount={notifications.length} />
+                    {/* Only show navigation for non-dashboard screens */}
+                    {activeScreen !== 'Dashboard' && (
+                        <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
+                    )}
                 </>
             )}
             <AnimatePresence>

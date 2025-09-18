@@ -6,6 +6,7 @@ import type { Screen } from '../types';
 interface NavigationProps {
   activeScreen: Screen;
   setScreen: (screen: Screen) => void;
+  notificationCount?: number;
 }
 
 interface NavButtonProps {
@@ -70,6 +71,7 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
         whileHover={{ scale: collapsed ? 1.05 : 1.02 }}
         whileTap={{ scale: 0.95 }}
       >
+<<<<<<< HEAD
         {/* Active indicator background */}
         {isActive && (
           <motion.div
@@ -77,6 +79,34 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
             className="absolute inset-0 bg-white rounded-xl"
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
           />
+=======
+        <div className={`relative flex items-center justify-center ${collapsed ? 'w-5 h-5' : 'w-6 h-6 mr-3'}`}>
+          <Icon 
+            className={`transition-all duration-300 ${
+              collapsed ? 'w-4 h-4' : 'w-5 h-5'
+            }`} 
+          style={{
+              color: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.9)',
+              filter: isActive ? `drop-shadow(0 0 6px ${color}60)` : 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))'
+          }}
+          />
+          {isActive && (
+            <motion.div
+              className="absolute inset-0 rounded-lg"
+              style={{ 
+                background: `linear-gradient(135deg, ${color}40, transparent)`,
+                boxShadow: `inset 0 0 0 1px ${color}60`
+              }}
+              layoutId="activeIndicator"
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            />
+          )}
+        </div>
+        {!collapsed && (
+          <span className="text-sm font-semibold tracking-wide text-white truncate">
+            {label}
+        </span>
+>>>>>>> 30c5221f8abdb10fd9fb25c7d7147538af8772b3
         )}
         
         {/* Icon container */}
@@ -107,12 +137,32 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
   );
 }
 
+<<<<<<< HEAD
 function Navigation({ activeScreen, setScreen }: NavigationProps) {
   const [collapsed, setCollapsed] = useState(true); // Always start collapsed
   const [isHovered, setIsHovered] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout>();
   const leaveTimeoutRef = useRef<NodeJS.Timeout>();
+=======
+const NAV_ITEMS: { screen: Screen; label: string; icon: React.FC<React.SVGProps<SVGSVGElement>>; color: string }[] = [
+  { screen: 'Dashboard', label: 'Home', icon: HomeIcon, color: '#A855F7' },
+  { screen: 'Schedule', label: 'Schedule', icon: CalendarIcon, color: '#06B6D4' },
+  { screen: 'Notes', label: 'Notes', icon: DocumentTextIcon, color: '#F59E0B' },
+];
+
+const PROFILE_ITEMS: { screen: Screen; label: string; icon: React.FC<React.SVGProps<SVGSVGElement>>; color: string }[] = [
+  { screen: 'Profile', label: 'Profile', icon: UserCircleIcon, color: '#22C55E' },
+  { screen: 'Rewards', label: 'Rewards', icon: UserCircleIcon, color: '#F59E0B' },
+  { screen: 'Settings', label: 'Settings', icon: UserCircleIcon, color: '#6B7280' },
+];
+
+function Navigation({ activeScreen, setScreen, notificationCount = 0 }: NavigationProps) {
+  const [collapsed, setCollapsed] = useState<boolean>(true);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
+  const navRef = React.useRef<HTMLDivElement>(null);
+>>>>>>> 30c5221f8abdb10fd9fb25c7d7147538af8772b3
 
   // Sophisticated hover logic
   const handleMouseEnter = useCallback(() => {
@@ -152,7 +202,11 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
       return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+<<<<<<< HEAD
   // Cleanup timeouts
+=======
+  // Auto-collapse after inactivity and on screen changes
+>>>>>>> 30c5221f8abdb10fd9fb25c7d7147538af8772b3
   useEffect(() => {
     return () => {
       if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -160,12 +214,37 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
     };
   }, []);
 
+<<<<<<< HEAD
 
   return (
     <>
       {/* Desktop Navigation - Fixed to top-left corner */}
       <aside className="hidden md:flex fixed left-0 top-0 bottom-0 z-50">
         <motion.div
+=======
+      return () => clearTimeout(timer);
+    }
+  }, [collapsed, activeScreen]);
+
+  // Auto-collapse when screen changes
+  useEffect(() => {
+    setCollapsed(true);
+    setShowProfileDropdown(false);
+  }, [activeScreen]);
+
+  // Close profile dropdown when collapsed
+  useEffect(() => {
+    if (collapsed) {
+      setShowProfileDropdown(false);
+    }
+  }, [collapsed]);
+
+  return (
+    <>
+      {/* Desktop/Tablet sidebar */}
+      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 z-40">
+        <div 
+>>>>>>> 30c5221f8abdb10fd9fb25c7d7147538af8772b3
           ref={navRef}
           className={`
             h-full flex flex-col transition-all duration-500 ease-out
@@ -257,10 +336,16 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
             </motion.button>
           </div>
 
+<<<<<<< HEAD
           {/* Main Navigation */}
           <nav className="flex-1 px-4 py-2">
             <ul className="space-y-2">
               {MAIN_NAV_ITEMS.map((item, index) => (
+=======
+          {/* Navigation Items */}
+          <ul className="space-y-1.5 flex-1 overflow-y-auto overflow-x-hidden">
+            {NAV_ITEMS.map(({ screen, label, icon, color }) => (
+>>>>>>> 30c5221f8abdb10fd9fb25c7d7147538af8772b3
               <NavButton
                   key={item.screen}
                   Icon={item.icon}
@@ -275,6 +360,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
           </ul>
           </nav>
 
+<<<<<<< HEAD
           {/* Bottom Navigation Items */}
           <div className="p-4 border-t border-white/10">
             <ul className="space-y-2">
@@ -294,6 +380,102 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
           </div>
 
         </motion.div>
+=======
+          {/* Notifications Button */}
+          <div className="mt-auto mb-4">
+            <NavButton
+              Icon={BellIcon}
+              label={notificationCount > 0 ? "Notifications" : ""}
+              isActive={activeScreen === 'Notifications'}
+              onClick={() => setScreen('Notifications')}
+              color="#9CA3AF"
+              collapsed={collapsed}
+            />
+          </div>
+
+          {/* Profile Dropdown - Desktop only */}
+          <div>
+            <div className="relative">
+            <motion.button
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                className={`w-full rounded-2xl text-white font-semibold shadow-lg transition-all duration-300 ${
+                  collapsed ? 'h-10 flex items-center justify-center' : 'h-12 flex items-center justify-center gap-3'
+                } ${
+                  activeScreen === 'Profile' || activeScreen === 'Rewards' || activeScreen === 'Settings'
+                    ? 'bg-white/25 shadow-lg border border-white/40' 
+                    : 'bg-white/15 hover:bg-white/20 border border-white/25'
+                } backdrop-blur-xl`}
+                whileHover={{ scale: collapsed ? 1.05 : 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <UserCircleIcon className={`${collapsed ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                {!collapsed && (
+                  <span className="text-sm font-semibold tracking-wide">Profile</span>
+                )}
+                {!collapsed && (
+                  <motion.div
+                    animate={{ rotate: showProfileDropdown ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </motion.div>
+              )}
+            </motion.button>
+
+              {/* Profile Dropdown Menu */}
+              <AnimatePresence>
+                {showProfileDropdown && !collapsed && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute bottom-full left-0 right-0 mb-2 bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl p-2 space-y-1"
+                  >
+                    {PROFILE_ITEMS.map(({ screen, label, icon: Icon, color }) => (
+                      <motion.button
+                        key={screen}
+                        onClick={() => {
+                          setScreen(screen);
+                          setShowProfileDropdown(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                          activeScreen === screen
+                            ? 'bg-white/20 text-white'
+                            : 'text-white/80 hover:bg-white/10 hover:text-white'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{label}</span>
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Collapse Toggle */}
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              setCollapsed(c => !c);
+            }}
+            className="mt-3 w-full text-xs text-white/80 hover:text-white transition-colors py-2 rounded-lg hover:bg-white/15"
+            aria-label="Toggle collapse"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {collapsed ? '→' : '←'}
+          </motion.button>
+
+          {/* Notifications Icon - Bottom Right */}
+        </div>
+>>>>>>> 30c5221f8abdb10fd9fb25c7d7147538af8772b3
       </aside>
 
       {/* Mobile Navigation - Bottom bar inspired by Pinterest reference */}
@@ -331,6 +513,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
             className="relative p-4 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-lg shadow-purple-500/25"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+<<<<<<< HEAD
             animate={{ 
               y: [-1, 1, -1],
               transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
@@ -345,6 +528,42 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
                 opacity: [0, 1, 0]
               }}
               transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
+=======
+                className="relative flex items-center justify-center w-16 h-16 rounded-2xl shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #a855f7 0%, #6d28d9 50%, #4c1d95 100%)',
+                  boxShadow: '0 8px 32px rgba(168, 85, 247, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                  color: 'white'
+                }}
+                aria-label="Kiko AI"
+              >
+                <BabyPenguinIcon className="h-8 w-8" />
+              </motion.button>
+            </li>
+
+            {NAV_ITEMS.slice(2).map(({ screen, label, icon, color }) => (
+              <NavButton
+                key={screen}
+                Icon={icon}
+                label={label}
+                isActive={activeScreen === screen}
+                onClick={() => setScreen(screen)}
+                color={color}
+                collapsed
+              />
+            ))}
+
+            {/* Mobile Notifications Button */}
+
+            {/* Mobile Profile Button */}
+            <NavButton
+              Icon={UserCircleIcon}
+              label="Profile"
+              isActive={activeScreen === 'Profile'}
+              onClick={() => setScreen('Profile')}
+              color="#22C55E"
+              collapsed
+>>>>>>> 30c5221f8abdb10fd9fb25c7d7147538af8772b3
             />
           </motion.button>
 

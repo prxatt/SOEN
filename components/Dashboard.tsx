@@ -7,7 +7,7 @@ import { Screen, Task, Note, HealthData, Goal, Category, MissionBriefing } from 
 import { 
     SparklesIcon, BrainCircuitIcon, CheckCircleIcon, FireIcon, PlusIcon, 
     CalendarDaysIcon, DocumentTextIcon, ChevronRightIcon, ArrowRightIcon,
-    HeartIcon, BoltIcon, PlayIcon, PauseIcon, ClockIcon
+    HeartIcon, BoltIcon, PlayIcon, PauseIcon, ClockIcon, BellIcon
 } from './Icons';
 import * as Icons from './Icons'; // For dynamic icon loading
 
@@ -178,11 +178,16 @@ const useKikoWisdom = (tasks: Task[], healthData: HealthData, notes: Note[]) => 
     };
     
     // Simulate AI processing time
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setWisdom(wisdomData);
       quoteCount.current++;
       setIsLoading(false);
     }, 1500);
+
+    // Cleanup to avoid state updates on unmounted component
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [tasks, healthData, notes]);
 
   return { wisdom, isLoading };
@@ -2257,7 +2262,7 @@ export default function Dashboard(props: DashboardProps) {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="grid grid-cols-1 lg:grid-cols-4 gap-6 max-w-7xl mx-auto"
+            className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full"
         >
             {/* Header with Kiko's Wisdom and Animated Weather */}
             <Header 

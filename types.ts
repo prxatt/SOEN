@@ -15,7 +15,7 @@ export interface Task {
   id: number;
   title: string;
   category: Category;
-  startTime: Date;
+  startTime: string;
   plannedDuration: number; // in minutes
   actualDuration?: number; // in minutes
   status: TaskStatus;

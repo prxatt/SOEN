@@ -61,7 +61,7 @@ describe('Onboarding', () => {
     fireEvent.click(nextButton) // Step 3
     fireEvent.click(nextButton) // Step 4 (hobbies input)
     
-    const input = screen.getByPlaceholderText(/Boxing, DJing/)
+    const input = screen.getByPlaceholderText(/Boxing, DJing, art galleries/)
     expect(input).toHaveClass('text-black', 'dark:text-white')
     expect(input).toHaveClass('bg-white/80', 'dark:bg-black/80')
   })

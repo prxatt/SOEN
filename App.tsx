@@ -230,6 +230,10 @@ function App() {
         const authStatus = localStorage.getItem('praxis-authenticated') === 'true';
         const onboardingStatus = localStorage.getItem('praxis-onboarding-complete') === 'true';
 
+        // For testing - you can uncomment this to reset auth state
+        // localStorage.removeItem('praxis-authenticated');
+        // localStorage.removeItem('praxis-onboarding-complete');
+
         // First show Praxis preview for 1.5 seconds
         setTimeout(() => {
             setShowPreview(false);
@@ -350,7 +354,10 @@ function App() {
     // --- AUTH & ONBOARDING HANDLERS ---
     const handleLogin = () => {
         localStorage.setItem('praxis-authenticated', 'true');
+        // For existing users, automatically complete onboarding
+        localStorage.setItem('praxis-onboarding-complete', 'true');
         setIsAuthenticated(true);
+        setIsOnboardingComplete(true);
     };
     
     const handleLogout = () => {

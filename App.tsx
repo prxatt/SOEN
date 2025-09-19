@@ -874,14 +874,17 @@ function App() {
 
     return (
         <ErrorBoundary>
-            <div className={`min-h-screen font-sans bg-bg text-text transition-colors duration-300`}>
+            <div className={`min-h-screen font-sans bg-bg text-text transition-colors duration-300 flex`}>
                 {focusTask ? (
                      <ErrorBoundary>
                          <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
                      </ErrorBoundary>
                 ) : (
                     <>
-                        <main className="w-full">
+                        <ErrorBoundary>
+                            <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
+                        </ErrorBoundary>
+                        <main className="flex-1 ml-16 md:ml-20">
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={activeScreen}
@@ -896,9 +899,6 @@ function App() {
                                 </motion.div>
                             </AnimatePresence>
                         </main>
-                        <ErrorBoundary>
-                            <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
-                        </ErrorBoundary>
                     </>
                 )}
                 <AnimatePresence>

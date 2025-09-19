@@ -1,8 +1,15 @@
 /* Unified Dashboard Styles */
 .unified-dashboard {
   min-height: 100vh;
+  height: 100vh;
   background-color: #0a0a0a;
   color: #ffffff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
 }
 
 .unified-dashboard * {

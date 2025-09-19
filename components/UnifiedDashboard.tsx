@@ -377,7 +377,7 @@ export default function UnifiedDashboard(props: UnifiedDashboardProps) {
 
     return (
         <div 
-            className="unified-dashboard min-h-screen w-full"
+            className="unified-dashboard min-h-screen w-full fixed inset-0 overflow-y-auto"
             style={{ backgroundColor: UNIFIED_COLORS.background }}
         >
             {/* Fixed Header with Tabs */}
@@ -410,7 +410,14 @@ export default function UnifiedDashboard(props: UnifiedDashboardProps) {
                                 key={tab.id}
                                 tab={tab}
                                 isActive={activeTab === tab.id}
-                                onClick={() => setActiveTab(tab.id)}
+                                onClick={() => {
+                                    if (tab.id === 'dashboard') {
+                                        setActiveTab(tab.id);
+                                    } else {
+                                        // Navigate to main app screens
+                                        props.setScreen(tab.label as Screen);
+                                    }
+                                }}
                             />
                         ))}
                     </div>

@@ -274,140 +274,95 @@ function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, 
 
     return (
         <motion.div variants={itemVariants} className="space-y-8">
-            {/* Header with Greeting, Quote, Weather, and Next Task */}
+            {/* Unified Header Section */}
             <div className="relative rounded-3xl overflow-hidden" style={{ backgroundColor: categoryColors['Learning'] || '#3B82F6' }}>
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-8">
-                    {/* Daily Greeting and Quote */}
-                    <div className="lg:col-span-2 text-center">
-                        <h1 className="text-6xl font-bold text-white mb-6">{getGreeting()}</h1>
-                        <div className="bg-white/10 rounded-2xl p-6 mb-6">
-                            <blockquote className="text-white text-xl italic leading-relaxed">
-                                "{todayQuote.text}"
-                            </blockquote>
-                            <cite className="text-white/70 text-base font-medium mt-3 block">— {todayQuote.author}</cite>
-                        </div>
-                        <div className="text-white/70 text-lg">
+                <div className="p-8">
+                    {/* Main Greeting Row */}
+                    <div className="flex flex-col lg:flex-row items-center justify-between mb-6">
+                        <div className="text-center lg:text-left mb-6 lg:mb-0">
+                            <h1 className="text-6xl font-bold text-white mb-4">{getGreeting()}</h1>
+                            <div className="text-white/70 text-lg">
                     {new Date().toLocaleDateString('en-US', { 
                         weekday: 'long', 
                         month: 'long', 
-                                day: 'numeric'
-                            })}
+                                    day: 'numeric'
+                                })}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                            <WeatherWidget />
+                            {todayTasks.length > 0 && (
+                                <div 
+                                    className="bg-white/20 rounded-2xl p-4 cursor-pointer hover:bg-white/30 transition-all duration-300 min-w-[200px]"
+                                    onClick={() => setFocusTask(todayTasks[0])}
+                                >
+                                    <h4 className="text-white font-semibold text-lg mb-1">Next Up</h4>
+                                    <div className="text-white/80 text-sm mb-1">{todayTasks[0].title}</div>
+                                    <div className="text-white/60 text-xs">
+                                        {new Date(todayTasks[0].startTime).toLocaleTimeString([], { 
+                                            hour: '2-digit', 
+                                            minute: '2-digit' 
+                                        })} • {todayTasks[0].plannedDuration} min
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Next Up Task */}
-                    <div className="lg:col-span-1">
-                        <h3 className="text-white text-xl font-semibold mb-4">Next Up</h3>
-                        {todayTasks.length > 0 ? (
-                            <div 
-                                className="bg-white/20 rounded-2xl p-4 cursor-pointer hover:bg-white/30 transition-all duration-300"
-                                onClick={() => setFocusTask(todayTasks[0])}
-                            >
-                                <h4 className="text-white font-semibold text-lg mb-2">{todayTasks[0].title}</h4>
-                                <div className="text-white/80 text-sm">
-                                    {new Date(todayTasks[0].startTime).toLocaleTimeString([], { 
-                                        hour: '2-digit', 
-                                        minute: '2-digit' 
-                                    })} • {todayTasks[0].plannedDuration} min
-                                </div>
-                                <div className="text-white/60 text-xs mt-2">
-                                    Click to view details
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="bg-white/20 rounded-2xl p-4 text-center">
-                                <div className="text-white/60 text-lg">No tasks scheduled</div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Weather Widget */}
-                    <div className="lg:col-span-1 flex items-center justify-center">
-                        <WeatherWidget />
+                    {/* Daily Quote */}
+                    <div className="bg-white/10 rounded-2xl p-6 text-center">
+                        <blockquote className="text-white text-xl italic leading-relaxed mb-3">
+                            "{todayQuote.text}"
+                        </blockquote>
+                        <cite className="text-white/70 text-base font-medium">— {todayQuote.author}</cite>
                     </div>
                 </div>
+                </div>
+                
+            {/* Enhanced Health & Habits with Visuals */}
+            <div className="bg-surface rounded-2xl p-6 border border-border">
+                <IntegratedHealthInsights 
+                    healthData={healthData} 
+                    notes={notes} 
+                    tasks={tasks} 
+                />
             </div>
 
-            {/* Health and Habits - Side by Side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-surface rounded-2xl p-6 border border-border">
-                    <h3 className="text-text text-xl font-semibold mb-4">Health Metrics</h3>
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <span className="text-text/70">Sleep Quality</span>
-                            <span className="text-text font-semibold">{healthData.sleepQuality || 'Good'}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-text/70">Energy Level</span>
-                            <span className="text-text font-semibold">{healthData.energyLevel || 'High'}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-text/70">Steps Today</span>
-                            <span className="text-text font-semibold">{healthData.stepsToday || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-text/70">Heart Rate</span>
-                            <span className="text-text font-semibold">{healthData.heartRate || 0} bpm</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-surface rounded-2xl p-6 border border-border">
-                    <h3 className="text-text text-xl font-semibold mb-4">Habits & Progress</h3>
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <span className="text-text/70">Workouts</span>
-                            <span className="text-text font-semibold">{healthData.totalWorkouts || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-text/70">Total Minutes</span>
-                            <span className="text-text font-semibold">{healthData.totalWorkoutMinutes || 0} min</span>
-                    </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-text/70">Calories Burned</span>
-                            <span className="text-text font-semibold">{healthData.caloriesBurned || 0}</span>
-                </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-text/70">Notes Created</span>
-                            <span className="text-text font-semibold">{notes.length}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Stats and Rewards Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Dynamic Stats and Rewards Section */}
+            <div className="flex flex-wrap gap-4">
                 <motion.div 
-                    className="p-6 rounded-2xl text-center border border-border"
+                    className="flex-1 min-w-[200px] p-4 rounded-2xl text-center border border-border"
                     style={{ backgroundColor: categoryColors['Prototyping'] || '#A855F7' }}
                     whileHover={{ scale: 1.02 }}
                 >
-                    <div className="text-3xl font-bold text-white mb-2">{todayTasks.length}</div>
-                    <div className="text-white/80 text-lg">Tasks Today</div>
-                    <div className="text-white/60 text-sm mt-1">{completedToday} completed</div>
+                    <div className="text-2xl font-bold text-white">{todayTasks.length}</div>
+                    <div className="text-white/80 text-sm">Tasks Today</div>
+                    <div className="text-white/60 text-xs">{completedToday} done</div>
                 </motion.div>
 
                 <motion.div 
-                    className="p-6 rounded-2xl text-center border border-border"
+                    className="flex-1 min-w-[200px] p-4 rounded-2xl text-center border border-border"
                     style={{ backgroundColor: categoryColors['Workout'] || '#EC4899' }}
                     whileHover={{ scale: 1.02 }}
                 >
-                    <div className="text-3xl font-bold text-white mb-2">{completionRate}%</div>
-                    <div className="text-white/80 text-lg">Completion Rate</div>
-                    <div className="text-white/60 text-sm mt-1">Today's progress</div>
+                    <div className="text-2xl font-bold text-white">{completionRate}%</div>
+                    <div className="text-white/80 text-sm">Complete</div>
+                    <div className="text-white/60 text-xs">Today's rate</div>
                 </motion.div>
 
                 <motion.div 
-                    className="p-6 rounded-2xl text-center border border-border"
+                    className="flex-1 min-w-[200px] p-4 rounded-2xl text-center border border-border"
                     style={{ backgroundColor: categoryColors['Personal'] || '#6366F1' }}
                     whileHover={{ scale: 1.02 }}
                 >
-                    <div className="text-3xl font-bold text-white mb-2">{notes.length}</div>
-                    <div className="text-white/80 text-lg">Notes</div>
-                    <div className="text-white/60 text-sm mt-1">Total notes</div>
+                    <div className="text-2xl font-bold text-white">{notes.length}</div>
+                    <div className="text-white/80 text-sm">Notes</div>
+                    <div className="text-white/60 text-xs">Total created</div>
                 </motion.div>
 
-                <PraxisRewardsVisual />
+                <div className="flex-1 min-w-[300px]">
+                    <PraxisRewardsVisual />
+                </div>
             </div>
 
             {/* Today's Tasks - Schedule UI Style */}

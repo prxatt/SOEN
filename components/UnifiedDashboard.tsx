@@ -170,57 +170,22 @@ function DailyQuote() {
 
     return (
         <motion.div
-            className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl p-6 border border-purple-500/30 backdrop-blur-sm"
+            className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl p-8 border border-purple-500/30 backdrop-blur-sm"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
         >
             <div className="text-center">
-                <div className="text-4xl mb-4">💭</div>
-                <blockquote className="text-text text-lg italic mb-4">
+                <div className="text-4xl mb-6">💭</div>
+                <blockquote className="text-text text-xl italic mb-6 leading-relaxed">
                     "{quote}"
                 </blockquote>
-                <cite className="text-text/70 text-sm">— {philosopher}</cite>
+                <cite className="text-text/70 text-base font-medium">— {philosopher}</cite>
             </div>
         </motion.div>
     );
 }
 
-// 3D Praxis Visual Component
-function Praxis3DVisual() {
-    const [rotation, setRotation] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setRotation(prev => (prev + 1) % 360);
-        }, 50);
-        return () => clearInterval(interval);
-    }, []);
-
-    return (
-        <motion.div
-            className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl p-8 border border-blue-500/30 backdrop-blur-sm flex items-center justify-center"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-        >
-            <div className="text-center">
-                <motion.div
-                    className="w-24 h-24 mx-auto mb-4 relative"
-                    animate={{ rotateY: rotation }}
-                    transition={{ duration: 0.1, ease: "linear" }}
-                >
-                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl">
-                        <span className="text-white text-3xl font-bold">P</span>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/50 to-purple-600/50 rounded-2xl blur-lg"></div>
-                </motion.div>
-                <div className="text-text text-lg font-semibold">Praxis AI</div>
-                <div className="text-text/70 text-sm">3D Visual</div>
-            </div>
-        </motion.div>
-    );
-}
 
 // Dashboard Content Component - Schedule UI Style
 function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, onCompleteTask, setFocusTask }: {
@@ -286,10 +251,9 @@ function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, 
                 </div>
             </div>
 
-            {/* Features Row: Quote, 3D Visual, Health Data */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Features Row: Quote and Health Data */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <DailyQuote />
-                <Praxis3DVisual />
                 <div className="bg-surface/50 rounded-2xl p-6 border border-border/50 backdrop-blur-sm">
                     <IntegratedHealthInsights 
                         healthData={healthData} 

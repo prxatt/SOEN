@@ -26,30 +26,22 @@ interface UnifiedDashboardProps {
     onCompleteTask: (taskId: number) => void;
 }
 
-// Taskflow-inspired minimalist color scheme
+// Original brand cohesive color scheme
 const UNIFIED_COLORS = {
-    background: '#101C2E', // Deep blue background like Taskflow
-    surface: '#1A2332',    // Slightly lighter surface
+    background: '#0a0a0a', // Deep black background
+    surface: '#1a1a1a',    // Slightly lighter surface
     text: {
-        primary: '#FFFFFF',
-        secondary: '#B0B0B0',
+        primary: '#ffffff',
+        secondary: '#b0b0b0',
         muted: '#666666'
     },
-    // Pastel backgrounds for different sections (Taskflow style)
-    pastels: {
-        blue: '#5D8BFF',      // Light blue
-        teal: '#65F5ED',      // Teal
-        yellow: '#FCFF52',    // Yellow
-        purple: '#8B5CF6',    // Purple
-        pink: '#F472B6'       // Pink
-    },
     tabs: {
-        dashboard: '#5D8BFF',    // Light blue
-        schedule: '#65F5ED',     // Teal  
-        notes: '#FCFF52',        // Yellow
-        health: '#F472B6',       // Pink
-        habits: '#8B5CF6',       // Purple
-        profile: '#5D8BFF'       // Light blue
+        dashboard: '#3b82f6',    // Blue
+        schedule: '#10b981',     // Green  
+        notes: '#f59e0b',        // Orange
+        health: '#ef4444',       // Red
+        habits: '#8b5cf6',       // Purple
+        profile: '#06b6d4'       // Cyan
     }
 } as const;
 
@@ -147,17 +139,18 @@ function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, 
 
     return (
         <motion.div variants={itemVariants} className="space-y-6">
-            {/* Clean Daily Greeting - Taskflow Style */}
-            <div className="text-center py-12 rounded-3xl" style={{ backgroundColor: UNIFIED_COLORS.pastels.blue }}>
-                <h1 className="text-4xl font-bold text-white mb-2">{getGreeting()}</h1>
-                <p className="text-white/90 text-lg max-w-xl mx-auto">
+            {/* Daily Greeting with Integrated Health & Habits Insights */}
+            <div className="text-center py-8 bg-gradient-to-br from-slate-800/30 to-slate-900/30 rounded-3xl border border-white/10 backdrop-blur-sm">
+                <h1 className="text-5xl font-bold text-white mb-4">{getGreeting()}</h1>
+                <p className="text-gray-300 text-lg italic max-w-2xl mx-auto leading-relaxed">
                     "{todayQuote}"
                 </p>
-                <div className="mt-3 text-white/70 text-sm">
+                <div className="mt-4 text-sm text-gray-400">
                     {new Date().toLocaleDateString('en-US', { 
                         weekday: 'long', 
                         month: 'long', 
-                        day: 'numeric'
+                        day: 'numeric',
+                        year: 'numeric'
                     })}
                 </div>
                 
@@ -169,54 +162,60 @@ function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, 
                 />
             </div>
 
-            {/* Clean Stats - Taskflow Style */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="rounded-2xl p-6" style={{ backgroundColor: UNIFIED_COLORS.pastels.yellow }}>
-                    <div className="text-center">
-                        <p className="text-3xl font-bold text-white">{todayTasks.length}</p>
-                        <p className="text-white/80 text-sm">Tasks Today</p>
-                        <p className="text-white/60 text-xs">{completedToday} completed</p>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                            <CheckCircleIcon className="w-6 h-6 text-blue-400" />
+                        </div>
+                        <h3 className="text-white font-semibold">Tasks Today</h3>
                     </div>
+                    <p className="text-3xl font-bold text-white">{todayTasks.length}</p>
+                    <p className="text-gray-400 text-sm">{completedToday} completed</p>
                 </div>
 
-                <div className="rounded-2xl p-6" style={{ backgroundColor: UNIFIED_COLORS.pastels.purple }}>
-                    <div className="text-center">
-                        <p className="text-3xl font-bold text-white">{completionRate}%</p>
-                        <p className="text-white/80 text-sm">Completion Rate</p>
-                        <p className="text-white/60 text-xs">Today's progress</p>
+                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
+                            <FireIcon className="w-6 h-6 text-green-400" />
+                        </div>
+                        <h3 className="text-white font-semibold">Completion Rate</h3>
                     </div>
+                    <p className="text-3xl font-bold text-white">{completionRate}%</p>
+                    <p className="text-gray-400 text-sm">Today's progress</p>
                 </div>
 
-                <div className="rounded-2xl p-6" style={{ backgroundColor: UNIFIED_COLORS.pastels.pink }}>
-                    <div className="text-center">
-                        <p className="text-3xl font-bold text-white">{notes.length}</p>
-                        <p className="text-white/80 text-sm">Notes</p>
-                        <p className="text-white/60 text-xs">Total notes</p>
+                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                            <SparklesIcon className="w-6 h-6 text-purple-400" />
+                        </div>
+                        <h3 className="text-white font-semibold">Notes</h3>
                     </div>
+                    <p className="text-3xl font-bold text-white">{notes.length}</p>
+                    <p className="text-gray-400 text-sm">Total notes</p>
                 </div>
             </div>
 
-            {/* Today's Tasks - Taskflow Style */}
-            <div className="rounded-2xl p-6" style={{ backgroundColor: UNIFIED_COLORS.pastels.teal }}>
+            {/* Today's Tasks */}
+            <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
                 <h3 className="text-white font-semibold text-lg mb-4">Today's Tasks</h3>
                 {todayTasks.length > 0 ? (
                     <div className="space-y-3">
-                        {todayTasks.slice(0, 5).map((task, index) => (
+                        {todayTasks.slice(0, 5).map((task) => (
                             <motion.div
                                 key={task.id}
-                                className="flex items-center gap-4 p-4 bg-white/20 rounded-xl"
+                                className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10"
                                 whileHover={{ scale: 1.02 }}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
                             >
                                 <div 
-                                    className="w-4 h-4 rounded-full"
+                                    className="w-3 h-3 rounded-full"
                                     style={{ backgroundColor: categoryColors[task.category] }}
                                 />
                                 <div className="flex-1">
                                     <p className="text-white font-medium">{task.title}</p>
-                                    <p className="text-white/70 text-sm">
+                                    <p className="text-gray-400 text-sm">
                                         {new Date(task.startTime).toLocaleTimeString([], { 
                                             hour: '2-digit', 
                                             minute: '2-digit' 
@@ -225,7 +224,7 @@ function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, 
                                 </div>
                                 <button
                                     onClick={() => onCompleteTask(task.id)}
-                                    className="p-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors"
+                                    className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
                                 >
                                     <CheckCircleIcon className="w-5 h-5" />
                                 </button>
@@ -233,7 +232,7 @@ function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, 
                         ))}
                     </div>
                 ) : (
-                    <p className="text-white/70 text-center py-8">No tasks for today</p>
+                    <p className="text-gray-400 text-center py-8">No tasks for today</p>
                 )}
             </div>
         </motion.div>

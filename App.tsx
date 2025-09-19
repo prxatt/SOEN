@@ -8,8 +8,7 @@
  *    - Always provide default values for optional properties
  * 
  * 2. AUTHENTICATION FLOW:
- *    - showPreview: Shows animated Praxis logo first (1.5s)
- *    - isLoading: Shows loading screen (1s) 
+ *    - isLoading: Shows integrated loading screen (3.5s) with progress bar and steps
  *    - !isAuthenticated: Shows login screen
  *    - !isOnboardingComplete: Shows onboarding (only for new users)
  *    - Default: Shows main dashboard
@@ -63,8 +62,7 @@ import Auth from './components/auth/Auth';
 import Onboarding from './components/Onboarding';
 import FocusMode from './components/FocusMode';
 import Toast from './components/Toast';
-import LoadingScreen from './components/LoadingScreen'; // New Loading Screen
-import PraxisPreview from './components/PraxisPreview'; // Praxis Preview Screen
+import IntegratedLoadingScreen from './components/IntegratedLoadingScreen'; // Integrated Loading Screen
 import ErrorBoundary from './components/ErrorBoundary'; // Error boundary for crash prevention
 import { PraxisLogo } from './components/Icons';
 
@@ -185,7 +183,6 @@ function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [showPreview, setShowPreview] = useState(true);
     const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
     const [previousScreen, setPreviousScreen] = useState<Screen>('Dashboard');
     const [uiMode, setUiMode] = useState<'dark' | 'glass'>('glass');
@@ -284,16 +281,12 @@ function App() {
         // localStorage.removeItem('praxis-authenticated');
         // localStorage.removeItem('praxis-onboarding-complete');
 
-        // First show Praxis preview for 1.5 seconds
+        // Show integrated loading screen for 3.5 seconds total
         setTimeout(() => {
-            setShowPreview(false);
-            // Then show loading for 1 second
-            setTimeout(() => {
-                setIsAuthenticated(authStatus);
-                setIsOnboardingComplete(onboardingStatus);
-                setIsLoading(false);
-            }, 1000);
-        }, 1500);
+            setIsAuthenticated(authStatus);
+            setIsOnboardingComplete(onboardingStatus);
+            setIsLoading(false);
+        }, 3500);
 
         const savedTheme = localStorage.getItem('praxis-theme') || 'obsidian';
         setActiveTheme(savedTheme);
@@ -875,8 +868,7 @@ function App() {
         }
     };
     
-    if (showPreview) return <PraxisPreview />;
-    if (isLoading) return <LoadingScreen />;
+    if (isLoading) return <IntegratedLoadingScreen onComplete={() => setIsLoading(false)} />;
     if (!isAuthenticated) return <Auth onLogin={handleLogin} />;
     if (!isOnboardingComplete) return <Onboarding goals={goals} setGoals={setGoals} onComplete={handleOnboardingComplete} />;
 

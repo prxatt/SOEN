@@ -60,87 +60,6 @@ const itemVariants = {
     }
 };
 
-// Weather Component
-function WeatherWidget() {
-    const [loading, setLoading] = useState(true);
-    const [tempC, setTempC] = useState<number | null>(null);
-    const [code, setCode] = useState<number | null>(null);
-    const [location, setLocation] = useState<string>('');
-
-    useEffect(() => {
-        const fallback = { lat: 37.7749, lon: -122.4194, city: 'San Francisco' };
-        const fetchWeather = async (lat: number, lon: number, city?: string) => {
-            try {
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`;
-                const res = await fetch(url);
-                const data = await res.json();
-                setTempC(data?.current?.temperature_2m ?? null);
-                setCode(data?.current?.weather_code ?? null);
-                
-                if (!city) {
-                    try {
-                        const reverseGeocodeUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
-                        const geoRes = await fetch(reverseGeocodeUrl);
-                        const geoData = await geoRes.json();
-                        setLocation(geoData.city || geoData.locality || 'Unknown');
-                    } catch {
-                        setLocation('Unknown');
-                    }
-                } else {
-                    setLocation(city);
-                }
-            } catch (e) {
-                // ignore
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if ('geolocation' in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-                () => fetchWeather(fallback.lat, fallback.lon, fallback.city),
-                { maximumAge: 600000, timeout: 8000 }
-            );
-        } else {
-            fetchWeather(fallback.lat, fallback.lon, fallback.city);
-        }
-    }, []);
-
-    const getIconForCode = (code: number | null) => {
-        if (code === null) return '🌡️';
-        if (code === 0) return '☀️';
-        if (code <= 3) return '⛅';
-        if (code <= 48) return '☁️';
-        if (code <= 67) return '🌧️';
-        if (code <= 77) return '❄️';
-        if (code <= 82) return '🌦️';
-        if (code <= 86) return '🌨️';
-        return '🌡️';
-    };
-
-    return (
-        <motion.div
-            className="bg-white/10 rounded-2xl p-4 border border-white/20"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-        >
-            <div className="text-center">
-                <div className="text-3xl mb-2">{getIconForCode(code)}</div>
-                <div className="text-2xl font-bold text-white mb-1">
-                    {loading ? '—' : tempC ? `${Math.round(tempC)}°C` : '—'}
-                </div>
-                <div className="text-white/70 text-sm mb-1">
-                    {code !== null ? (code === 0 ? 'Clear' : code <= 3 ? 'Partly Cloudy' : 'Weather') : '—'}
-                </div>
-                <div className="text-white/60 text-xs">
-                    {location || 'Loading...'}
-                </div>
-            </div>
-        </motion.div>
-    );
-}
 
 // 3D Animated Praxis Rewards Visual
 function PraxisRewardsVisual() {
@@ -252,12 +171,17 @@ function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, 
     const completedToday = todayTasks.filter(t => t.status === 'Completed').length;
     const completionRate = todayTasks.length > 0 ? Math.round((completedToday / todayTasks.length) * 100) : 0;
 
-    // Daily greeting with time-based message
+    // Daily greeting with time-based message and user name
+    const getUserName = () => {
+        return localStorage.getItem('praxis-user-name') || 'there';
+    };
+
     const getGreeting = () => {
         const hour = new Date().getHours();
-        if (hour < 12) return 'Good Morning';
-        if (hour < 17) return 'Good Afternoon';
-        return 'Good Evening';
+        const name = getUserName();
+        if (hour < 12) return `Good Morning, ${name}`;
+        if (hour < 17) return `Good Afternoon, ${name}`;
+        return `Good Evening, ${name}`;
     };
 
     // Philosophical quotes for daily inspiration
@@ -274,159 +198,168 @@ function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, 
 
     return (
         <motion.div variants={itemVariants} className="space-y-8">
-            {/* Unified Header Section */}
+            {/* Unified Daily Greeting Section with Integrated Health Insights */}
             <div className="relative rounded-3xl overflow-hidden" style={{ backgroundColor: categoryColors['Learning'] || '#3B82F6' }}>
                 <div className="p-8">
-                    {/* Main Greeting Row */}
-                    <div className="flex flex-col lg:flex-row items-center justify-between mb-6">
-                        <div className="text-center lg:text-left mb-6 lg:mb-0">
-                            <h1 className="text-6xl font-bold text-white mb-4">{getGreeting()}</h1>
-                            <div className="text-white/70 text-lg">
-                    {new Date().toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        month: 'long', 
-                                    day: 'numeric'
-                                })}
-                            </div>
+                    {/* Main Greeting and Date */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-6xl font-bold text-white mb-4">{getGreeting()}</h1>
+                        <div className="text-white/70 text-lg mb-6">
+                            {new Date().toLocaleDateString('en-US', { 
+                                weekday: 'long', 
+                                month: 'long', 
+                                day: 'numeric'
+                            })}
                         </div>
-                        <div className="flex items-center gap-6">
-                            <WeatherWidget />
-                            {todayTasks.length > 0 && (
-                                <div 
-                                    className="bg-white/20 rounded-2xl p-4 cursor-pointer hover:bg-white/30 transition-all duration-300 min-w-[200px]"
-                                    onClick={() => setFocusTask(todayTasks[0])}
-                                >
-                                    <h4 className="text-white font-semibold text-lg mb-1">Next Up</h4>
-                                    <div className="text-white/80 text-sm mb-1">{todayTasks[0].title}</div>
-                                    <div className="text-white/60 text-xs">
-                                        {new Date(todayTasks[0].startTime).toLocaleTimeString([], { 
-                                            hour: '2-digit', 
-                                            minute: '2-digit' 
-                                        })} • {todayTasks[0].plannedDuration} min
-                                    </div>
-                                </div>
-                            )}
+
+                        {/* Daily Quote */}
+                        <div className="bg-white/10 rounded-2xl p-6 max-w-4xl mx-auto">
+                            <blockquote className="text-white text-xl italic leading-relaxed mb-3">
+                                "{todayQuote.text}"
+                            </blockquote>
+                            <cite className="text-white/70 text-base font-medium">— {todayQuote.author}</cite>
                         </div>
                     </div>
 
-                    {/* Daily Quote */}
-                    <div className="bg-white/10 rounded-2xl p-6 text-center">
-                        <blockquote className="text-white text-xl italic leading-relaxed mb-3">
-                            "{todayQuote.text}"
-                        </blockquote>
-                        <cite className="text-white/70 text-base font-medium">— {todayQuote.author}</cite>
+                    {/* Integrated Health Insights */}
+                    <div className="bg-white/10 rounded-2xl p-6">
+                        <IntegratedHealthInsights 
+                            healthData={healthData} 
+                            notes={notes} 
+                            tasks={tasks} 
+                        />
                     </div>
                 </div>
-                </div>
-                
-            {/* Enhanced Health & Habits with Visuals */}
-            <div className="bg-surface rounded-2xl p-6 border border-border">
-                <IntegratedHealthInsights 
-                    healthData={healthData} 
-                    notes={notes} 
-                    tasks={tasks} 
-                />
             </div>
 
-            {/* Dynamic Stats and Rewards Section */}
-            <div className="flex flex-wrap gap-4">
-                <motion.div 
-                    className="flex-1 min-w-[200px] p-4 rounded-2xl text-center border border-border"
-                    style={{ backgroundColor: categoryColors['Prototyping'] || '#A855F7' }}
-                    whileHover={{ scale: 1.02 }}
-                >
-                    <div className="text-2xl font-bold text-white">{todayTasks.length}</div>
-                    <div className="text-white/80 text-sm">Tasks Today</div>
-                    <div className="text-white/60 text-xs">{completedToday} done</div>
-                </motion.div>
+            {/* Next Up Section - Outside the greeting box */}
+            {todayTasks.length > 0 && (
+                <div className="bg-surface rounded-2xl p-6 border border-border">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-text text-xl font-semibold">Next Up</h3>
+                        <button
+                            onClick={() => {
+                                // Open EventDetail instead of FocusMode
+                                const event = new CustomEvent('openEventDetail', { 
+                                    detail: { task: todayTasks[0] } 
+                                });
+                                window.dispatchEvent(event);
+                            }}
+                            className="text-accent hover:text-accent/80 text-sm font-medium"
+                        >
+                            View Details →
+                        </button>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div 
+                            className="flex-1 p-4 rounded-xl cursor-pointer hover:bg-surface/50 transition-all duration-300 border border-border"
+                            onClick={() => {
+                                const event = new CustomEvent('openEventDetail', { 
+                                    detail: { task: todayTasks[0] } 
+                                });
+                                window.dispatchEvent(event);
+                            }}
+                        >
+                            <h4 className="text-text font-semibold text-lg mb-2">{todayTasks[0].title}</h4>
+                            <div className="text-text/70 text-sm">
+                                {new Date(todayTasks[0].startTime).toLocaleTimeString([], { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                })} • {todayTasks[0].plannedDuration} min
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-                <motion.div 
-                    className="flex-1 min-w-[200px] p-4 rounded-2xl text-center border border-border"
-                    style={{ backgroundColor: categoryColors['Workout'] || '#EC4899' }}
-                    whileHover={{ scale: 1.02 }}
-                >
-                    <div className="text-2xl font-bold text-white">{completionRate}%</div>
-                    <div className="text-white/80 text-sm">Complete</div>
-                    <div className="text-white/60 text-xs">Today's rate</div>
-                </motion.div>
-
-                <motion.div 
-                    className="flex-1 min-w-[200px] p-4 rounded-2xl text-center border border-border"
-                    style={{ backgroundColor: categoryColors['Personal'] || '#6366F1' }}
-                    whileHover={{ scale: 1.02 }}
-                >
-                    <div className="text-2xl font-bold text-white">{notes.length}</div>
-                    <div className="text-white/80 text-sm">Notes</div>
-                    <div className="text-white/60 text-xs">Total created</div>
-                </motion.div>
-
-                <div className="flex-1 min-w-[300px]">
+            {/* Praxis Rewards Section */}
+            <div className="flex justify-center">
+                <div className="w-full max-w-md">
                     <PraxisRewardsVisual />
                 </div>
             </div>
 
-            {/* Today's Tasks - Schedule UI Style */}
-            <div>
-                <h2 className="text-3xl font-bold text-text mb-6">Today's Tasks</h2>
+            {/* Today's Tasks - Pill-shaped Interface */}
+            <div className="bg-surface rounded-2xl p-6 border border-border">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-text text-xl font-semibold">Today's Tasks</h2>
+                    <button
+                        onClick={() => {
+                            // Navigate to schedule view
+                            const event = new CustomEvent('navigateToSchedule');
+                            window.dispatchEvent(event);
+                        }}
+                        className="text-accent hover:text-accent/80 text-sm font-medium"
+                    >
+                        View Complete Schedule →
+                    </button>
+                </div>
+                
                 {todayTasks.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-3">
                         {todayTasks.map((task) => {
                             const categoryColor = categoryColors[task.category] || '#6B7280';
                             const startTime = new Date(task.startTime);
-                            const endTime = new Date(startTime.getTime() + task.plannedDuration * 60000);
                             const isCompleted = task.status === 'Completed';
 
                             return (
-                            <motion.div
-                                key={task.id}
-                                    layoutId={`task-card-${task.id}`}
-                                    onClick={() => setFocusTask(task)}
-                                    animate={{ opacity: isCompleted ? 0.6 : 1 }}
-                                    className="p-6 rounded-3xl cursor-pointer text-white flex-shrink-0"
-                                    style={{ backgroundColor: categoryColor }}
-                                whileHover={{ scale: 1.02 }}
-                            >
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="w-3/4">
-                                            <h3 className="text-2xl font-bold relative inline-block break-words">
-                                                {task.title}
-                                                {isCompleted && (
-                                                    <div className="absolute top-1/2 left-0 w-full h-0.5 bg-current" />
-                                                )}
-                                            </h3>
-                                </div>
-                                <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onCompleteTask(task.id);
-                                            }}
-                                            className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                                <motion.div
+                                    key={task.id}
+                                    className="flex items-center gap-4 p-4 rounded-full border border-border hover:bg-surface/50 transition-all duration-300 cursor-pointer"
+                                    whileHover={{ scale: 1.01 }}
+                                    onClick={() => {
+                                        const event = new CustomEvent('openEventDetail', { 
+                                            detail: { task } 
+                                        });
+                                        window.dispatchEvent(event);
+                                    }}
                                 >
-                                    <CheckCircleIcon className="w-5 h-5" />
-                                </button>
+                                    {/* Category Indicator */}
+                                    <div 
+                                        className="w-3 h-3 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: categoryColor }}
+                                    />
+                                    
+                                    {/* Task Content */}
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className={`text-text font-medium truncate ${isCompleted ? 'line-through opacity-60' : ''}`}>
+                                            {task.title}
+                                        </h3>
+                                        <div className="text-text/60 text-sm">
+                                            {startTime.toLocaleTimeString([], { 
+                                                hour: '2-digit', 
+                                                minute: '2-digit' 
+                                            })} • {task.plannedDuration} min
+                                        </div>
                                     </div>
-                                    <div className="pt-4 border-t border-white/20 flex justify-between items-center">
-                                        <div className="text-center">
-                                            <p className="font-semibold">{startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
-                                            <p className="text-sm opacity-80">Start</p>
-                                        </div>
-                                        <div className="px-4 py-1.5 rounded-full text-sm font-semibold bg-white/20">
-                                            {task.plannedDuration} Min
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="font-semibold">{endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
-                                            <p className="text-sm opacity-80">End</p>
-                                        </div>
-                                    </div>
-                            </motion.div>
+                                    
+                                    {/* Complete/Undo Button */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (isCompleted) {
+                                                // Undo complete - would need to implement this
+                                                console.log('Undo complete task:', task.id);
+                                            } else {
+                                                onCompleteTask(task.id);
+                                            }
+                                        }}
+                                        className={`p-2 rounded-full transition-colors ${
+                                            isCompleted 
+                                                ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30' 
+                                                : 'bg-surface/50 text-text/60 hover:bg-surface/70'
+                                        }`}
+                                    >
+                                        <CheckCircleIcon className="w-5 h-5" />
+                                    </button>
+                                </motion.div>
                             );
                         })}
                     </div>
                 ) : (
-                    <div className="text-center py-16">
-                        <div className="text-6xl mb-4">📝</div>
-                        <p className="text-text/60 text-xl">No tasks for today</p>
-                        <p className="text-text/40 text-sm mt-2">Add some tasks to get started!</p>
+                    <div className="text-center py-12">
+                        <div className="text-text/40 text-lg mb-2">No tasks for today</div>
+                        <div className="text-text/30 text-sm">Add some tasks to get started!</div>
                     </div>
                 )}
             </div>

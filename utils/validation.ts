@@ -17,6 +17,8 @@
  * - safeRender(condition, <Component />) instead of condition && <Component />
  */
 
+import React from 'react';
+
 /**
  * Safely get a property from an object with a default value
  * Prevents "Cannot read properties of undefined" errors
@@ -112,6 +114,7 @@ export function validateRequired(obj: any, requiredProps: string[], context: str
 
 /**
  * Create a safe component wrapper that handles errors gracefully
+ * Note: This function should be used in .tsx files only due to JSX syntax
  */
 export function withErrorHandling<T extends object>(
   Component: React.ComponentType<T>,
@@ -119,22 +122,23 @@ export function withErrorHandling<T extends object>(
 ) {
   return function SafeComponent(props: T) {
     try {
-      return <Component {...props} />;
+      return React.createElement(Component, props);
     } catch (error) {
       console.error('Component error:', error);
       
       if (fallbackComponent) {
-        return <fallbackComponent error={error as Error} />;
+        return React.createElement(fallbackComponent, { error: error as Error });
       }
       
-      return (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
-          <p>Component failed to render</p>
-          {process.env.NODE_ENV === 'development' && (
-            <pre className="text-xs mt-2">{String(error)}</pre>
-          )}
-        </div>
-      );
+      return React.createElement('div', {
+        className: 'p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400'
+      }, [
+        React.createElement('p', { key: 'error-msg' }, 'Component failed to render'),
+        process.env.NODE_ENV === 'development' && React.createElement('pre', {
+          key: 'error-details',
+          className: 'text-xs mt-2'
+        }, String(error))
+      ].filter(Boolean));
     }
   };
 }

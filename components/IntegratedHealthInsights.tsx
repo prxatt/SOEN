@@ -74,13 +74,13 @@ const SleepInsights = ({ healthData, notes, tasks }: {
         let recommendation = "";
         let priority = "medium";
         
-        if (healthData.sleepHours < 6) {
+        if (safeGet(healthData, 'avgSleepHours', 0) < 6) {
             recommendation = "Consider lighter tasks today - your sleep data suggests you need more rest.";
             priority = "high";
         } else if (stressLevel > energyLevel && taskLoad > 5) {
             recommendation = "Balance your day with physical activity. Your notes suggest stress - try a 10-minute walk.";
             priority = "high";
-        } else if (healthData.sleepHours >= 7 && energyLevel > stressLevel) {
+        } else if (safeGet(healthData, 'avgSleepHours', 0) >= 7 && energyLevel > stressLevel) {
             recommendation = "Great energy! Perfect day for challenging tasks and new projects.";
             priority = "low";
         } else {
@@ -98,8 +98,8 @@ const SleepInsights = ({ healthData, notes, tasks }: {
     }, [healthData, notes, tasks]);
     
     const getSleepIcon = () => {
-        if (healthData.sleepHours >= 8) return <SunIcon className="w-5 h-5" />;
-        if (healthData.sleepHours >= 6) return <CloudIcon className="w-5 h-5" />;
+        if (safeGet(healthData, 'avgSleepHours', 0) >= 8) return <SunIcon className="w-5 h-5" />;
+        if (safeGet(healthData, 'avgSleepHours', 0) >= 6) return <CloudIcon className="w-5 h-5" />;
         return <div className="w-5 h-5 flex items-center justify-center">🌙</div>;
     };
     
@@ -127,7 +127,7 @@ const SleepInsights = ({ healthData, notes, tasks }: {
                     </Icon3D>
                     <div>
                         <h3 className="text-white font-semibold text-sm">Sleep & Energy</h3>
-                        <p className="text-gray-400 text-xs">{healthData.sleepHours}h • {healthData.sleepQuality} quality</p>
+                        <p className="text-gray-400 text-xs">{safeGet(healthData, 'avgSleepHours', 0)}h • {safeGet(healthData, 'sleepQuality', 'good')} quality</p>
                     </div>
                 </div>
                 <motion.div

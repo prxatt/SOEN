@@ -164,6 +164,9 @@ export interface HealthData {
     avgSleepHours: number;
     sleepQuality: 'poor' | 'fair' | 'good';
     energyLevel: 'low' | 'medium' | 'high';
+    stepsToday?: number;
+    heartRate?: number;
+    caloriesBurned?: number;
 }
 
 export interface ProjectStatusReport {

@@ -2,10 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Note, HealthData, Goal, Category, MissionBriefing, Screen } from '../types';
 import { 
-    SparklesIcon, CheckCircleIcon, FireIcon, PlusIcon, 
-    CalendarDaysIcon, DocumentTextIcon, ChevronRightIcon,
-    HeartIcon, BoltIcon, ClockIcon, PlayIcon, HomeIcon,
-    UserCircleIcon, BabyPenguinIcon, GiftIcon
+    CheckCircleIcon
 } from './Icons';
 import IntegratedHealthInsights from './IntegratedHealthInsights';
 import './UnifiedDashboard.css';
@@ -45,14 +42,6 @@ const UNIFIED_COLORS = {
     }
 } as const;
 
-// Tab configuration
-const TABS = [
-    { id: 'dashboard', label: 'Dashboard', icon: HomeIcon, color: UNIFIED_COLORS.tabs.dashboard },
-    { id: 'schedule', label: 'Schedule', icon: CalendarDaysIcon, color: UNIFIED_COLORS.tabs.schedule },
-    { id: 'notes', label: 'Notes', icon: DocumentTextIcon, color: UNIFIED_COLORS.tabs.notes },
-    { id: 'profile', label: 'Profile', icon: UserCircleIcon, color: UNIFIED_COLORS.tabs.profile }
-] as const;
-
 // Animation variants
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -71,34 +60,7 @@ const itemVariants = {
     }
 };
 
-// Tab Button Component
-function TabButton({ tab, isActive, onClick }: { 
-    tab: typeof TABS[0], 
-    isActive: boolean, 
-    onClick: () => void 
-}) {
-    return (
-        <motion.button
-            onClick={onClick}
-            className={`tab-button ${
-                isActive 
-                    ? 'text-white shadow-lg' 
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-            style={{
-                backgroundColor: isActive ? tab.color : 'transparent',
-                boxShadow: isActive ? `0 8px 32px ${tab.color}40` : 'none'
-            }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-        >
-            <tab.icon className="w-5 h-5" />
-            <span>{tab.label}</span>
-        </motion.button>
-    );
-}
-
-// Dashboard Content Component
+// Dashboard Content Component - Schedule UI Style
 function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, onCompleteTask, setFocusTask }: {
     tasks: Task[];
     notes: Note[];
@@ -138,310 +100,146 @@ function DashboardContent({ tasks, notes, healthData, briefing, categoryColors, 
     const todayQuote = dailyQuotes[new Date().getDate() % dailyQuotes.length];
 
     return (
-        <motion.div variants={itemVariants} className="space-y-6">
-            {/* Daily Greeting with Integrated Health & Habits Insights */}
-            <div className="text-center py-8 bg-gradient-to-br from-slate-800/30 to-slate-900/30 rounded-3xl border border-white/10 backdrop-blur-sm">
-                <h1 className="text-5xl font-bold text-white mb-4">{getGreeting()}</h1>
-                <p className="text-gray-300 text-lg italic max-w-2xl mx-auto leading-relaxed">
+        <motion.div variants={itemVariants} className="space-y-8">
+            {/* Daily Greeting - Schedule UI Style */}
+            <div className="text-center py-12 rounded-3xl" style={{ backgroundColor: categoryColors['Learning'] || '#3B82F6' }}>
+                <h1 className="text-6xl font-bold text-white mb-4">{getGreeting()}</h1>
+                <p className="text-white/90 text-xl max-w-2xl mx-auto leading-relaxed">
                     "{todayQuote}"
                 </p>
-                <div className="mt-4 text-sm text-gray-400">
+                <div className="mt-6 text-white/70 text-lg">
                     {new Date().toLocaleDateString('en-US', { 
                         weekday: 'long', 
                         month: 'long', 
-                        day: 'numeric',
-                        year: 'numeric'
+                        day: 'numeric'
                     })}
                 </div>
-                
-                {/* Integrated Health & Habits Insights */}
-                <IntegratedHealthInsights 
-                    healthData={healthData} 
-                    notes={notes} 
-                    tasks={tasks} 
-                />
             </div>
 
-            {/* Stats Grid */}
+            {/* Stats Cards - Schedule UI Style */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                            <CheckCircleIcon className="w-6 h-6 text-blue-400" />
-                        </div>
-                        <h3 className="text-white font-semibold">Tasks Today</h3>
-                    </div>
-                    <p className="text-3xl font-bold text-white">{todayTasks.length}</p>
-                    <p className="text-gray-400 text-sm">{completedToday} completed</p>
-                </div>
+                <motion.div 
+                    className="p-8 rounded-3xl text-white text-center"
+                    style={{ backgroundColor: categoryColors['Prototyping'] || '#A855F7' }}
+                    whileHover={{ scale: 1.02 }}
+                >
+                    <div className="text-4xl font-bold mb-2">{todayTasks.length}</div>
+                    <div className="text-white/80 text-lg">Tasks Today</div>
+                    <div className="text-white/60 text-sm mt-1">{completedToday} completed</div>
+                </motion.div>
 
-                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
-                            <FireIcon className="w-6 h-6 text-green-400" />
-                        </div>
-                        <h3 className="text-white font-semibold">Completion Rate</h3>
-                    </div>
-                    <p className="text-3xl font-bold text-white">{completionRate}%</p>
-                    <p className="text-gray-400 text-sm">Today's progress</p>
-                </div>
+                <motion.div 
+                    className="p-8 rounded-3xl text-white text-center"
+                    style={{ backgroundColor: categoryColors['Workout'] || '#EC4899' }}
+                    whileHover={{ scale: 1.02 }}
+                >
+                    <div className="text-4xl font-bold mb-2">{completionRate}%</div>
+                    <div className="text-white/80 text-lg">Completion Rate</div>
+                    <div className="text-white/60 text-sm mt-1">Today's progress</div>
+                </motion.div>
 
-                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
-                            <SparklesIcon className="w-6 h-6 text-purple-400" />
-                        </div>
-                        <h3 className="text-white font-semibold">Notes</h3>
-                    </div>
-                    <p className="text-3xl font-bold text-white">{notes.length}</p>
-                    <p className="text-gray-400 text-sm">Total notes</p>
-                </div>
+                <motion.div 
+                    className="p-8 rounded-3xl text-white text-center"
+                    style={{ backgroundColor: categoryColors['Personal'] || '#6366F1' }}
+                    whileHover={{ scale: 1.02 }}
+                >
+                    <div className="text-4xl font-bold mb-2">{notes.length}</div>
+                    <div className="text-white/80 text-lg">Notes</div>
+                    <div className="text-white/60 text-sm mt-1">Total notes</div>
+                </motion.div>
             </div>
 
-            {/* Today's Tasks */}
-            <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                <h3 className="text-white font-semibold text-lg mb-4">Today's Tasks</h3>
+            {/* Today's Tasks - Schedule UI Style */}
+            <div>
+                <h2 className="text-3xl font-bold text-white mb-6">Today's Tasks</h2>
                 {todayTasks.length > 0 ? (
-                    <div className="space-y-3">
-                        {todayTasks.slice(0, 5).map((task) => (
-                            <motion.div
-                                key={task.id}
-                                className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10"
-                                whileHover={{ scale: 1.02 }}
-                            >
-                                <div 
-                                    className="w-3 h-3 rounded-full"
-                                    style={{ backgroundColor: categoryColors[task.category] }}
-                                />
-                                <div className="flex-1">
-                                    <p className="text-white font-medium">{task.title}</p>
-                                    <p className="text-gray-400 text-sm">
-                                        {new Date(task.startTime).toLocaleTimeString([], { 
-                                            hour: '2-digit', 
-                                            minute: '2-digit' 
-                                        })} • {task.plannedDuration} min
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => onCompleteTask(task.id)}
-                                    className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {todayTasks.map((task) => {
+                            const categoryColor = categoryColors[task.category] || '#6B7280';
+                            const startTime = new Date(task.startTime);
+                            const endTime = new Date(startTime.getTime() + task.plannedDuration * 60000);
+                            const isCompleted = task.status === 'Completed';
+
+                            return (
+                                <motion.div
+                                    key={task.id}
+                                    layoutId={`task-card-${task.id}`}
+                                    onClick={() => setFocusTask(task)}
+                                    animate={{ opacity: isCompleted ? 0.6 : 1 }}
+                                    className="p-6 rounded-3xl cursor-pointer text-white flex-shrink-0"
+                                    style={{ backgroundColor: categoryColor }}
+                                    whileHover={{ scale: 1.02 }}
                                 >
-                                    <CheckCircleIcon className="w-5 h-5" />
-                                </button>
-                            </motion.div>
-                        ))}
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="w-3/4">
+                                            <h3 className="text-2xl font-bold relative inline-block break-words">
+                                                {task.title}
+                                                {isCompleted && (
+                                                    <div className="absolute top-1/2 left-0 w-full h-0.5 bg-current" />
+                                                )}
+                                            </h3>
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onCompleteTask(task.id);
+                                            }}
+                                            className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                                        >
+                                            <CheckCircleIcon className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                    <div className="pt-4 border-t border-white/20 flex justify-between items-center">
+                                        <div className="text-center">
+                                            <p className="font-semibold">{startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
+                                            <p className="text-sm opacity-80">Start</p>
+                                        </div>
+                                        <div className="px-4 py-1.5 rounded-full text-sm font-semibold bg-white/20">
+                                            {task.plannedDuration} Min
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="font-semibold">{endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
+                                            <p className="text-sm opacity-80">End</p>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
                     </div>
                 ) : (
-                    <p className="text-gray-400 text-center py-8">No tasks for today</p>
+                    <div className="text-center py-16">
+                        <div className="text-6xl mb-4">📝</div>
+                        <p className="text-gray-400 text-xl">No tasks for today</p>
+                        <p className="text-gray-500 text-sm mt-2">Add some tasks to get started!</p>
+                    </div>
                 )}
             </div>
         </motion.div>
     );
 }
 
-// Schedule Content Component
-function ScheduleContent({ tasks, categoryColors, onCompleteTask }: {
-    tasks: Task[];
-    categoryColors: Record<Category, string>;
-    onCompleteTask: (taskId: number) => void;
-}) {
-    const todayTasks = useMemo(() => 
-        tasks.filter(t => new Date(t.startTime).toDateString() === new Date().toDateString())
-            .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
-        [tasks]
-    );
 
-    return (
-        <motion.div variants={itemVariants} className="space-y-6">
-            <div className="text-center py-8">
-                <h1 className="text-4xl font-bold text-white mb-2">Schedule</h1>
-                <p className="text-gray-400 text-lg">Your daily timeline</p>
-            </div>
-
-            <div className="space-y-4">
-                {todayTasks.map((task) => (
-                    <motion.div
-                        key={task.id}
-                        className="flex items-center gap-4 p-6 bg-white/5 rounded-2xl border border-white/10"
-                        whileHover={{ scale: 1.02 }}
-                    >
-                        <div 
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: categoryColors[task.category] }}
-                        />
-                        <div className="flex-1">
-                            <h3 className="text-white font-semibold text-lg">{task.title}</h3>
-                            <p className="text-gray-400">
-                                {new Date(task.startTime).toLocaleTimeString([], { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                })} - {new Date(new Date(task.startTime).getTime() + task.plannedDuration * 60000).toLocaleTimeString([], { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                })}
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => onCompleteTask(task.id)}
-                            className="px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
-                        >
-                            Complete
-                        </button>
-                    </motion.div>
-                ))}
-            </div>
-        </motion.div>
-    );
-}
-
-// Notes Content Component
-function NotesContent({ notes }: { notes: Note[] }) {
-    return (
-        <motion.div variants={itemVariants} className="space-y-6">
-            <div className="text-center py-8">
-                <h1 className="text-4xl font-bold text-white mb-2">Notes</h1>
-                <p className="text-gray-400 text-lg">Your thoughts and ideas</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {notes.map((note) => (
-                    <motion.div
-                        key={note.id}
-                        className="p-6 bg-white/5 rounded-2xl border border-white/10"
-                        whileHover={{ scale: 1.02 }}
-                    >
-                        <h3 className="text-white font-semibold text-lg mb-2">{note.title}</h3>
-                        <p className="text-gray-400 text-sm line-clamp-3">{note.content}</p>
-                    </motion.div>
-                ))}
-            </div>
-        </motion.div>
-    );
-}
-
-
-// Profile Content Component
-function ProfileContent() {
-    return (
-        <motion.div variants={itemVariants} className="space-y-6">
-            <div className="text-center py-8">
-                <h1 className="text-4xl font-bold text-white mb-2">Profile</h1>
-                <p className="text-gray-400 text-lg">Manage your account</p>
-            </div>
-
-            <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <UserCircleIcon className="w-8 h-8 text-white" />
-                    </div>
-                    <div>
-                        <h3 className="text-white font-semibold text-lg">User Profile</h3>
-                        <p className="text-gray-400">Praxis AI User</p>
-                    </div>
-                </div>
-                
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-400">Email</span>
-                        <span className="text-white">user@praxis.ai</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-400">Member since</span>
-                        <span className="text-white">2024</span>
-                    </div>
-                </div>
-            </div>
-        </motion.div>
-    );
-}
-
-// Main Unified Dashboard Component
+// Main Unified Dashboard Component - Clean Schedule UI Style
 export default function UnifiedDashboard(props: UnifiedDashboardProps) {
     const { tasks, notes, healthData, briefing, categoryColors, onCompleteTask, setFocusTask } = props;
-    const [activeTab, setActiveTab] = useState('dashboard');
-
-    const renderContent = () => {
-        switch (activeTab) {
-            case 'dashboard':
-                return <DashboardContent tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} categoryColors={categoryColors} onCompleteTask={onCompleteTask} setFocusTask={setFocusTask} />;
-            case 'schedule':
-                return <ScheduleContent tasks={tasks} categoryColors={categoryColors} onCompleteTask={onCompleteTask} />;
-            case 'notes':
-                return <NotesContent notes={notes} />;
-            case 'profile':
-                return <ProfileContent />;
-            default:
-                return <DashboardContent tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} categoryColors={categoryColors} onCompleteTask={onCompleteTask} setFocusTask={setFocusTask} />;
-        }
-    };
 
     return (
-        <div 
-            className="unified-dashboard min-h-screen w-full fixed inset-0 overflow-y-auto"
-            style={{ backgroundColor: UNIFIED_COLORS.background }}
-        >
-            {/* Fixed Header with Tabs */}
-            <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
-                <div className="max-w-7xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-                                <span className="text-black font-bold text-lg">P</span>
-                            </div>
-                            <div>
-                                <h1 className="text-white font-bold text-xl">Praxis AI</h1>
-                                <p className="text-gray-400 text-sm">Command Center</p>
-                            </div>
-                        </div>
-                        
-                        <button
-                            onClick={() => props.setScreen('Kiko')}
-                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
-                        >
-                            <BabyPenguinIcon className="w-5 h-5" />
-                            <span>Kiko AI</span>
-                        </button>
-                    </div>
-                    
-                    {/* Tab Navigation */}
-                    <div className="tab-navigation">
-                        {TABS.map((tab) => (
-                            <TabButton
-                                key={tab.id}
-                                tab={tab}
-                                isActive={activeTab === tab.id}
-                                onClick={() => {
-                                    if (tab.id === 'dashboard') {
-                                        setActiveTab(tab.id);
-                                    } else {
-                                        // Navigate to main app screens
-                                        props.setScreen(tab.label as Screen);
-                                    }
-                                }}
-                            />
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="dashboard-content">
+        <div className="min-h-screen bg-black text-white p-6">
+            <div className="max-w-7xl mx-auto">
                 <motion.div
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
                 >
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={activeTab}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            {renderContent()}
-                        </motion.div>
-                    </AnimatePresence>
+                    <DashboardContent
+                        tasks={tasks}
+                        notes={notes}
+                        healthData={healthData}
+                        briefing={briefing}
+                        categoryColors={categoryColors}
+                        onCompleteTask={onCompleteTask}
+                        setFocusTask={setFocusTask}
+                    />
                 </motion.div>
             </div>
         </div>

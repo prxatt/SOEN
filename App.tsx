@@ -1,3 +1,42 @@
+/**
+ * AI/LLM MAINTENANCE NOTES - CRITICAL FOR FUTURE DEVELOPMENT:
+ * 
+ * 1. ERROR PREVENTION:
+ *    - Always use ErrorBoundary to wrap components that might crash
+ *    - Use safeGet(), safeFormatNumber(), createSafeHealthData() from utils/validation
+ *    - Never access object properties directly without null checks
+ *    - Always provide default values for optional properties
+ * 
+ * 2. AUTHENTICATION FLOW:
+ *    - showPreview: Shows animated Praxis logo first (1.5s)
+ *    - isLoading: Shows loading screen (1s) 
+ *    - !isAuthenticated: Shows login screen
+ *    - !isOnboardingComplete: Shows onboarding (only for new users)
+ *    - Default: Shows main dashboard
+ * 
+ * 3. STATE MANAGEMENT:
+ *    - All state should be initialized with safe defaults
+ *    - Use createSafeHealthData() for health data initialization
+ *    - Validate data before using it in components
+ * 
+ * 4. COMPONENT STRUCTURE:
+ *    - Each major component should be wrapped in ErrorBoundary
+ *    - Use safe validation functions for all data access
+ *    - Add comprehensive error handling and fallbacks
+ * 
+ * 5. DEBUGGING:
+ *    - Check browser console for errors
+ *    - Use React DevTools for component inspection
+ *    - Test error boundaries by intentionally breaking components
+ * 
+ * 6. PERFORMANCE:
+ *    - Use useMemo and useCallback for expensive operations
+ *    - Lazy load heavy components when possible
+ *    - Optimize re-renders with proper dependency arrays
+ * 
+ * NEVER REMOVE THESE SAFETY MEASURES - THEY PREVENT APP CRASHES!
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -27,12 +66,14 @@ import FocusMode from './components/FocusMode';
 import Toast from './components/Toast';
 import LoadingScreen from './components/LoadingScreen'; // New Loading Screen
 import PraxisPreview from './components/PraxisPreview'; // Praxis Preview Screen
+import ErrorBoundary from './components/ErrorBoundary'; // Error boundary for crash prevention
 import { PraxisLogo } from './components/Icons';
 
 
 // Import services and utils
 import { syncCalendar } from './services/googleCalendarService';
 import { kikoRequest } from './services/kikoAIService';
+import { createSafeHealthData, safeGet, safeFormatNumber } from './utils/validation';
 import { calculateStreak, getTodaysTaskCompletion, inferHomeLocation } from './utils/taskUtils';
 import { triggerHapticFeedback } from './utils/haptics';
 import { MOCKED_BRIEFING, REWARDS_CATALOG, DEFAULT_CATEGORIES, CATEGORY_COLORS, PRESET_COLORS } from './constants';
@@ -191,8 +232,18 @@ function App() {
     const [browserPushEnabled, setBrowserPushEnabled] = useState<boolean>(false);
 
 
-    // Derived/Generated states
-    const [healthData, setHealthData] = useState<HealthData>({ totalWorkouts: 1, totalWorkoutMinutes: 28, workoutTypes: { 'Running': 1 }, avgSleepHours: 7.5, sleepQuality: 'good', energyLevel: 'high' });
+    // Derived/Generated states - AI/LLM NOTE: Always use createSafeHealthData to prevent crashes
+    const [healthData, setHealthData] = useState<HealthData>(createSafeHealthData({ 
+        totalWorkouts: 1, 
+        totalWorkoutMinutes: 28, 
+        workoutTypes: { 'Running': 1 }, 
+        avgSleepHours: 7.5, 
+        sleepQuality: 'good', 
+        energyLevel: 'high',
+        stepsToday: 8500,
+        heartRate: 72,
+        caloriesBurned: 2100
+    }));
     const [briefing, setBriefing] = useState(MOCKED_BRIEFING);
     const [isBriefingLoading, setIsBriefingLoading] = useState(true);
 
@@ -831,44 +882,57 @@ function App() {
     if (!isOnboardingComplete) return <Onboarding goals={goals} setGoals={setGoals} onComplete={handleOnboardingComplete} />;
 
     return (
-        <div className={`min-h-screen font-sans bg-bg text-text transition-colors duration-300`}>
-            {focusTask ? (
-                 <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
-            ) : (
-                <>
-                    <main className="w-full">
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={activeScreen}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                {renderScreen()}
-                            </motion.div>
-                        </AnimatePresence>
-                    </main>
-                    {/* Show navigation for all screens */}
-                    <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
-                </>
-            )}
-            <AnimatePresence>
-                {isDailyModeOpen && (
-                    <DailyMode
-                        tasks={tasks}
-                        onClose={() => setIsDailyModeOpen(false)}
-                        onStartFocus={(task) => {
-                            setFocusTask(task);
-                            setIsDailyModeOpen(false);
-                        }}
-                    />
+        <ErrorBoundary>
+            <div className={`min-h-screen font-sans bg-bg text-text transition-colors duration-300`}>
+                {focusTask ? (
+                     <ErrorBoundary>
+                         <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
+                     </ErrorBoundary>
+                ) : (
+                    <>
+                        <main className="w-full">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={activeScreen}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <ErrorBoundary>
+                                        {renderScreen()}
+                                    </ErrorBoundary>
+                                </motion.div>
+                            </AnimatePresence>
+                        </main>
+                        <ErrorBoundary>
+                            <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
+                        </ErrorBoundary>
+                    </>
                 )}
-            </AnimatePresence>
-            <AnimatePresence>
-                {toast && <Toast message={toast.message} action={toast.action} onClose={() => setToast(null)} />}
-            </AnimatePresence>
-        </div>
+                <AnimatePresence>
+                    {isDailyModeOpen && (
+                        <ErrorBoundary>
+                            <DailyMode
+                                tasks={tasks}
+                                onClose={() => setIsDailyModeOpen(false)}
+                                onStartFocus={(task) => {
+                                    setFocusTask(task);
+                                    setIsDailyModeOpen(false);
+                                }}
+                            />
+                        </ErrorBoundary>
+                    )}
+                </AnimatePresence>
+                <AnimatePresence>
+                    {toast && (
+                        <ErrorBoundary>
+                            <Toast message={toast.message} action={toast.action} onClose={() => setToast(null)} />
+                        </ErrorBoundary>
+                    )}
+                </AnimatePresence>
+            </div>
+        </ErrorBoundary>
     );
 };
 

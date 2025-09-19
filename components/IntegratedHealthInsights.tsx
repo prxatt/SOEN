@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HealthData, Note, Task } from '../types';
+import { safeGet, safeFormatNumber, createSafeHealthData } from '../utils/validation';
 import { 
     HeartIcon, BoltIcon, ClockIcon, SparklesIcon, 
     FireIcon, CheckCircleIcon, PlayIcon, PauseIcon,
@@ -348,13 +349,15 @@ const InteractiveHabits = ({ healthData }: { healthData: HealthData }) => {
     );
 };
 
-// Compact Physical Activity Insights
+// Compact Physical Activity Insights - AI/LLM NOTE: Uses safe validation to prevent crashes
 const PhysicalActivityInsights = ({ healthData }: { healthData: HealthData }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     
+    // AI/LLM NOTE: Always use safeGet to prevent "Cannot read properties of undefined" errors
     const activityLevel = useMemo(() => {
-        if (healthData.stepsToday >= 10000) return { level: 'high', color: '#10B981', message: 'Excellent!' };
-        if (healthData.stepsToday >= 5000) return { level: 'medium', color: '#F59E0B', message: 'Good progress!' };
+        const steps = safeGet(healthData, 'stepsToday', 0);
+        if (steps >= 10000) return { level: 'high', color: '#10B981', message: 'Excellent!' };
+        if (steps >= 5000) return { level: 'medium', color: '#F59E0B', message: 'Good progress!' };
         return { level: 'low', color: '#EF4444', message: 'Time to move!' };
     }, [healthData.stepsToday]);
     
@@ -386,7 +389,7 @@ const PhysicalActivityInsights = ({ healthData }: { healthData: HealthData }) =>
             
             <div className="mt-3 space-y-2">
                 <div className="flex items-center justify-between">
-                    <span className="text-white font-bold text-xl">{healthData.stepsToday.toLocaleString()}</span>
+                    <span className="text-white font-bold text-xl">{safeFormatNumber(healthData.stepsToday, '0')}</span>
                     <span className="text-gray-400 text-xs">steps today</span>
                 </div>
                 
@@ -395,7 +398,7 @@ const PhysicalActivityInsights = ({ healthData }: { healthData: HealthData }) =>
                         className="h-2 rounded-full"
                         style={{ backgroundColor: activityLevel.color }}
                         initial={{ width: 0 }}
-                        animate={{ width: `${Math.min((healthData.stepsToday / 10000) * 100, 100)}%` }}
+                        animate={{ width: `${Math.min(safeGet(healthData, 'stepsToday', 0) / 10000 * 100, 100)}%` }}
                         transition={{ duration: 1, delay: 0.5 }}
                     />
                 </div>

@@ -11,6 +11,7 @@ import Navigation from './components/Navigation';
 import Notifications from './components/Notifications';
 import Dashboard from './components/Dashboard';
 import UnifiedDashboard from './components/UnifiedDashboard';
+import EnhancedDashboard from './components/EnhancedDashboard';
 import DashboardOptimized from './components/DashboardOptimized';
 import DailyMode from './components/DailyMode';
 import Schedule from './components/Schedule';
@@ -25,6 +26,7 @@ import Onboarding from './components/Onboarding';
 import FocusMode from './components/FocusMode';
 import Toast from './components/Toast';
 import LoadingScreen from './components/LoadingScreen'; // New Loading Screen
+import PraxisPreview from './components/PraxisPreview'; // Praxis Preview Screen
 import { PraxisLogo } from './components/Icons';
 
 
@@ -143,6 +145,7 @@ function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [showPreview, setShowPreview] = useState(true);
     const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
     const [previousScreen, setPreviousScreen] = useState<Screen>('Dashboard');
     const [uiMode, setUiMode] = useState<'dark' | 'glass'>('glass');
@@ -178,7 +181,7 @@ function App() {
     const [lastDeletedChat, setLastDeletedChat] = useState<ChatSession | null>(null);
     const [notifications, setNotifications] = useState<NotificationItem[]>([
         {
-            id: 1,
+            id: "1",
             title: "Welcome to Praxis AI",
             message: "Your productivity journey starts here! Kiko is ready to help you organize your day.",
             timestamp: new Date(),
@@ -223,15 +226,20 @@ function App() {
 
     // --- EFFECTS ---
     useEffect(() => {
-        // Mock loading and auth check
+        // Show Praxis preview first, then loading, then auth check
         const authStatus = localStorage.getItem('praxis-authenticated') === 'true';
         const onboardingStatus = localStorage.getItem('praxis-onboarding-complete') === 'true';
 
+        // First show Praxis preview for 1.5 seconds
         setTimeout(() => {
-            setIsAuthenticated(authStatus);
-            setIsOnboardingComplete(onboardingStatus);
-            setIsLoading(false);
-        }, 2500); // Increased duration for new loading animation
+            setShowPreview(false);
+            // Then show loading for 1 second
+            setTimeout(() => {
+                setIsAuthenticated(authStatus);
+                setIsOnboardingComplete(onboardingStatus);
+                setIsLoading(false);
+            }, 1000);
+        }, 1500);
 
         const savedTheme = localStorage.getItem('praxis-theme') || 'obsidian';
         setActiveTheme(savedTheme);
@@ -806,10 +814,11 @@ function App() {
             case 'Notifications': return <Notifications items={notifications} />;
             case 'Rewards': return <Rewards onBack={() => navigateTo('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
-            default: return <UnifiedDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} />;
+            default: return <EnhancedDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} />;
         }
     };
     
+    if (showPreview) return <PraxisPreview />;
     if (isLoading) return <LoadingScreen />;
     if (!isAuthenticated) return <Auth onLogin={handleLogin} />;
     if (!isOnboardingComplete) return <Onboarding goals={goals} setGoals={setGoals} onComplete={handleOnboardingComplete} />;

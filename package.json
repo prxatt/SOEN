@@ -17,11 +17,15 @@
   },
   "dependencies": {
     "@google/genai": "^1.15.0",
-    "framer-motion": "^11.3.19",
+    "@react-three/drei": "^10.7.6",
+    "@react-three/fiber": "^9.3.0",
+    "@types/three": "^0.180.0",
+    "framer-motion": "^11.18.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-draggable": "4.4.6",
-    "recharts": "^3.1.2"
+    "recharts": "^3.1.2",
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",

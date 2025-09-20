@@ -1,6 +1,212 @@
 import React from 'react';
-// FIX: Import MotionProps for correct typing of motion components.
 import { motion, MotionProps } from 'framer-motion';
+import { 
+    CheckCircle, 
+    Calendar, 
+    Clock, 
+    ChartBar, 
+    Heart, 
+    Sparkles, 
+    Sun, 
+    Cloud, 
+    CloudRain, 
+    Snowflake, 
+    Activity,
+    ChevronLeft,
+    ChevronRight,
+    Plus,
+    Brain,
+    Bolt,
+    CalendarDays,
+    ChevronDown,
+    ChevronUp,
+    Star,
+    Trophy,
+    Target,
+    Zap,
+    TrendingUp,
+    BarChart3,
+    PieChart,
+    LineChart,
+    Users,
+    Settings,
+    Bell,
+    Search,
+    Menu,
+    X,
+    ArrowRight,
+    ArrowLeft,
+    ArrowUp,
+    ArrowDown,
+    Play,
+    Pause,
+    RefreshCw,
+    RotateCcw,
+    Download,
+    Upload,
+    Share,
+    Copy,
+    Edit,
+    Trash2,
+    Save,
+    Eye,
+    EyeOff,
+    Lock,
+    Unlock,
+    Shield,
+    AlertCircle,
+    Info,
+    Check,
+    XCircle,
+    HelpCircle,
+    ExternalLink,
+    Link,
+    Mail,
+    Phone,
+    MapPin,
+    Globe,
+    Wifi,
+    WifiOff,
+    Battery,
+    BatteryLow,
+    Signal,
+    SignalZero,
+    Volume2,
+    VolumeX,
+    Mic,
+    MicOff,
+    Camera,
+    Video,
+    Image,
+    File,
+    Folder,
+    FolderOpen,
+    Archive,
+    Bookmark,
+    Tag,
+    Filter,
+    SortAsc,
+    SortDesc,
+    Grid,
+    List,
+    Layout,
+    Maximize,
+    Minimize,
+    Move,
+    RotateCw,
+    ZoomIn,
+    ZoomOut,
+    Focus,
+    Crop,
+    Scissors,
+    Palette,
+    Brush,
+    Eraser,
+    Pen,
+    Pencil,
+    Highlighter,
+    Type,
+    AlignLeft,
+    AlignCenter,
+    AlignRight,
+    AlignJustify,
+    Bold,
+    Italic,
+    Underline,
+    Strikethrough,
+    Code,
+    Terminal,
+    Database,
+    Server,
+    Cpu,
+    HardDrive,
+    MemoryStick,
+    Monitor,
+    Smartphone,
+    Tablet,
+    Laptop,
+    Headphones,
+    Speaker,
+    Radio,
+    Tv,
+    Gamepad2,
+    Joystick,
+    Dice1,
+    Dice2,
+    Dice3,
+    Dice4,
+    Dice5,
+    Dice6,
+    Puzzle,
+    Gamepad,
+    Mouse,
+    Keyboard,
+    MousePointer,
+    Hand,
+    Fingerprint,
+    Scan,
+    QrCode,
+    Barcode,
+    CreditCard,
+    DollarSign,
+    Euro,
+    PoundSterling,
+    Bitcoin,
+    Wallet,
+    ShoppingCart,
+    ShoppingBag,
+    Store,
+    Building,
+    Home,
+    Building2,
+    Factory,
+    Warehouse,
+    School,
+    Hospital,
+    Church,
+    Landmark,
+    Flag,
+    Map,
+    Compass,
+    Navigation,
+    Route,
+    Car,
+    Bus,
+    Train,
+    Plane,
+    Ship,
+    Truck,
+    Bike,
+    Rocket,
+    Satellite,
+    Space,
+    Moon,
+    Eclipse,
+    Sunrise,
+    Sunset,
+    CloudSun,
+    CloudMoon,
+    CloudSnow,
+    CloudLightning,
+    CloudDrizzle,
+    CloudFog,
+    Wind,
+    Thermometer,
+    Droplets,
+    Umbrella,
+    Rainbow,
+    Tornado,
+    Mountain,
+    Trees,
+    TreePine,
+    Flower,
+    Rose,
+    Cherry,
+    Apple,
+    Banana,
+    Grape,
+    TrendingUp as ArrowTrendingUp
+} from 'lucide-react';
 
 // A generic icon wrapper for props with improved type safety
 type IconProps = React.SVGProps<SVGSVGElement> & {
@@ -255,6 +461,97 @@ export const BabyPenguinIcon: React.FC<IconProps> = ({ size = 24, ...props }) =>
     </svg>
 );
 
+// Activity Icon for health metrics
+export const ActivityIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path 
+            d="M22 12h-4l-3 9L9 3l-3 9H2" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+        />
+    </svg>
+);
+
+// Weather Icons
+export const CloudIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path 
+            d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+        />
+    </svg>
+);
+
+export const RainIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path 
+            d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+        />
+        <path 
+            d="M8 14l2 2 4-4" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+        />
+    </svg>
+);
+
+export const SnowIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path 
+            d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+        />
+        <path 
+            d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+        />
+    </svg>
+);
 
 // Refined Action Icons
 export const SparklesIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
@@ -1159,20 +1456,6 @@ export const SunIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     </svg>
 );
 
-export const CloudIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
-    <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        fill="none" 
-        viewBox="0 0 24 24" 
-        strokeWidth={1.5} 
-        stroke="currentColor"
-        width={size}
-        height={size}
-        {...props}
-    >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-2.666-4.995 4.5 4.5 0 00-8.5 2.25A4.5 4.5 0 002.25 15z" />
-    </svg>
-);
 
 export const BoltSlashIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     <svg 
@@ -1401,6 +1684,13 @@ export const AppleIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     </svg>
 );
 
+// Additional missing icons
+export const ArrowTrendingUpIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <ArrowTrendingUp size={size} {...props} />
+);
+
+// BrainIcon and EyeIcon are already defined above as BrainCircuitIcon and other variants
+
 
 // Layout Components Export
 export default {
@@ -1477,7 +1767,13 @@ export default {
     // User
     UserIcon,
     HeartIcon,
+    ActivityIcon,
     MapPinIcon,
+    
+    // Weather
+    CloudIcon,
+    RainIcon,
+    SnowIcon,
     
     // Media
     PhotoIcon,
@@ -1493,7 +1789,6 @@ export default {
     
     // Weather
     SunIcon,
-    CloudIcon,
     BoltSlashIcon,
     
     // Status feedback
@@ -1528,5 +1823,8 @@ export default {
 
     // Social
     GoogleIcon,
-    AppleIcon
+    AppleIcon,
+
+    // Additional missing icons
+    ArrowTrendingUpIcon
 };

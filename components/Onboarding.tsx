@@ -19,6 +19,7 @@ const cardVariants: Variants = {
 
 function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
     const [step, setStep] = useState(0);
+    const [userName, setUserName] = useState('');
     const [longTermGoal, setLongTermGoal] = useState('');
     const [userHobbies, setUserHobbies] = useState('');
 
@@ -27,6 +28,9 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
     };
     
     const handleFinish = () => {
+        if (userName.trim()) {
+            localStorage.setItem('praxis-user-name', userName.trim());
+        }
         if (longTermGoal.trim()) {
             const newGoal: Goal = {
                 id: Date.now(),
@@ -47,6 +51,20 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
             icon: <SparklesIcon />,
             title: "Welcome to Praxis",
             content: "Your AI-powered partner for turning knowledge into action. Let's set up your command center."
+        },
+        {
+            icon: <HeartIcon />,
+            title: "What's your name?",
+            content: "We'd love to personalize your experience.",
+            input: (
+                <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:outline-none text-lg"
+                />
+            )
         },
         {
             icon: <FlagIcon />,
@@ -124,6 +142,16 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
                                         placeholder={currentStepData.placeholder}
                                         className="w-full text-center bg-white/80 dark:bg-black/80 border border-black/20 dark:border-white/20 rounded-xl shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent text-lg text-black dark:text-white"
                                     />
+                                </motion.div>
+                            )}
+
+                            {currentStepData.input && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 10 }} 
+                                    animate={{ opacity: 1, y: 0 }} 
+                                    className="w-full max-w-sm mx-auto"
+                                >
+                                    {currentStepData.input}
                                 </motion.div>
                             )}
                         </div>

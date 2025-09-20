@@ -109,36 +109,12 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
 
 function Navigation({ activeScreen, setScreen }: NavigationProps) {
   const [collapsed, setCollapsed] = useState(true); // Always start collapsed
-  const [isHovered, setIsHovered] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout>();
-  const leaveTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Sophisticated hover logic
-  const handleMouseEnter = useCallback(() => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    if (leaveTimeoutRef.current) {
-      clearTimeout(leaveTimeoutRef.current);
-    }
-    
-    setIsHovered(true);
-    hoverTimeoutRef.current = setTimeout(() => {
-      setCollapsed(false);
-    }, 150); // Small delay before expanding
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    
-    setIsHovered(false);
-    leaveTimeoutRef.current = setTimeout(() => {
-      setCollapsed(true);
-    }, 300); // Delay before collapsing
-  }, []);
+  // Click to toggle navigation
+  const handleNavClick = useCallback(() => {
+    setCollapsed(!collapsed);
+  }, [collapsed]);
 
   // Click outside to collapse
   useEffect(() => {
@@ -148,17 +124,15 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
       }
     };
 
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Cleanup timeouts
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-      if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
-    };
-  }, []);
+  // Auto-collapse when clicking on a tab
+  const handleTabClick = useCallback((screen: Screen) => {
+    setScreen(screen);
+    setCollapsed(true);
+  }, [setScreen]);
 
 
   return (
@@ -177,13 +151,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
             paddingLeft: collapsed ? '0.25rem' : '0rem',
             paddingRight: collapsed ? '0.25rem' : '0rem'
           }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          onClick={() => {
-            if (collapsed) {
-              setCollapsed(false);
-            }
-          }}
+          onClick={handleNavClick}
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
@@ -228,7 +196,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
           {/* Kiko AI Button - Special prominence */}
           <div className="p-4">
             <motion.button
-              onClick={() => setScreen('Kiko')}
+              onClick={() => handleTabClick('Kiko')}
               className={`
                 w-full flex items-center justify-center transition-all duration-300
                 ${collapsed ? 'h-12 rounded-xl' : 'h-12 px-4 rounded-xl'}
@@ -267,7 +235,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
                   screen={item.screen}
                   label={item.label}
                   isActive={activeScreen === item.screen}
-                  onClick={() => setScreen(item.screen)}
+                  onClick={() => handleTabClick(item.screen)}
                 collapsed={collapsed}
                   index={index}
               />
@@ -285,7 +253,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
                   screen={item.screen}
                   label={item.label}
                   isActive={activeScreen === item.screen}
-                  onClick={() => setScreen(item.screen)}
+                  onClick={() => handleTabClick(item.screen)}
                   collapsed={collapsed}
                   index={index + MAIN_NAV_ITEMS.length}
                 />

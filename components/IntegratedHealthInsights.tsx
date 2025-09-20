@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HealthData, Note, Task } from '../types';
+import { safeGet, safeFormatNumber, createSafeHealthData } from '../utils/validation';
 import { 
     HeartIcon, BoltIcon, ClockIcon, SparklesIcon, 
     FireIcon, CheckCircleIcon, PlayIcon, PauseIcon,
@@ -73,13 +74,13 @@ const SleepInsights = ({ healthData, notes, tasks }: {
         let recommendation = "";
         let priority = "medium";
         
-        if (healthData.sleepHours < 6) {
+        if (safeGet(healthData, 'avgSleepHours', 0) < 6) {
             recommendation = "Consider lighter tasks today - your sleep data suggests you need more rest.";
             priority = "high";
         } else if (stressLevel > energyLevel && taskLoad > 5) {
             recommendation = "Balance your day with physical activity. Your notes suggest stress - try a 10-minute walk.";
             priority = "high";
-        } else if (healthData.sleepHours >= 7 && energyLevel > stressLevel) {
+        } else if (safeGet(healthData, 'avgSleepHours', 0) >= 7 && energyLevel > stressLevel) {
             recommendation = "Great energy! Perfect day for challenging tasks and new projects.";
             priority = "low";
         } else {
@@ -97,8 +98,8 @@ const SleepInsights = ({ healthData, notes, tasks }: {
     }, [healthData, notes, tasks]);
     
     const getSleepIcon = () => {
-        if (healthData.sleepHours >= 8) return <SunIcon className="w-5 h-5" />;
-        if (healthData.sleepHours >= 6) return <CloudIcon className="w-5 h-5" />;
+        if (safeGet(healthData, 'avgSleepHours', 0) >= 8) return <SunIcon className="w-5 h-5" />;
+        if (safeGet(healthData, 'avgSleepHours', 0) >= 6) return <CloudIcon className="w-5 h-5" />;
         return <div className="w-5 h-5 flex items-center justify-center">🌙</div>;
     };
     
@@ -126,7 +127,7 @@ const SleepInsights = ({ healthData, notes, tasks }: {
                     </Icon3D>
                     <div>
                         <h3 className="text-white font-semibold text-sm">Sleep & Energy</h3>
-                        <p className="text-gray-400 text-xs">{healthData.sleepHours}h • {healthData.sleepQuality} quality</p>
+                        <p className="text-gray-400 text-xs">{safeGet(healthData, 'avgSleepHours', 0)}h • {safeGet(healthData, 'sleepQuality', 'good')} quality</p>
                     </div>
                 </div>
                 <motion.div
@@ -348,13 +349,15 @@ const InteractiveHabits = ({ healthData }: { healthData: HealthData }) => {
     );
 };
 
-// Compact Physical Activity Insights
+// Compact Physical Activity Insights - AI/LLM NOTE: Uses safe validation to prevent crashes
 const PhysicalActivityInsights = ({ healthData }: { healthData: HealthData }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     
+    // AI/LLM NOTE: Always use safeGet to prevent "Cannot read properties of undefined" errors
     const activityLevel = useMemo(() => {
-        if (healthData.stepsToday >= 10000) return { level: 'high', color: '#10B981', message: 'Excellent!' };
-        if (healthData.stepsToday >= 5000) return { level: 'medium', color: '#F59E0B', message: 'Good progress!' };
+        const steps = safeGet(healthData, 'stepsToday', 0);
+        if (steps >= 10000) return { level: 'high', color: '#10B981', message: 'Excellent!' };
+        if (steps >= 5000) return { level: 'medium', color: '#F59E0B', message: 'Good progress!' };
         return { level: 'low', color: '#EF4444', message: 'Time to move!' };
     }, [healthData.stepsToday]);
     
@@ -386,7 +389,7 @@ const PhysicalActivityInsights = ({ healthData }: { healthData: HealthData }) =>
             
             <div className="mt-3 space-y-2">
                 <div className="flex items-center justify-between">
-                    <span className="text-white font-bold text-xl">{healthData.stepsToday.toLocaleString()}</span>
+                    <span className="text-white font-bold text-xl">{safeFormatNumber(healthData.stepsToday, '0')}</span>
                     <span className="text-gray-400 text-xs">steps today</span>
                 </div>
                 
@@ -395,7 +398,7 @@ const PhysicalActivityInsights = ({ healthData }: { healthData: HealthData }) =>
                         className="h-2 rounded-full"
                         style={{ backgroundColor: activityLevel.color }}
                         initial={{ width: 0 }}
-                        animate={{ width: `${Math.min((healthData.stepsToday / 10000) * 100, 100)}%` }}
+                        animate={{ width: `${Math.min(safeGet(healthData, 'stepsToday', 0) / 10000 * 100, 100)}%` }}
                         transition={{ duration: 1, delay: 0.5 }}
                     />
                 </div>

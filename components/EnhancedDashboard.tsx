@@ -1,8 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Sphere, Text, OrbitControls } from '@react-three/drei';
-import * as THREE from 'three';
 import { Task, Note, HealthData, Goal, Category, MissionBriefing, Screen } from '../types';
 import { 
     SparklesIcon, CheckCircleIcon, FireIcon, PlusIcon, 
@@ -11,65 +8,31 @@ import {
     UserCircleIcon, BabyPenguinIcon, GiftIcon
 } from './Icons';
 
-// Floating particles component
-function FloatingParticles({ count = 100 }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const tempObject = useMemo(() => new THREE.Object3D(), []);
-
-  useEffect(() => {
-    if (!meshRef.current) return;
-    
-    for (let i = 0; i < count; i++) {
-      tempObject.position.set(
-        (Math.random() - 0.5) * 20,
-        (Math.random() - 0.5) * 20,
-        (Math.random() - 0.5) * 20
-      );
-      tempObject.rotation.set(
-        Math.random() * Math.PI,
-        Math.random() * Math.PI,
-        Math.random() * Math.PI
-      );
-      tempObject.scale.setScalar(Math.random() * 0.5 + 0.5);
-      tempObject.updateMatrix();
-      meshRef.current.setMatrixAt(i, tempObject.matrix);
-    }
-    meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [count, tempObject]);
-
-  useFrame((state) => {
-    if (!meshRef.current) return;
-    
-    for (let i = 0; i < count; i++) {
-      tempObject.position.y += Math.sin(state.clock.elapsedTime + i) * 0.01;
-      tempObject.rotation.x += 0.01;
-      tempObject.rotation.y += 0.01;
-      tempObject.updateMatrix();
-      meshRef.current.setMatrixAt(i, tempObject.matrix);
-    }
-    meshRef.current.instanceMatrix.needsUpdate = true;
-  });
-
+// Floating particles component (CSS-based for better compatibility)
+function FloatingParticles({ count = 50 }) {
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
-      <sphereGeometry args={[0.1, 8, 8]} />
-      <meshBasicMaterial color="#3b82f6" transparent opacity={0.6} />
-    </instancedMesh>
-  );
-}
-
-// 3D Background component
-function Background3D() {
-  return (
-    <Canvas
-      camera={{ position: [0, 0, 5], fov: 75 }}
-      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-    >
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} />
-      <FloatingParticles count={50} />
-      <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
-    </Canvas>
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {[...Array(count)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+          }}
+          animate={{
+            y: [0, -100, 0],
+            opacity: [0, 1, 0],
+            scale: [0, 1, 0],
+          }}
+          transition={{
+            duration: 3 + Math.random() * 2,
+            repeat: Infinity,
+            delay: Math.random() * 2,
+          }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -197,10 +160,8 @@ export default function EnhancedDashboard(props: EnhancedDashboardProps) {
 
     return (
         <div className="min-h-screen w-full relative overflow-hidden">
-            {/* 3D Background - Hidden on mobile for performance */}
-            <div className="hidden md:block">
-                <Background3D />
-            </div>
+            {/* Animated Background */}
+            <FloatingParticles count={30} />
             
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-gray-900/60 to-black/80" />

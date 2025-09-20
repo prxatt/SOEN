@@ -230,7 +230,7 @@ const GhibliPenguin: React.FC = () => {
 const PraxisHeader: React.FC = () => {
     return (
         <motion.div
-            className="fixed top-20 left-6 z-50"
+            className="fixed top-4 left-4 z-30"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
@@ -532,15 +532,15 @@ const NextUpWidget: React.FC<{
     if (!nextTask) {
         return (
             <motion.div
-                className="card rounded-2xl p-6 relative overflow-hidden"
+                className="relative overflow-hidden"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
             >
                 <div className="text-center py-8">
                     <ArrowRightIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-white mb-2">No Upcoming Tasks</h3>
-                    <p className="text-gray-400 text-sm">You're all caught up! Great work!</p>
+                    <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text)' }}>No Upcoming Tasks</h3>
+                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>You're all caught up! Great work!</p>
                 </div>
             </motion.div>
         );
@@ -548,7 +548,7 @@ const NextUpWidget: React.FC<{
 
     return (
         <motion.div
-            className="card rounded-2xl p-6 relative overflow-hidden"
+            className="relative overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -1360,7 +1360,7 @@ const DailyGreeting: React.FC<{
 
     return (
         <motion.div
-            className="relative overflow-hidden"
+            className="relative overflow-hidden card rounded-3xl p-8"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8 }}
@@ -1413,28 +1413,28 @@ const DailyGreeting: React.FC<{
                     </motion.div>
                 </div>
 
-                {/* Health Insights - Condensed under quote */}
+                {/* Health Insights - Unified layout under quote */}
                 <motion.div
-                    className="grid grid-cols-3 gap-4 mb-8"
+                    className="grid grid-cols-3 gap-6 mb-8"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.6 }}
                 >
-                    <div className="card rounded-xl p-4 text-center">
+                    <div className="text-center p-4 rounded-xl" style={{ backgroundColor: 'var(--color-border)' }}>
                         <div className="flex items-center justify-center gap-2 mb-2">
                             <ActivityIcon className="w-5 h-5 text-green-500" />
                             <span className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>{steps.toLocaleString()}</span>
                         </div>
                         <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Steps</div>
                     </div>
-                    <div className="card rounded-xl p-4 text-center">
+                    <div className="text-center p-4 rounded-xl" style={{ backgroundColor: 'var(--color-border)' }}>
                         <div className="flex items-center justify-center gap-2 mb-2">
                             <HeartIcon className="w-5 h-5 text-red-500" />
                             <span className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>{sleep}h</span>
                         </div>
                         <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Sleep</div>
                     </div>
-                    <div className="card rounded-xl p-4 text-center">
+                    <div className="text-center p-4 rounded-xl" style={{ backgroundColor: 'var(--color-border)' }}>
                         <div className="flex items-center justify-center gap-2 mb-2">
                             <BoltIcon className="w-5 h-5 text-blue-500" />
                             <span className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>{water}%</span>
@@ -1443,10 +1443,10 @@ const DailyGreeting: React.FC<{
                     </div>
                 </motion.div>
 
-                {/* Bottom Row - Next Up and Stats */}
+                {/* Bottom Row - Next Up and Stats - Unified Layout */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                    {/* Next Up Section */}
-                    <div className="flex-1">
+                    {/* Next Up Section - Unified */}
+                    <div className="flex-1 p-6 rounded-2xl" style={{ backgroundColor: 'var(--color-border)' }}>
                         <NextUpWidget
                             tasks={tasks}
                             categoryColors={categoryColors}
@@ -1456,10 +1456,11 @@ const DailyGreeting: React.FC<{
                         />
                     </div>
 
-                    {/* Quick Stats */}
+                    {/* Quick Stats - Unified */}
                     <div className="grid grid-cols-3 gap-4">
                         <motion.div
-                            className="card rounded-xl p-4 text-center"
+                            className="text-center p-4 rounded-xl"
+                            style={{ backgroundColor: 'var(--color-border)' }}
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 1.2 }}
@@ -1471,7 +1472,8 @@ const DailyGreeting: React.FC<{
                             <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Completed</div>
                         </motion.div>
                         <motion.div
-                            className="card rounded-xl p-4 text-center"
+                            className="text-center p-4 rounded-xl"
+                            style={{ backgroundColor: 'var(--color-border)' }}
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 1.3 }}
@@ -1483,7 +1485,8 @@ const DailyGreeting: React.FC<{
                             <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Remaining</div>
                         </motion.div>
                         <motion.div
-                            className="card rounded-xl p-4 text-center"
+                            className="text-center p-4 rounded-xl"
+                            style={{ backgroundColor: 'var(--color-border)' }}
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 1.4 }}
@@ -1565,7 +1568,7 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
             <FloatingParticles count={50} />
 
             {/* Main Content - Full width with proper padding */}
-            <div className="w-full px-2 sm:px-4 lg:px-6 xl:px-8 py-4 md:py-6 pt-24">
+            <div className="w-full px-2 sm:px-4 lg:px-6 xl:px-8 py-4 md:py-6 pt-20">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

@@ -230,14 +230,14 @@ const GhibliPenguin: React.FC = () => {
 const PraxisHeader: React.FC = () => {
     return (
         <motion.div
-            className="fixed top-16 left-4 z-40"
+            className="fixed top-20 left-6 z-50"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="flex items-center gap-3 px-4 py-2 backdrop-blur-sm rounded-full border card">
+            <div className="flex items-center gap-3">
                 <GhibliPenguin />
-                <span className="font-bold text-lg" style={{ color: 'var(--color-text)' }}>Praxis AI</span>
+                <span className="font-bold text-2xl" style={{ color: 'var(--color-text)' }}>Praxis AI</span>
             </div>
         </motion.div>
     );
@@ -1316,7 +1316,10 @@ const DailyGreeting: React.FC<{
     tasks: Task[];
     categoryColors: Record<Category, string>;
     healthData: HealthData;
-}> = ({ tasks, categoryColors, healthData }) => {
+    onCompleteTask: (taskId: number) => void;
+    navigateToScheduleDate: (date: Date) => void;
+    setScreen: (screen: Screen) => void;
+}> = ({ tasks, categoryColors, healthData, onCompleteTask, navigateToScheduleDate, setScreen }) => {
     const today = new Date();
     const todayTasks = tasks.filter(t => 
         new Date(t.startTime).toDateString() === today.toDateString()
@@ -1440,30 +1443,17 @@ const DailyGreeting: React.FC<{
                     </div>
                 </motion.div>
 
-                {/* Bottom Row - Progress and Stats */}
+                {/* Bottom Row - Next Up and Stats */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                    {/* Progress Section */}
+                    {/* Next Up Section */}
                     <div className="flex-1">
-                        <motion.div
-                            className="card rounded-2xl p-6"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: 0.8 }}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>Today's Progress</h3>
-                                <span className="text-3xl font-bold" style={{ color: 'var(--color-text)' }}>{completionRate.toFixed(0)}%</span>
-                            </div>
-                            <div className="w-full rounded-full h-3 mb-4" style={{ backgroundColor: 'var(--color-border)' }}>
-                                <motion.div
-                                    className="h-3 rounded-full bg-gradient-to-r from-green-500 to-blue-500"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${completionRate}%` }}
-                                    transition={{ duration: 1.5, delay: 1 }}
-                                />
-                            </div>
-                            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{getMotivationalMessage()}</p>
-                        </motion.div>
+                        <NextUpWidget
+                            tasks={tasks}
+                            categoryColors={categoryColors}
+                            onCompleteTask={onCompleteTask}
+                            navigateToScheduleDate={navigateToScheduleDate}
+                            setScreen={setScreen}
+                        />
                     </div>
 
                     {/* Quick Stats */}
@@ -1515,43 +1505,41 @@ const DailyGreeting: React.FC<{
 const WeatherWidget: React.FC = () => {
     return (
         <motion.div
-            className="card rounded-2xl p-6 h-full"
+            className="h-full flex flex-col items-center justify-center text-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="flex flex-col items-center justify-center h-full text-center">
-                <motion.div
-                    animate={{ 
-                        rotate: [0, 5, -5, 0],
-                        scale: [1, 1.1, 1]
-                    }}
-                    transition={{ 
-                        duration: 3, 
-                        repeat: Infinity, 
-                        ease: 'easeInOut' 
-                    }}
-                    className="mb-4"
-                >
-                    <SunIcon className="w-16 h-16 text-yellow-400" />
-                </motion.div>
-                
-                <div className="space-y-2">
-                    <div className="text-4xl font-bold" style={{ color: 'var(--color-text)' }}>22°C</div>
-                    <div className="text-lg" style={{ color: 'var(--color-text-secondary)' }}>San Francisco</div>
-                    <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Sunny</div>
-                </div>
+            <motion.div
+                animate={{ 
+                    rotate: [0, 5, -5, 0],
+                    scale: [1, 1.1, 1]
+                }}
+                transition={{ 
+                    duration: 3, 
+                    repeat: Infinity, 
+                    ease: 'easeInOut' 
+                }}
+                className="mb-4"
+            >
+                <SunIcon className="w-16 h-16 text-yellow-400" />
+            </motion.div>
+            
+            <div className="space-y-2">
+                <div className="text-4xl font-bold" style={{ color: 'var(--color-text)' }}>22°C</div>
+                <div className="text-lg" style={{ color: 'var(--color-text-secondary)' }}>San Francisco</div>
+                <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Sunny</div>
+            </div>
 
-                {/* Additional weather details */}
-                <div className="mt-6 grid grid-cols-2 gap-4 w-full">
-                    <div className="text-center">
-                        <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Humidity</div>
-                        <div className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>65%</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Wind</div>
-                        <div className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>12 km/h</div>
-                    </div>
+            {/* Additional weather details */}
+            <div className="mt-6 grid grid-cols-2 gap-4 w-full">
+                <div className="text-center">
+                    <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Humidity</div>
+                    <div className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>65%</div>
+                </div>
+                <div className="text-center">
+                    <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Wind</div>
+                    <div className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>12 km/h</div>
                 </div>
             </div>
         </motion.div>
@@ -1577,7 +1565,7 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
             <FloatingParticles count={50} />
 
             {/* Main Content - Full width with proper padding */}
-            <div className="w-full px-2 sm:px-4 lg:px-6 xl:px-8 py-4 md:py-6">
+            <div className="w-full px-2 sm:px-4 lg:px-6 xl:px-8 py-4 md:py-6 pt-24">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1588,7 +1576,14 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Daily Greeting - Left Side */}
                         <div className="lg:col-span-2">
-                            <DailyGreeting tasks={tasks} categoryColors={categoryColors} healthData={healthData} />
+                            <DailyGreeting 
+                                tasks={tasks} 
+                                categoryColors={categoryColors} 
+                                healthData={healthData}
+                                onCompleteTask={onCompleteTask}
+                                navigateToScheduleDate={navigateToScheduleDate}
+                                setScreen={setScreen}
+                            />
                         </div>
                         
                         {/* Weather Widget - Right Side */}
@@ -1597,14 +1592,6 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
                         </div>
                     </div>
 
-                    {/* Next Up Widget - Full Width */}
-                    <NextUpWidget
-                        tasks={tasks}
-                        categoryColors={categoryColors}
-                        onCompleteTask={onCompleteTask}
-                        navigateToScheduleDate={navigateToScheduleDate}
-                        setScreen={setScreen}
-                    />
 
                     {/* Main Content Grid - Full Width Desktop Layout */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">

@@ -230,7 +230,7 @@ const GhibliPenguin: React.FC = () => {
 const PraxisHeader: React.FC = () => {
     return (
         <motion.div
-            className="fixed top-4 left-4 z-30"
+            className="fixed top-4 left-20 z-30"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}

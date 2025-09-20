@@ -1,3 +1,41 @@
+/**
+ * AI/LLM MAINTENANCE NOTES - CRITICAL FOR FUTURE DEVELOPMENT:
+ * 
+ * 1. ERROR PREVENTION:
+ *    - Always use ErrorBoundary to wrap components that might crash
+ *    - Use safeGet(), safeFormatNumber(), createSafeHealthData() from utils/validation
+ *    - Never access object properties directly without null checks
+ *    - Always provide default values for optional properties
+ * 
+ * 2. AUTHENTICATION FLOW:
+ *    - isLoading: Shows integrated loading screen (3.5s) with progress bar and steps
+ *    - !isAuthenticated: Shows login screen
+ *    - !isOnboardingComplete: Shows onboarding (only for new users)
+ *    - Default: Shows main dashboard
+ * 
+ * 3. STATE MANAGEMENT:
+ *    - All state should be initialized with safe defaults
+ *    - Use createSafeHealthData() for health data initialization
+ *    - Validate data before using it in components
+ * 
+ * 4. COMPONENT STRUCTURE:
+ *    - Each major component should be wrapped in ErrorBoundary
+ *    - Use safe validation functions for all data access
+ *    - Add comprehensive error handling and fallbacks
+ * 
+ * 5. DEBUGGING:
+ *    - Check browser console for errors
+ *    - Use React DevTools for component inspection
+ *    - Test error boundaries by intentionally breaking components
+ * 
+ * 6. PERFORMANCE:
+ *    - Use useMemo and useCallback for expensive operations
+ *    - Lazy load heavy components when possible
+ *    - Optimize re-renders with proper dependency arrays
+ * 
+ * NEVER REMOVE THESE SAFETY MEASURES - THEY PREVENT APP CRASHES!
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -10,9 +48,8 @@ import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatSession, Sear
 import Navigation from './components/Navigation';
 import Notifications from './components/Notifications';
 import Dashboard from './components/Dashboard';
-import UnifiedDashboard from './components/UnifiedDashboard';
-import EnhancedDashboard from './components/EnhancedDashboard';
 import DashboardOptimized from './components/DashboardOptimized';
+import PraxisDashboard from './components/PraxisDashboard';
 import DailyMode from './components/DailyMode';
 import Schedule from './components/Schedule';
 import Notes from './components/Notes';
@@ -25,14 +62,15 @@ import Auth from './components/auth/Auth';
 import Onboarding from './components/Onboarding';
 import FocusMode from './components/FocusMode';
 import Toast from './components/Toast';
-import LoadingScreen from './components/LoadingScreen'; // New Loading Screen
-import PraxisPreview from './components/PraxisPreview'; // Praxis Preview Screen
+import IntegratedLoadingScreen from './components/IntegratedLoadingScreen'; // Integrated Loading Screen
+import ErrorBoundary from './components/ErrorBoundary'; // Error boundary for crash prevention
 import { PraxisLogo } from './components/Icons';
 
 
 // Import services and utils
 import { syncCalendar } from './services/googleCalendarService';
 import { kikoRequest } from './services/kikoAIService';
+import { createSafeHealthData, safeGet, safeFormatNumber } from './utils/validation';
 import { calculateStreak, getTodaysTaskCompletion, inferHomeLocation } from './utils/taskUtils';
 import { triggerHapticFeedback } from './utils/haptics';
 import { MOCKED_BRIEFING, REWARDS_CATALOG, DEFAULT_CATEGORIES, CATEGORY_COLORS, PRESET_COLORS } from './constants';
@@ -145,7 +183,6 @@ function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [showPreview, setShowPreview] = useState(true);
     const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
     const [previousScreen, setPreviousScreen] = useState<Screen>('Dashboard');
     const [uiMode, setUiMode] = useState<'dark' | 'glass'>('glass');
@@ -191,8 +228,18 @@ function App() {
     const [browserPushEnabled, setBrowserPushEnabled] = useState<boolean>(false);
 
 
-    // Derived/Generated states
-    const [healthData, setHealthData] = useState<HealthData>({ totalWorkouts: 1, totalWorkoutMinutes: 28, workoutTypes: { 'Running': 1 }, avgSleepHours: 7.5, sleepQuality: 'good', energyLevel: 'high' });
+    // Derived/Generated states - AI/LLM NOTE: Always use createSafeHealthData to prevent crashes
+    const [healthData, setHealthData] = useState<HealthData>(createSafeHealthData({ 
+        totalWorkouts: 1, 
+        totalWorkoutMinutes: 28, 
+        workoutTypes: { 'Running': 1 }, 
+        avgSleepHours: 7.5, 
+        sleepQuality: 'good', 
+        energyLevel: 'high',
+        stepsToday: 8500,
+        heartRate: 72,
+        caloriesBurned: 2100
+    }));
     const [briefing, setBriefing] = useState(MOCKED_BRIEFING);
     const [isBriefingLoading, setIsBriefingLoading] = useState(true);
 
@@ -230,16 +277,16 @@ function App() {
         const authStatus = localStorage.getItem('praxis-authenticated') === 'true';
         const onboardingStatus = localStorage.getItem('praxis-onboarding-complete') === 'true';
 
-        // First show Praxis preview for 1.5 seconds
+        // For testing - you can uncomment this to reset auth state
+        // localStorage.removeItem('praxis-authenticated');
+        // localStorage.removeItem('praxis-onboarding-complete');
+
+        // Show integrated loading screen for 3.5 seconds total
         setTimeout(() => {
-            setShowPreview(false);
-            // Then show loading for 1 second
-            setTimeout(() => {
-                setIsAuthenticated(authStatus);
-                setIsOnboardingComplete(onboardingStatus);
-                setIsLoading(false);
-            }, 1000);
-        }, 1500);
+            setIsAuthenticated(authStatus);
+            setIsOnboardingComplete(onboardingStatus);
+            setIsLoading(false);
+        }, 3500);
 
         const savedTheme = localStorage.getItem('praxis-theme') || 'obsidian';
         setActiveTheme(savedTheme);
@@ -350,7 +397,10 @@ function App() {
     // --- AUTH & ONBOARDING HANDLERS ---
     const handleLogin = () => {
         localStorage.setItem('praxis-authenticated', 'true');
+        // For existing users, automatically complete onboarding
+        localStorage.setItem('praxis-onboarding-complete', 'true');
         setIsAuthenticated(true);
+        setIsOnboardingComplete(true);
     };
     
     const handleLogout = () => {
@@ -786,7 +836,7 @@ function App() {
     // --- RENDER LOGIC ---
     const renderScreen = () => {
         switch (activeScreen) {
-            case 'Dashboard': return <UnifiedDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} />;
+            case 'Dashboard': return <PraxisDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} />;
             case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
             case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
             case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={navigateTo} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} />;
@@ -814,54 +864,66 @@ function App() {
             case 'Notifications': return <Notifications items={notifications} />;
             case 'Rewards': return <Rewards onBack={() => navigateTo('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
-            default: return <EnhancedDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} />;
+            default: return <PraxisDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} />;
         }
     };
     
-    if (showPreview) return <PraxisPreview />;
-    if (isLoading) return <LoadingScreen />;
+    if (isLoading) return <IntegratedLoadingScreen onComplete={() => setIsLoading(false)} />;
     if (!isAuthenticated) return <Auth onLogin={handleLogin} />;
     if (!isOnboardingComplete) return <Onboarding goals={goals} setGoals={setGoals} onComplete={handleOnboardingComplete} />;
 
     return (
-        <div className={`min-h-screen font-sans bg-bg text-text transition-colors duration-300`}>
-            {focusTask ? (
-                 <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
-            ) : (
-                <>
-                    <main className="w-full">
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={activeScreen}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                {renderScreen()}
-                            </motion.div>
-                        </AnimatePresence>
-                    </main>
-                    {/* Show navigation for all screens */}
-                    <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
-                </>
-            )}
-            <AnimatePresence>
-                {isDailyModeOpen && (
-                    <DailyMode
-                        tasks={tasks}
-                        onClose={() => setIsDailyModeOpen(false)}
-                        onStartFocus={(task) => {
-                            setFocusTask(task);
-                            setIsDailyModeOpen(false);
-                        }}
-                    />
+        <ErrorBoundary>
+            <div className={`min-h-screen font-sans bg-bg text-text transition-colors duration-300 flex`}>
+                {focusTask ? (
+                     <ErrorBoundary>
+                         <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
+                     </ErrorBoundary>
+                ) : (
+                    <>
+                        <ErrorBoundary>
+                            <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
+                        </ErrorBoundary>
+                        <main className="flex-1 ml-16 md:ml-20">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={activeScreen}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <ErrorBoundary>
+                                        {renderScreen()}
+                                    </ErrorBoundary>
+                                </motion.div>
+                            </AnimatePresence>
+                        </main>
+                    </>
                 )}
-            </AnimatePresence>
-            <AnimatePresence>
-                {toast && <Toast message={toast.message} action={toast.action} onClose={() => setToast(null)} />}
-            </AnimatePresence>
-        </div>
+                <AnimatePresence>
+                    {isDailyModeOpen && (
+                        <ErrorBoundary>
+                            <DailyMode
+                                tasks={tasks}
+                                onClose={() => setIsDailyModeOpen(false)}
+                                onStartFocus={(task) => {
+                                    setFocusTask(task);
+                                    setIsDailyModeOpen(false);
+                                }}
+                            />
+                        </ErrorBoundary>
+                    )}
+                </AnimatePresence>
+                <AnimatePresence>
+                    {toast && (
+                        <ErrorBoundary>
+                            <Toast message={toast.message} action={toast.action} onClose={() => setToast(null)} />
+                        </ErrorBoundary>
+                    )}
+                </AnimatePresence>
+            </div>
+        </ErrorBoundary>
     );
 };
 

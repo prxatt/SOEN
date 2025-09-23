@@ -55,7 +55,7 @@ function TaskCard({ task, categoryColors, onSelect }: TaskCardProps) {
             layoutId={`task-card-${task.id}`}
             onClick={() => onSelect(task)}
             animate={{ opacity: isCompleted ? 0.6 : 1 }}
-            className="p-4 rounded-3xl cursor-pointer text-white flex-shrink-0"
+            className="p-4 rounded-3xl cursor-pointer text-black flex-shrink-0"
             style={{ backgroundColor: categoryColor }}
         >
             <div className="flex justify-between items-start">
@@ -80,7 +80,7 @@ function TaskCard({ task, categoryColors, onSelect }: TaskCardProps) {
                     <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop" alt="user 2" />
                 </div>
             </div>
-            <div className={`mt-6 pt-4 border-t border-white/20 flex justify-between items-center`}>
+            <div className={`mt-6 pt-4 border-t border-black/20 flex justify-between items-center`}>
                 <div className="text-center">
                     <p className="font-semibold">{startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
                     <p className="text-sm opacity-80">Start</p>
@@ -250,9 +250,9 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors, onMov
     }, [tasks]);
 
     return (
-        <div ref={timelineRef} className="flex h-full gap-2 overflow-x-auto hide-scrollbar">
+        <div ref={timelineRef} className="flex h-full gap-1.5 sm:gap-2 overflow-x-auto hide-scrollbar">
             {visibleHours.map(hour => (
-                <div key={hour} className="flex flex-col items-center flex-shrink-0 w-24" onDragOver={(e) => { e.preventDefault(); }} onDrop={(e) => {
+                <div key={hour} className="flex flex-col items-center flex-shrink-0 w-20 sm:w-24" onDragOver={(e) => { e.preventDefault(); }} onDrop={(e) => {
                     e.preventDefault();
                     const data = e.dataTransfer.getData('application/praxis-task-id') || e.dataTransfer.getData('text/plain');
                     const taskId = Number(data);
@@ -269,15 +269,15 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors, onMov
                     hasLongPressedRef.current = false;
                     setSelectedTaskForMove(null);
                 }}>
-                    <div className="text-center border-b w-full pb-1" style={{ borderColor: `${textColor}40`}}>
-                        <span className="text-xs font-semibold">{hour % 12 === 0 ? 12 : hour % 12}{hour < 12 ? ' am' : ' pm'}</span>
+                    <div className="text-center border-b w-full pb-0.5" style={{ borderColor: `${textColor}40`}}>
+                        <span className="text-[10px] sm:text-xs font-semibold">{hour % 12 === 0 ? 12 : hour % 12}{hour < 12 ? ' am' : ' pm'}</span>
                     </div>
-                    <div className="flex-grow w-full pt-2 space-y-1.5 min-h-[6rem]" onClick={() => setActiveHourIndex(activeHourIndex === hour ? null : hour)}>
+                    <div className="flex-grow w-full pt-1.5 sm:pt-2 space-y-1 sm:space-y-1.5 min-h-[5.5rem] sm:min-h-[6rem]" onClick={() => setActiveHourIndex(activeHourIndex === hour ? null : hour)}>
                         {(tasksByHour[hour] || []).map(task => {
                             const pillColor = categoryColors[task.category] || '#6B7280';
                             const textOnPill = getTextColorForBackground(pillColor) === 'white' ? '#ffffff' : '#111827';
                             return (
-                                <div key={task.id} className="p-1.5 rounded-lg text-xs break-words cursor-grab active:cursor-grabbing select-none" style={{ backgroundColor: pillColor, color: textOnPill }} draggable onDragStart={(e) => {
+                                <div key={task.id} className="p-1 sm:p-1.5 rounded-lg text-[10px] sm:text-xs break-words cursor-grab active:cursor-grabbing select-none" style={{ backgroundColor: pillColor, color: textOnPill }} draggable onDragStart={(e) => {
                                     e.dataTransfer.setData('application/praxis-task-id', String(task.id));
                                     e.dataTransfer.setData('text/plain', String(task.id));
                                 }} onTouchStart={(e) => {
@@ -305,8 +305,8 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors, onMov
                             );
                         })}
                         {activeHourIndex === hour && (
-                            <button onClick={() => onAddTask(date, hour)} className="w-full flex justify-center items-center h-8 rounded-lg transition-colors" style={{ backgroundColor: 'rgba(0,0,0,0.15)'}} aria-label="Add task here">
-                                <PlusIcon className="w-4 h-4" style={{ color: textColor, opacity: 0.8 }} />
+                            <button onClick={() => onAddTask(date, hour)} className="w-full flex justify-center items-center h-7 sm:h-8 rounded-lg transition-colors" style={{ backgroundColor: 'rgba(0,0,0,0.15)'}} aria-label="Add task here">
+                                <PlusIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: textColor, opacity: 0.8 }} />
                             </button>
                         )}
                     </div>
@@ -363,15 +363,15 @@ function CalendarDayCard({ date, tasks, categoryColors, onAddTask, onMoveTask }:
     return (
         <div
             data-date={date.toISOString().split('T')[0]} // Unique key for scrolling
-            className="rounded-3xl p-4 flex min-h-[10rem] flex-shrink-0"
+            className="rounded-3xl p-3 sm:p-4 flex flex-col sm:flex-row min-h-[9rem] flex-shrink-0 min-w-0"
             style={{ backgroundColor: bgColor, color: textColor }}
         >
-            <div className="w-1/3 flex-shrink-0 pr-4">
-                <p className="font-semibold">{dayOfWeek}</p>
-                <p className="text-6xl font-bold font-display tracking-tighter leading-none mt-1">{day}</p>
-                <p className="text-6xl font-bold font-display tracking-tight leading-none opacity-60">{month}</p>
+            <div className="sm:w-2/5 w-full flex-shrink-0 sm:pr-3 pr-0 mb-2 sm:mb-0">
+                <p className="font-semibold text-sm sm:text-base">{dayOfWeek}</p>
+                <p className="text-5xl sm:text-6xl font-bold font-display tracking-tighter leading-none mt-0.5">{day}</p>
+                <p className="text-5xl sm:text-6xl font-bold font-display tracking-tight leading-none opacity-60">{month}</p>
             </div>
-            <div className="w-2/3 overflow-hidden">
+            <div className="sm:w-3/5 w-full overflow-visible min-w-0">
                 <MiniTimeline tasks={safeTasks} textColor={textColor} date={date} onAddTask={onAddTask} onMoveTask={onMoveTask} categoryColors={categoryColors}/>
             </div>
         </div>
@@ -516,8 +516,8 @@ function CalendarView({ tasks, categoryColors, onAddTask, onMoveTask, selectedDa
     }
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
-            <div className="flex justify-between items-center text-xl font-bold p-2 mb-4 flex-shrink-0">
+        <div className="flex flex-col h-full overflow-y-hidden overflow-x-visible">
+            <div className="flex justify-between items-center text-xl font-bold p-2 mb-4 flex-shrink-0 w-full">
                 <span className="text-text-secondary/50 font-medium">{prevMonth}</span>
                 <div className="flex items-center gap-3 text-2xl font-display">
                     <button onClick={() => changeMonth(-1)} disabled={isAnimating} className="p-1 rounded-full hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-wait">
@@ -533,19 +533,19 @@ function CalendarView({ tasks, categoryColors, onAddTask, onMoveTask, selectedDa
                 </div>
                 <span className="text-text-secondary/50 font-medium">{nextMonth}</span>
             </div>
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 w-full min-w-0">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentMonthDate.toISOString()}
                         ref={listRef}
-                        className="h-full overflow-y-auto hide-scrollbar"
+                        className="h-full w-full min-w-0 overflow-y-auto hide-scrollbar"
                         initial={{ opacity: 0, y: 30 * animationDirection }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -30 * animationDirection }}
                         transition={{ duration: 0.4, ease: 'easeInOut' }}
                         onAnimationComplete={() => setIsAnimating(false)}
                     >
-                        <div className="space-y-3">
+                        <div className="space-y-3 pr-3 sm:pr-5">
                             {dayElements}
                         </div>
                     </motion.div>
@@ -643,7 +643,7 @@ function Schedule(props: ScheduleProps) {
     // Note: swipe gestures removed to avoid interfering with scrolling. Use the toggle buttons.
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col min-w-0">
              <div className="flex justify-between items-center mb-6 flex-shrink-0">
                 <div className="flex items-center gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-full">
                     <button onClick={() => setView('today')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${view === 'today' ? 'bg-black text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>Today</button>
@@ -668,7 +668,7 @@ function Schedule(props: ScheduleProps) {
                         onReorderTasks={reorderTodayTasks}
                     />
                 </div>
-                <div className={`${view === 'month' ? 'block' : 'hidden'} h-full min-h-0`}>
+                <div className={`${view === 'month' ? 'block' : 'hidden'} h-full min-h-0 min-w-0`}>
                     <CalendarView 
                         tasks={tasks} 
                         categoryColors={categoryColors} 

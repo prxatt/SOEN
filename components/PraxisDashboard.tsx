@@ -244,102 +244,6 @@ const PraxisHeader: React.FC = () => {
 };
 
 
-// Enhanced Kiko's Wisdom
-const KikoWisdom: React.FC<{
-    tasks: Task[];
-    notes: Note[];
-    healthData: HealthData;
-}> = ({ tasks, notes, healthData }) => {
-    const [wisdom, setWisdom] = useState({
-        quote: "Every task completed is a step closer to your dreams. Let's make today count!",
-        context: "High completion rate detected"
-    });
-
-    const completedTasks = tasks.filter(t => t.status === 'Completed').length;
-    const totalTasks = tasks.length;
-    const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-
-    const wisdomQuotes = [
-        {
-            quote: "Every task completed is a step closer to your dreams. Let's make today count!",
-            context: "High completion rate detected"
-        },
-        {
-            quote: "Consistency is the bridge between goals and accomplishments. You've got this!",
-            context: "Building daily habits"
-        },
-        {
-            quote: "Small progress is still progress. Celebrate every win, no matter how small.",
-            context: "Encouraging consistency"
-        },
-        {
-            quote: "Your future self will thank you for the work you do today. Keep pushing forward!",
-            context: "Productivity boost needed"
-        },
-        {
-            quote: "Energy flows where attention goes. Focus on what energizes you today.",
-            context: "Energy optimization"
-        }
-    ];
-
-    useEffect(() => {
-        const randomQuote = wisdomQuotes[Math.floor(Math.random() * wisdomQuotes.length)];
-        setWisdom(randomQuote);
-    }, [completionRate]);
-
-    return (
-        <motion.div
-            className="bg-white/5 rounded-xl p-6 border border-white/10 relative overflow-hidden"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-        >
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10" />
-            <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-8 -translate-x-8" />
-
-            <div className="flex items-center gap-3 mb-4 relative z-10">
-                <motion.div
-                    animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                    <BrainCircuitIcon className="w-6 h-6 text-blue-400" />
-                </motion.div>
-                <div>
-                    <h3 className="text-white text-lg font-semibold">Kiko's Wisdom</h3>
-                    <p className="text-white/70 text-sm">{wisdom.context}</p>
-                </div>
-            </div>
-
-            <motion.div
-                className="mb-4 relative z-10"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-            >
-                <p className="text-white text-lg italic leading-relaxed">
-                    "{wisdom.quote}"
-                </p>
-            </motion.div>
-
-            <div className="flex items-center justify-between relative z-10">
-                <div className="text-white/60 text-sm">
-                    — Kiko's Wisdom
-                </div>
-                <motion.button
-                    onClick={() => {
-                        const randomQuote = wisdomQuotes[Math.floor(Math.random() * wisdomQuotes.length)];
-                        setWisdom(randomQuote);
-                    }}
-                    className="text-white/80 hover:text-white text-sm font-medium transition-colors"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                >
-                    New Wisdom →
-                </motion.button>
-            </div>
-        </motion.div>
-    );
-};
 
 // Today and Tomorrow Task Previews
 const TaskPreviews: React.FC<{
@@ -367,15 +271,19 @@ const TaskPreviews: React.FC<{
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Today Preview */}
             <motion.div
-                className="bg-gradient-to-br from-slate-800/30 to-slate-900/30 rounded-2xl p-6 border border-white/10 backdrop-blur-sm relative overflow-hidden"
+                className="rounded-2xl p-6 relative overflow-hidden"
+                style={{ 
+                    backgroundColor: todayTasks.length > 0 ? categoryColors[todayTasks[0].category] : '#374151',
+                    color: getTextColorForBackground(todayTasks.length > 0 ? categoryColors[todayTasks[0].category] : '#374151')
+                }}
                 variants={itemVariants}
             >
                 <FloatingParticles count={20} />
                 
                 <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-white text-xl font-semibold">Today</h3>
-                        <div className="text-accent text-sm font-medium">{completionRate.toFixed(0)}% Complete</div>
+                        <h3 className="text-xl font-semibold">Today</h3>
+                        <div className="text-sm font-medium opacity-80">{completionRate.toFixed(0)}% Complete</div>
                     </div>
 
                     {todayTasks.length > 0 ? (
@@ -389,7 +297,10 @@ const TaskPreviews: React.FC<{
                                     <motion.div
                                         key={task.id}
                                         className="flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:scale-105"
-                                        style={{ backgroundColor: categoryColor + '20' }}
+                                        style={{ 
+                                            backgroundColor: 'rgba(0,0,0,0.2)',
+                                            color: getTextColorForBackground(todayTasks.length > 0 ? categoryColors[todayTasks[0].category] : '#374151')
+                                        }}
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.1 }}
@@ -443,15 +354,19 @@ const TaskPreviews: React.FC<{
 
             {/* Tomorrow Preview */}
             <motion.div
-                className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 rounded-2xl p-6 border border-purple-500/20 relative overflow-hidden"
+                className="rounded-2xl p-6 relative overflow-hidden"
+                style={{ 
+                    backgroundColor: tomorrowTasks.length > 0 ? categoryColors[tomorrowTasks[0].category] : '#8b5cf6',
+                    color: getTextColorForBackground(tomorrowTasks.length > 0 ? categoryColors[tomorrowTasks[0].category] : '#8b5cf6')
+                }}
                 variants={itemVariants}
             >
                 <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-purple-500/20 to-transparent rounded-full -translate-x-12 -translate-y-12" />
                 
                 <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-white text-xl font-semibold">Tomorrow</h3>
-                        <div className="text-purple-400 text-sm font-medium">{tomorrowTasks.length} Tasks</div>
+                        <h3 className="text-xl font-semibold">Tomorrow</h3>
+                        <div className="text-sm font-medium opacity-80">{tomorrowTasks.length} Tasks</div>
                     </div>
 
                     {tomorrowTasks.length > 0 ? (
@@ -464,7 +379,10 @@ const TaskPreviews: React.FC<{
                                     <motion.div
                                         key={task.id}
                                         className="flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:scale-105"
-                                        style={{ backgroundColor: categoryColor + '20' }}
+                                        style={{ 
+                                            backgroundColor: 'rgba(0,0,0,0.2)',
+                                            color: getTextColorForBackground(tomorrowTasks.length > 0 ? categoryColors[tomorrowTasks[0].category] : '#8b5cf6')
+                                        }}
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.1 }}
@@ -474,7 +392,7 @@ const TaskPreviews: React.FC<{
                                             <ClockIcon className="w-4 h-4" style={{ color: categoryColor }} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium truncate">{task.title}</p>
+                                            <p className="font-semibold truncate">{task.title}</p>
                                             <p className="text-sm opacity-80">
                                                 {startTime.toLocaleTimeString([], { 
                                                     hour: '2-digit', 
@@ -548,14 +466,12 @@ const NextUpWidget: React.FC<{
 
     return (
         <motion.div
-            className="relative overflow-hidden"
+            className="relative"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10" />
-            
-            <div className="flex items-center gap-3 mb-6 relative z-10">
+            <div className="flex items-center gap-3 mb-6">
                 <motion.div
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
@@ -565,11 +481,10 @@ const NextUpWidget: React.FC<{
                 <h3 className="text-2xl font-bold font-display" style={{ color: 'var(--color-text)' }}>Next Up</h3>
             </div>
 
-            <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex-1">
                         <h4 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text)' }}>{nextTask.title}</h4>
-                        <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    <div className="flex items-center gap-4 text-sm opacity-80" style={{ color: 'var(--color-text)' }}>
                             <div className="flex items-center gap-1">
                                 <CalendarIcon className="w-4 h-4" />
                                 <span>
@@ -603,7 +518,11 @@ const NextUpWidget: React.FC<{
                 <div className="flex gap-3">
                     <motion.button
                         onClick={() => onCompleteTask(nextTask.id)}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white text-sm font-medium rounded-xl hover:bg-green-600 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl transition-colors"
+                    style={{ 
+                        backgroundColor: '#374151',
+                        color: 'white'
+                    }}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                     >
@@ -615,14 +534,17 @@ const NextUpWidget: React.FC<{
                             navigateToScheduleDate(new Date(nextTask.startTime));
                             setScreen('Schedule');
                         }}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl transition-colors"
+                    style={{ 
+                        backgroundColor: '#1f2937',
+                        color: 'white'
+                    }}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                     >
                         <ArrowRightIcon className="w-4 h-4" />
                         View Details
                     </motion.button>
-                </div>
             </div>
         </motion.div>
     );
@@ -654,12 +576,11 @@ const TaskToggle: React.FC<{
 
     return (
         <motion.div
-            className="card rounded-2xl p-6 relative overflow-hidden"
+            className="rounded-2xl p-6 relative overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full -translate-x-12 -translate-y-12" />
             
             {/* Pill Toggle */}
             <div className="flex items-center justify-between mb-6 relative z-10">
@@ -673,17 +594,13 @@ const TaskToggle: React.FC<{
                     <h3 className="text-2xl font-bold font-display" style={{ color: 'var(--color-text)' }}>Tasks</h3>
                 </div>
                 
-                <div className="flex rounded-full p-1" style={{ backgroundColor: 'var(--color-border)' }}>
+                <div className="flex rounded-full p-1" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
                     <motion.button
                         onClick={() => setActiveView('today')}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                            activeView === 'today' 
-                                ? 'bg-white text-black' 
-                                : 'hover:opacity-80'
-                        }`}
+                        className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300"
                         style={{ 
-                            color: activeView === 'today' ? 'black' : 'var(--color-text-secondary)',
-                            backgroundColor: activeView === 'today' ? 'white' : 'transparent'
+                            color: activeView === 'today' ? getTextColorForBackground('#10b981') : 'var(--color-text-secondary)',
+                            backgroundColor: activeView === 'today' ? '#10b981' : 'transparent'
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -692,14 +609,10 @@ const TaskToggle: React.FC<{
                     </motion.button>
                     <motion.button
                         onClick={() => setActiveView('tomorrow')}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                            activeView === 'tomorrow' 
-                                ? 'bg-white text-black' 
-                                : 'hover:opacity-80'
-                        }`}
+                        className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300"
                         style={{ 
-                            color: activeView === 'tomorrow' ? 'black' : 'var(--color-text-secondary)',
-                            backgroundColor: activeView === 'tomorrow' ? 'white' : 'transparent'
+                            color: activeView === 'tomorrow' ? getTextColorForBackground('#8b5cf6') : 'var(--color-text-secondary)',
+                            backgroundColor: activeView === 'tomorrow' ? '#8b5cf6' : 'transparent'
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -724,11 +637,17 @@ const TaskToggle: React.FC<{
                             currentTasks.slice(0, 4).map((task, index) => (
                                 <motion.div
                                     key={task.id}
-                                    className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300"
+                                    className="flex items-center justify-between p-4 rounded-xl transition-all duration-300"
+                                    style={{ 
+                                        backgroundColor: categoryColors[task.category],
+                                        color: getTextColorForBackground(categoryColors[task.category])
+                                    }}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.1 }}
-                                    whileHover={{ scale: 1.02 }}
+                                    whileHover={{ 
+                                        scale: 1.02 
+                                    }}
                                 >
                                     <div className="flex items-center gap-3 flex-1">
                                         <div 
@@ -736,8 +655,8 @@ const TaskToggle: React.FC<{
                                             style={{ backgroundColor: categoryColors[task.category] }}
                                         />
                                         <div className="flex-1 min-w-0">
-                                            <span className="text-sm font-medium block truncate" style={{ color: 'var(--color-text)' }}>{task.title}</span>
-                                            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                            <span className="text-sm font-semibold block truncate" style={{ color: 'var(--color-text)' }}>{task.title}</span>
+                                            <span className="text-sm opacity-80" style={{ color: 'var(--color-text)' }}>
                                                 {new Date(task.startTime).toLocaleTimeString([], { 
                                                     hour: '2-digit', 
                                                     minute: '2-digit' 
@@ -748,22 +667,36 @@ const TaskToggle: React.FC<{
                                     <div className="flex gap-2">
                                         <motion.button
                                             onClick={() => onCompleteTask(task.id)}
-                                            className="p-2 rounded-full hover:bg-green-500/20 transition-colors"
-                                            whileHover={{ scale: 1.1 }}
+                                            className="p-2 rounded-full transition-colors"
+                                            style={{ 
+                                                backgroundColor: 'rgba(0,0,0,0.2)',
+                                                color: getTextColorForBackground(categoryColors[task.category])
+                                            }}
+                                            whileHover={{ 
+                                                scale: 1.1,
+                                                backgroundColor: 'rgba(0,0,0,0.3)'
+                                            }}
                                             whileTap={{ scale: 0.9 }}
                                         >
-                                            <CheckCircleIcon className="w-4 h-4 text-green-400" />
+                                            <CheckCircleIcon className="w-4 h-4" />
                                         </motion.button>
                                         <motion.button
                                             onClick={() => {
                                                 navigateToScheduleDate(currentDate);
                                                 setScreen('Schedule');
                                             }}
-                                            className="p-2 rounded-full hover:bg-blue-500/20 transition-colors"
-                                            whileHover={{ scale: 1.1 }}
+                                            className="p-2 rounded-full transition-colors"
+                                            style={{ 
+                                                backgroundColor: 'rgba(0,0,0,0.2)',
+                                                color: getTextColorForBackground(categoryColors[task.category])
+                                            }}
+                                            whileHover={{ 
+                                                scale: 1.1,
+                                                backgroundColor: 'rgba(0,0,0,0.3)'
+                                            }}
                                             whileTap={{ scale: 0.9 }}
                                         >
-                                            <ArrowRightIcon className="w-4 h-4 text-blue-400" />
+                                            <ArrowRightIcon className="w-4 h-4" />
                                         </motion.button>
                                     </div>
                                 </motion.div>
@@ -789,13 +722,14 @@ const TaskToggle: React.FC<{
     );
 };
 
-// Enhanced Health Insights
+// Enhanced Health Insights with Integrated Metrics
 const HealthInsights: React.FC<{
     healthData: HealthData;
 }> = ({ healthData }) => {
     const energyLevel = healthData.energyLevel || 'medium';
     const sleepHours = healthData.avgSleepHours || 0;
     const steps = (healthData as any).steps || 0;
+    const water = (healthData as any).water || 0;
 
     const getEnergyColor = (level: string) => {
         switch (level) {
@@ -809,6 +743,12 @@ const HealthInsights: React.FC<{
     const getSleepColor = (hours: number) => {
         if (hours >= 8) return '#10b981';
         if (hours >= 6) return '#f59e0b';
+        return '#ef4444';
+    };
+
+    const getHydrationColor = (percentage: number) => {
+        if (percentage >= 80) return '#10b981';
+        if (percentage >= 60) return '#f59e0b';
         return '#ef4444';
     };
 
@@ -828,27 +768,37 @@ const HealthInsights: React.FC<{
             progress: Math.min((sleepHours / 8) * 100, 100)
         },
         {
-            name: 'Activity',
+            name: 'Steps',
             value: steps.toLocaleString(),
             color: '#10b981',
             icon: ActivityIcon,
             progress: Math.min((steps / 10000) * 100, 100)
+        },
+        {
+            name: 'Hydration',
+            value: `${water}%`,
+            color: getHydrationColor(water),
+            icon: BoltIcon,
+            progress: water
         }
     ];
 
     return (
         <motion.div
-            className="card rounded-2xl p-6 relative overflow-hidden"
+            className="rounded-2xl p-6 relative overflow-hidden"
+            style={{ 
+                backgroundColor: '#10B981',
+                color: 'white'
+            }}
             variants={itemVariants}
         >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
             
             <div className="flex items-center gap-3 mb-6 relative z-10">
                 <HeartIcon className="w-6 h-6 text-accent" />
-                <h3 className="text-2xl font-bold font-display" style={{ color: 'var(--color-text)' }}>Health Insights</h3>
+                <h3 className="text-2xl font-bold font-display">Health Insights</h3>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 relative z-10">
+            <div className="grid grid-cols-2 gap-4 relative z-10">
                 {healthMetrics.map((metric, index) => (
                     <motion.div
                         key={metric.name}
@@ -859,28 +809,28 @@ const HealthInsights: React.FC<{
                         whileHover={{ scale: 1.05 }}
                     >
                         <motion.div 
-                            className="w-16 h-16 rounded-full mx-auto mb-2 flex items-center justify-center relative"
+                            className="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center relative"
                             style={{ backgroundColor: metric.color + '20' }}
                             whileHover={{ rotate: 5 }}
                         >
                             <metric.icon 
-                                className="w-8 h-8" 
+                                className="w-6 h-6" 
                                 style={{ color: metric.color }}
                             />
-                            <svg className="absolute inset-0 w-16 h-16 -rotate-90" viewBox="0 0 32 32">
+                            <svg className="absolute inset-0 w-12 h-12 -rotate-90" viewBox="0 0 24 24">
                                 <circle
-                                    cx="16"
-                                    cy="16"
-                                    r="12"
+                                    cx="12"
+                                    cy="12"
+                                    r="8"
                                     stroke="currentColor"
                                     strokeWidth="2"
                                     fill="none"
                                     className="text-white/20"
                                 />
                                 <motion.circle
-                                    cx="16"
-                                    cy="16"
-                                    r="12"
+                                    cx="12"
+                                    cy="12"
+                                    r="8"
                                     stroke="currentColor"
                                     strokeWidth="2"
                                     fill="none"
@@ -892,8 +842,8 @@ const HealthInsights: React.FC<{
                                 />
                             </svg>
                         </motion.div>
-                        <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{metric.name}</p>
-                        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{metric.value}</p>
+                        <p className="text-sm font-semibold">{metric.name}</p>
+                        <p className="text-sm opacity-80">{metric.value}</p>
                     </motion.div>
                 ))}
             </div>
@@ -914,10 +864,13 @@ const HabitInsights: React.FC<{
 
     return (
         <motion.div
-            className="card rounded-2xl p-6 relative overflow-hidden"
+            className="rounded-2xl p-6 relative overflow-hidden"
+            style={{ 
+                backgroundColor: '#6366F1',
+                color: 'white'
+            }}
             variants={itemVariants}
         >
-            <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full -translate-x-12 -translate-y-12" />
             
             <div className="flex items-center gap-3 mb-6 relative z-10">
                 <motion.div
@@ -926,7 +879,7 @@ const HabitInsights: React.FC<{
                 >
                     <FlagIcon className="w-6 h-6 text-purple-400" />
                 </motion.div>
-                <h3 className="text-2xl font-bold font-display text-white">Habit Insights</h3>
+                <h3 className="text-2xl font-bold font-display">Habit Insights</h3>
             </div>
 
             <div className="space-y-3 relative z-10">
@@ -946,10 +899,10 @@ const HabitInsights: React.FC<{
                             >
                                 <habit.icon className="w-5 h-5" style={{ color: habit.color }} />
                             </motion.div>
-                            <span className="text-white font-medium">{habit.name}</span>
+                            <span className="font-semibold" style={{ color: 'var(--color-text)' }}>{habit.name}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-white text-sm font-semibold">{habit.streak} days</span>
+                            <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{habit.streak} days</span>
                             <motion.div
                                 className="w-2 h-2 rounded-full"
                                 style={{ backgroundColor: habit.color }}
@@ -964,15 +917,42 @@ const HabitInsights: React.FC<{
     );
 };
 
-// Mission Briefing Widget
+// Mission Briefing Widget - Integrated with AI Insights
 const MissionBriefingWidget: React.FC<{
     briefing: MissionBriefing;
     isBriefingLoading: boolean;
-}> = ({ briefing, isBriefingLoading }) => {
+    tasks: Task[];
+    healthData: HealthData;
+    notes: Note[];
+}> = ({ briefing, isBriefingLoading, tasks, healthData, notes }) => {
+    const [insights, setInsights] = useState([
+        {
+            type: 'productivity',
+            title: 'Peak Performance Time',
+            description: 'Your most productive hours are 9-11 AM. Schedule important tasks during this window.',
+            icon: ClockIcon,
+            color: '#10b981'
+        },
+        {
+            type: 'health',
+            title: 'Energy Optimization',
+            description: 'Your energy levels peak after 7+ hours of sleep. Maintain consistent sleep schedule.',
+            icon: HeartIcon,
+            color: '#ef4444'
+        },
+        {
+            type: 'focus',
+            title: 'Deep Work Sessions',
+            description: 'You complete 40% more tasks during 90-minute focused blocks. Try time-blocking.',
+            icon: BrainCircuitIcon,
+            color: '#8b5cf6'
+        }
+    ]);
+
     if (isBriefingLoading) {
         return (
             <motion.div
-                className="card rounded-2xl p-6 relative overflow-hidden"
+                className="rounded-2xl p-6 relative overflow-hidden"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
@@ -999,38 +979,43 @@ const MissionBriefingWidget: React.FC<{
 
     return (
         <motion.div
-            className="card rounded-2xl p-6 relative overflow-hidden"
+            className="rounded-2xl p-6 relative overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10" />
             
-            <div className="flex items-center gap-3 mb-4 relative z-10">
+            <div className="flex items-center gap-3 mb-6 relative z-10">
                 <motion.div
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                    <BrainCircuitIcon className="w-6 h-6 text-purple-500 dark:text-purple-400" />
+                    <BrainCircuitIcon className="w-6 h-6 text-indigo-400" />
                 </motion.div>
-                <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>Mission Briefing</h3>
+                <h3 className="text-2xl font-bold font-display" style={{ color: 'var(--color-text)' }}>Mission Briefing</h3>
             </div>
 
             <div className="space-y-4 relative z-10">
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--color-border)' }}>
-                    <h4 className="font-semibold mb-2" style={{ color: 'var(--color-text)' }}>Today's Focus</h4>
-                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{(briefing as any).focus || "Complete your priority tasks and maintain momentum."}</p>
+                {insights.map((insight, index) => (
+                    <motion.div
+                        key={insight.type}
+                        className="rounded-xl p-4 transition-all duration-300"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ scale: 1.02 }}
+                    >
+                        <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: insight.color + '20' }}>
+                                <insight.icon className="w-5 h-5" style={{ color: insight.color }} />
                 </div>
-                
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--color-border)' }}>
-                    <h4 className="font-semibold mb-2" style={{ color: 'var(--color-text)' }}>Key Insights</h4>
-                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{(briefing as any).insights || "Your productivity patterns show optimal performance in the morning."}</p>
+                            <div className="flex-1">
+                                <h4 className="text-black font-semibold text-sm mb-1">{insight.title}</h4>
+                                <p className="text-black/70 text-xs leading-relaxed">{insight.description}</p>
                 </div>
-
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--color-border)' }}>
-                    <h4 className="font-semibold mb-2" style={{ color: 'var(--color-text)' }}>Recommendations</h4>
-                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{(briefing as any).recommendations || "Consider scheduling deep work during your peak hours."}</p>
                 </div>
+                    </motion.div>
+                ))}
             </div>
         </motion.div>
     );
@@ -1085,23 +1070,26 @@ const ProductivityMetrics: React.FC<{
 
     return (
         <motion.div
-            className="card rounded-2xl p-6 relative overflow-hidden"
+            className="rounded-2xl p-6 relative overflow-hidden"
+            style={{ 
+                backgroundColor: '#EC4899',
+                color: 'white'
+            }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full -translate-x-12 -translate-y-12" />
             
             <div className="flex items-center gap-3 mb-6 relative z-10">
                 <ChartBarIcon className="w-6 h-6 text-green-400" />
-                <h3 className="text-2xl font-bold font-display text-white">Productivity Metrics</h3>
+                <h3 className="text-2xl font-bold font-display">Productivity Metrics</h3>
             </div>
 
             <div className="space-y-4 relative z-10">
                 {metrics.map((metric, index) => (
                     <motion.div
                         key={metric.name}
-                        className="bg-white/5 rounded-xl p-4"
+                        className="rounded-xl p-4"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
@@ -1109,9 +1097,9 @@ const ProductivityMetrics: React.FC<{
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
                                 <metric.icon className="w-5 h-5" style={{ color: metric.color }} />
-                                <span className="text-white font-medium">{metric.name}</span>
+                                <span className="text-black font-medium">{metric.name}</span>
                             </div>
-                            <span className="text-white text-lg font-bold">{metric.value}</span>
+                            <span className="text-black text-lg font-bold">{metric.value}</span>
                         </div>
                         <div className="w-full bg-white/10 rounded-full h-2">
                             <motion.div
@@ -1173,12 +1161,11 @@ const QuickActionsWidget: React.FC<{
 
     return (
         <motion.div
-            className="card rounded-2xl p-6 relative overflow-hidden"
+            className="rounded-2xl p-6 relative overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10" />
             
             <div className="flex items-center gap-3 mb-6 relative z-10">
                 <motion.div
@@ -1187,7 +1174,7 @@ const QuickActionsWidget: React.FC<{
                 >
                     <ZapIcon className="w-6 h-6 text-orange-400" />
                 </motion.div>
-                <h3 className="text-2xl font-bold font-display text-white">Quick Actions</h3>
+                <h3 className="text-2xl font-bold font-display text-black">Quick Actions</h3>
             </div>
 
             <div className="grid grid-cols-2 gap-3 relative z-10">
@@ -1204,22 +1191,22 @@ const QuickActionsWidget: React.FC<{
                         whileTap={{ scale: 0.95 }}
                     >
                         <action.icon className="w-6 h-6" style={{ color: action.color }} />
-                        <span className="text-white text-sm font-medium">{action.label}</span>
+                        <span className="text-black text-sm font-medium">{action.label}</span>
                     </motion.button>
                 ))}
             </div>
 
             {nextTask && (
                 <motion.div
-                    className="mt-4 p-3 rounded-xl bg-white/5 border border-white/10"
+                    className="mt-4 p-3 rounded-xl"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
                 >
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-white text-sm font-medium">Next Task</p>
-                            <p className="text-white/80 text-xs truncate">{nextTask.title}</p>
+                            <p className="text-black text-sm font-medium">Next Task</p>
+                            <p className="text-black/80 text-xs truncate">{nextTask.title}</p>
                         </div>
                         <motion.button
                             onClick={() => onCompleteTask(nextTask.id)}
@@ -1268,12 +1255,11 @@ const AIInsightsWidget: React.FC<{
 
     return (
         <motion.div
-            className="card rounded-2xl p-6 relative overflow-hidden"
+            className="rounded-2xl p-6 relative overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full -translate-x-12 -translate-y-12" />
             
             <div className="flex items-center gap-3 mb-6 relative z-10">
                 <motion.div
@@ -1289,7 +1275,7 @@ const AIInsightsWidget: React.FC<{
                 {insights.map((insight, index) => (
                     <motion.div
                         key={insight.type}
-                        className="bg-white/5 rounded-xl p-4 hover:bg-white/10 transition-all duration-300"
+                        className="rounded-xl p-4 transition-all duration-300"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
@@ -1360,7 +1346,11 @@ const DailyGreeting: React.FC<{
 
     return (
         <motion.div
-            className="relative overflow-hidden card rounded-3xl p-8"
+            className="relative overflow-hidden rounded-3xl p-8"
+            style={{ 
+                backgroundColor: '#A855F7',
+                color: 'white'
+            }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8 }}
@@ -1413,40 +1403,9 @@ const DailyGreeting: React.FC<{
                     </motion.div>
                 </div>
 
-                {/* Health Insights - Unified layout under quote */}
-                <motion.div
-                    className="grid grid-cols-3 gap-6 mb-8"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.6 }}
-                >
-                    <div className="text-center p-4 rounded-xl" style={{ backgroundColor: 'var(--color-border)' }}>
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                            <ActivityIcon className="w-5 h-5 text-green-500" />
-                            <span className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>{steps.toLocaleString()}</span>
-                        </div>
-                        <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Steps</div>
-                    </div>
-                    <div className="text-center p-4 rounded-xl" style={{ backgroundColor: 'var(--color-border)' }}>
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                            <HeartIcon className="w-5 h-5 text-red-500" />
-                            <span className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>{sleep}h</span>
-                        </div>
-                        <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Sleep</div>
-                    </div>
-                    <div className="text-center p-4 rounded-xl" style={{ backgroundColor: 'var(--color-border)' }}>
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                            <BoltIcon className="w-5 h-5 text-blue-500" />
-                            <span className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>{water}%</span>
-                        </div>
-                        <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Hydration</div>
-                    </div>
-                </motion.div>
 
-                {/* Bottom Row - Next Up and Stats - Unified Layout */}
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                    {/* Next Up Section - Unified */}
-                    <div className="flex-1 p-6 rounded-2xl" style={{ backgroundColor: 'var(--color-border)' }}>
+                {/* Next Up Section - Full Width */}
+                <div className="rounded-2xl p-6" style={{ backgroundColor: '#F59E0B', color: 'white' }}>
                         <NextUpWidget
                             tasks={tasks}
                             categoryColors={categoryColors}
@@ -1455,64 +1414,82 @@ const DailyGreeting: React.FC<{
                             setScreen={setScreen}
                         />
                     </div>
+            </div>
+        </motion.div>
+    );
+};
 
-                    {/* Quick Stats - Unified */}
-                    <div className="grid grid-cols-3 gap-4">
+// Quick Stats Widget
+const QuickStatsWidget: React.FC<{
+    completedToday: number;
+    remainingToday: number;
+}> = ({ completedToday, remainingToday }) => {
+    return (
                         <motion.div
-                            className="text-center p-4 rounded-xl"
+            className="rounded-2xl p-4 relative overflow-hidden"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+        >
+            <div className="grid grid-cols-3 gap-3">
+                <motion.div
+                    className="text-center p-3 rounded-xl"
                             style={{ backgroundColor: 'var(--color-border)' }}
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 1.2 }}
+                    transition={{ delay: 0.2 }}
                         >
-                            <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="flex items-center justify-center gap-1 mb-1">
                                 <CheckCircleIcon className="w-4 h-4 text-green-500" />
                                 <span className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{completedToday}</span>
                             </div>
                             <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Completed</div>
                         </motion.div>
                         <motion.div
-                            className="text-center p-4 rounded-xl"
+                    className="text-center p-3 rounded-xl"
                             style={{ backgroundColor: 'var(--color-border)' }}
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 1.3 }}
+                    transition={{ delay: 0.3 }}
                         >
-                            <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="flex items-center justify-center gap-1 mb-1">
                                 <ClockIcon className="w-4 h-4 text-orange-500" />
-                                <span className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{todayTasks.length - completedToday}</span>
+                        <span className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{remainingToday}</span>
                             </div>
                             <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Remaining</div>
                         </motion.div>
                         <motion.div
-                            className="text-center p-4 rounded-xl"
+                    className="text-center p-3 rounded-xl"
                             style={{ backgroundColor: 'var(--color-border)' }}
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 1.4 }}
+                    transition={{ delay: 0.4 }}
                         >
-                            <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="flex items-center justify-center gap-1 mb-1">
                                 <FireIcon className="w-4 h-4 text-red-500" />
                                 <span className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>7</span>
                             </div>
                             <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Streak</div>
                         </motion.div>
-                    </div>
-                </div>
             </div>
         </motion.div>
     );
 };
 
-// Standalone Weather Widget
-const WeatherWidget: React.FC = () => {
+// Condensed Weather Widget
+const CondensedWeatherWidget: React.FC = () => {
     return (
         <motion.div
-            className="h-full flex flex-col items-center justify-center text-center"
+            className="rounded-2xl p-4 relative overflow-hidden"
+            style={{ 
+                backgroundColor: '#3B82F6',
+                color: 'white'
+            }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
+            <div className="flex items-center justify-center text-center">
             <motion.div
                 animate={{ 
                     rotate: [0, 5, -5, 0],
@@ -1523,26 +1500,15 @@ const WeatherWidget: React.FC = () => {
                     repeat: Infinity, 
                     ease: 'easeInOut' 
                 }}
-                className="mb-4"
+                    className="mr-4"
             >
-                <SunIcon className="w-16 h-16 text-yellow-400" />
+                    <SunIcon className="w-8 h-8 text-yellow-400" />
             </motion.div>
             
-            <div className="space-y-2">
-                <div className="text-4xl font-bold" style={{ color: 'var(--color-text)' }}>22°C</div>
-                <div className="text-lg" style={{ color: 'var(--color-text-secondary)' }}>San Francisco</div>
-                <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Sunny</div>
-            </div>
-
-            {/* Additional weather details */}
-            <div className="mt-6 grid grid-cols-2 gap-4 w-full">
-                <div className="text-center">
-                    <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Humidity</div>
-                    <div className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>65%</div>
-                </div>
-                <div className="text-center">
-                    <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Wind</div>
-                    <div className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>12 km/h</div>
+                <div className="space-y-1">
+                    <div className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>22°C</div>
+                    <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>San Francisco</div>
+                    <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Sunny</div>
                 </div>
             </div>
         </motion.div>
@@ -1552,6 +1518,14 @@ const WeatherWidget: React.FC = () => {
 // Main Dashboard Component
 const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
     const { tasks, notes, healthData, briefing, isBriefingLoading, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen } = props;
+    
+    // Check if all daily tasks are completed
+    const today = new Date();
+    const todayTasks = tasks.filter(t => 
+        new Date(t.startTime).toDateString() === today.toDateString()
+    );
+    const completedToday = todayTasks.filter(t => t.status === 'Completed').length;
+    const allTasksCompleted = todayTasks.length > 0 && completedToday === todayTasks.length;
 
     return (
         <motion.div
@@ -1589,25 +1563,43 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
                             />
                         </div>
                         
-                        {/* Weather Widget - Right Side */}
-                        <div className="lg:col-span-1">
-                            <WeatherWidget />
+                        {/* Weather, Health Insights, and Quick Stats - Right Side */}
+                        <div className="lg:col-span-1 space-y-4">
+                            <CondensedWeatherWidget />
+                            <HealthInsights
+                                healthData={healthData}
+                            />
+                            <QuickStatsWidget
+                                completedToday={tasks.filter(t => 
+                                    new Date(t.startTime).toDateString() === new Date().toDateString() && 
+                                    t.status === 'Completed'
+                                ).length}
+                                remainingToday={tasks.filter(t => 
+                                    new Date(t.startTime).toDateString() === new Date().toDateString() && 
+                                    t.status !== 'Completed'
+                                ).length}
+                            />
                         </div>
                     </div>
 
 
-                    {/* Main Content Grid - Full Width Desktop Layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
-                        {/* Mission Briefing */}
-                        <div className="lg:col-span-1 xl:col-span-1">
+                    {/* Mission Briefing - Full Width when all tasks completed */}
+                    {allTasksCompleted && (
+                        <div className="mb-6">
                             <MissionBriefingWidget
                                 briefing={briefing}
                                 isBriefingLoading={isBriefingLoading}
+                                tasks={tasks}
+                                healthData={healthData}
+                                notes={notes}
                             />
                         </div>
+                    )}
 
+                    {/* Main Content Grid - Clean Two Column Layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
                         {/* Task Toggle */}
-                        <div className="lg:col-span-1 xl:col-span-1">
+                        <div className="lg:col-span-1">
                             <TaskToggle
                                 tasks={tasks}
                                 categoryColors={categoryColors}
@@ -1617,23 +1609,16 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
                             />
                         </div>
 
-                        {/* Health Insights */}
-                        <div className="lg:col-span-1 xl:col-span-1">
-                            <HealthInsights
-                                healthData={healthData}
-                            />
-                        </div>
-
                         {/* Habit Insights */}
-                        <div className="lg:col-span-1 xl:col-span-1">
+                        <div className="lg:col-span-1">
                             <HabitInsights
                                 healthData={healthData}
                             />
                         </div>
                     </div>
 
-                    {/* Bottom Row - Productivity, Quick Actions, and AI Insights */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+                    {/* Bottom Row - Productivity and Quick Actions */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
                         {/* Productivity Metrics */}
                         <div className="lg:col-span-1">
                             <ProductivityMetrics
@@ -1650,25 +1635,8 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
                                 onCompleteTask={onCompleteTask}
                             />
                         </div>
-
-                        {/* AI Insights */}
-                        <div className="lg:col-span-1">
-                            <AIInsightsWidget
-                                tasks={tasks}
-                                healthData={healthData}
-                                notes={notes}
-                            />
-                        </div>
                     </div>
 
-                    {/* Kiko's Wisdom - Full Width Bottom */}
-                    <div className="mt-6">
-                        <KikoWisdom
-                            tasks={tasks}
-                            notes={notes}
-                            healthData={healthData}
-                        />
-                    </div>
                 </motion.div>
             </div>
         </motion.div>

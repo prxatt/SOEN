@@ -49,14 +49,15 @@ function TaskCard({ task, categoryColors, onSelect }: TaskCardProps) {
     const startTime = new Date(task.startTime);
     const endTime = new Date(startTime.getTime() + task.plannedDuration * 60000);
     const isCompleted = task.status === TaskStatus.Completed;
+    const borderColor = textColor === 'white' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)';
 
     return (
         <motion.div
             layoutId={`task-card-${task.id}`}
             onClick={() => onSelect(task)}
             animate={{ opacity: isCompleted ? 0.6 : 1 }}
-            className="p-4 rounded-3xl cursor-pointer text-black flex-shrink-0"
-            style={{ backgroundColor: categoryColor }}
+            className="p-4 rounded-3xl cursor-pointer flex-shrink-0"
+            style={{ backgroundColor: categoryColor, color: textColor }}
         >
             <div className="flex justify-between items-start">
                 <div className="w-3/4">
@@ -80,7 +81,7 @@ function TaskCard({ task, categoryColors, onSelect }: TaskCardProps) {
                     <img className="w-8 h-8 rounded-full object-cover ring-2 ring-current" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop" alt="user 2" />
                 </div>
             </div>
-            <div className={`mt-6 pt-4 border-t border-black/20 flex justify-between items-center`}>
+            <div className={`mt-6 pt-4 border-t flex justify-between items-center`} style={{ borderTopColor: borderColor }}>
                 <div className="text-center">
                     <p className="font-semibold">{startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
                     <p className="text-sm opacity-80">Start</p>

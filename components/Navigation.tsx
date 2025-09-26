@@ -65,7 +65,7 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
             ? 'bg-white text-black shadow-lg' 
             : 'text-white/80 hover:text-white hover:bg-white/10'
           }
-          group overflow-hidden
+          group overflow-hidden whitespace-nowrap
         `}
         whileHover={{ scale: collapsed ? 1.05 : 1.02 }}
         whileTap={{ scale: 0.95 }}
@@ -82,7 +82,7 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
         {/* Icon container */}
         <div className={`relative z-10 flex items-center justify-center ${collapsed ? '' : 'mr-3'}`}>
           <Icon 
-            className={`transition-all duration-300 ${collapsed ? 'w-5 h-5' : 'w-5 h-5'} ${isActive ? 'text-black' : 'text-white/80'}`}
+            className={`w-5 h-5 transition-all duration-300 ${isActive ? 'text-black' : 'text-white/80'}`}
           />
         </div>
         
@@ -94,7 +94,7 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
               animate={{ opacity: 1, width: 'auto' }}
               exit={{ opacity: 0, width: 0 }}
               transition={{ duration: 0.2, delay: 0.1 }}
-              className={`text-sm font-medium tracking-wide whitespace-nowrap relative z-10 ${
+              className={`text-sm font-medium tracking-wide whitespace-nowrap truncate max-w-[9rem] relative z-10 ${
                 isActive ? 'text-black' : 'text-current'
               }`}
             >

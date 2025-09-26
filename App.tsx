@@ -47,8 +47,6 @@ import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatSession, Sear
 // Import components
 import Navigation from './components/Navigation';
 import Notifications from './components/Notifications';
-import Dashboard from './components/Dashboard';
-import DashboardOptimized from './components/DashboardOptimized';
 import PraxisDashboard from './components/PraxisDashboard';
 import DailyMode from './components/DailyMode';
 import Schedule from './components/Schedule';
@@ -70,6 +68,9 @@ import { PraxisLogo } from './components/Icons';
 // Import services and utils
 import { syncCalendar } from './services/googleCalendarService';
 import { kikoRequest } from './services/kikoAIService';
+import { healthDataService } from './services/healthDataService';
+import { pomodoroService } from './services/pomodoroService';
+import { aiPriorityService } from './services/aiPriorityService';
 import { createSafeHealthData, safeGet, safeFormatNumber } from './utils/validation';
 import { calculateStreak, getTodaysTaskCompletion, inferHomeLocation } from './utils/taskUtils';
 import { triggerHapticFeedback } from './utils/haptics';
@@ -189,6 +190,7 @@ function App() {
     const [activeTheme, setActiveTheme] = useState('obsidian');
     const [toast, setToast] = useState<{ message: string; id: number; action?: { label: string; onClick: () => void; } } | null>(null);
     const [scheduleInitialDate, setScheduleInitialDate] = useState<Date | undefined>(undefined);
+    const [lastHealthSync, setLastHealthSync] = useState<Date>(new Date());
 
     // Data states
     const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -321,6 +323,72 @@ function App() {
             }
         }
     }, []);
+
+    // --- HEALTH DATA SYNC LOGIC ---
+    useEffect(() => {
+        const initializeHealthServices = async () => {
+            try {
+                // Initialize health data service
+                await healthDataService.initialize();
+                console.log('🏥 Health Data Service initialized');
+            } catch (error) {
+                console.error('Health service initialization error:', error);
+            }
+        };
+
+        initializeHealthServices();
+    }, []);
+
+    // 3-hour health data sync logic
+    useEffect(() => {
+        const syncHealthData = async () => {
+            const now = new Date();
+            const timeSinceLastSync = now.getTime() - lastHealthSync.getTime();
+            const threeHours = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+
+            if (timeSinceLastSync >= threeHours) {
+                console.log('🔄 Performing 3-hour health data sync...');
+                
+                try {
+                    // Sync health data
+                    const updatedHealthData = await healthDataService.syncHealthData();
+                    
+                    // Update health data state
+                    setHealthData(prev => ({
+                        ...prev,
+                        sleepQuality: updatedHealthData.sleepQuality,
+                        energyLevel: updatedHealthData.energyLevel
+                    }));
+
+                    setLastHealthSync(now);
+                    console.log('✅ Health data synced successfully');
+                } catch (error) {
+                    console.error('Health sync error:', error);
+                }
+            }
+        };
+
+        // Check sync on app focus/visibility change
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                syncHealthData();
+            }
+        };
+
+        // Check sync every hour
+        const syncInterval = setInterval(syncHealthData, 60 * 60 * 1000);
+
+        // Listen for app focus
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Initial sync check
+        syncHealthData();
+
+        return () => {
+            clearInterval(syncInterval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [lastHealthSync]);
 
     // Listen for global event to open Daily Mode (triggered from Dashboard CTA)
     useEffect(() => {
@@ -836,7 +904,7 @@ function App() {
     // --- RENDER LOGIC ---
     const renderScreen = () => {
         switch (activeScreen) {
-            case 'Dashboard': return <PraxisDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} />;
+            case 'Dashboard': return <PraxisDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} />;
             case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
             case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
             case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={navigateTo} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} />;
@@ -864,7 +932,7 @@ function App() {
             case 'Notifications': return <Notifications items={notifications} />;
             case 'Rewards': return <Rewards onBack={() => navigateTo('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
-            default: return <PraxisDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} />;
+            default: return <PraxisDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} />;
         }
     };
     

@@ -167,6 +167,10 @@ export interface HealthData {
     stepsToday?: number;
     heartRate?: number;
     caloriesBurned?: number;
+    // Additional health metrics for dashboard
+    steps?: number;
+    sleep?: number;
+    water?: number;
 }
 
 export interface ProjectStatusReport {

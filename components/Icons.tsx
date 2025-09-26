@@ -1636,8 +1636,22 @@ export const ArrowTrendingUpIcon: React.FC<IconProps> = ({ size = 24, ...props }
     <ArrowTrendingUp size={size} {...props} />
 );
 
-// BrainIcon and EyeIcon are already defined above as BrainCircuitIcon and other variants
-
+// Eye Icon for viewing/visibility
+export const EyeIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        fill="none" 
+        viewBox="0 0 24 24" 
+        strokeWidth={1.5} 
+        stroke="currentColor"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
 
 // Layout Components Export
 export default {
@@ -1773,5 +1787,6 @@ export default {
     AppleIcon,
 
     // Additional missing icons
-    ArrowTrendingUpIcon
+    ArrowTrendingUpIcon,
+    EyeIcon
 };

@@ -140,7 +140,7 @@ function FloatingParticles({ count = 50 }) {
 const GhibliPenguin: React.FC = () => {
     return (
         <motion.div
-            className="relative w-12 h-12"
+            className="relative w-full h-full"
             animate={{ 
                 rotate: [0, 3, -3, 0],
                 scale: [1, 1.05, 1],
@@ -258,15 +258,17 @@ const GhibliPenguin: React.FC = () => {
 const PraxisHeader: React.FC = () => {
     return (
         <motion.div
-            className="fixed top-4 left-20 z-50"
+            className="fixed top-3 left-3 sm:top-4 sm:left-20 z-50"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
             style={{ position: 'fixed' }}
         >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10">
                 <GhibliPenguin />
-                <span className="font-bold text-2xl text-white">Praxis AI</span>
+                </div>
+                <span className="font-bold text-lg sm:text-2xl text-white">Praxis AI</span>
             </div>
         </motion.div>
     );
@@ -2373,7 +2375,7 @@ const PraxisRewardsWidget: React.FC<{
 
     return (
                         <motion.div
-            className="rounded-3xl p-6 relative overflow-hidden h-full"
+            className="rounded-3xl p-4 sm:p-6 relative overflow-hidden h-full min-h-[400px] sm:min-h-[500px]"
             style={{ 
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%)',
                 color: 'white'
@@ -2430,18 +2432,18 @@ const PraxisRewardsWidget: React.FC<{
                             </div>
 
             <div className="relative z-10">
-                {/* Header with Schedule.tsx TodayView inspired design */}
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
+                {/* Header with Schedule.tsx TodayView inspired design - Mobile optimized */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                    <div className="flex items-center gap-3 sm:gap-4">
                         <motion.div
                             animate={{ scale: [1, 1.1, 1] }}
                             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                         >
-                            <SparklesIcon className="w-7 h-7 text-yellow-400 drop-shadow-lg" />
+                            <SparklesIcon className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-400 drop-shadow-lg" />
                         </motion.div>
                         <div>
-                            <h3 className="text-2xl font-bold font-display tracking-tight">Praxis Rewards</h3>
-                            <div className="flex items-center gap-3 mt-1">
+                            <h3 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Praxis Rewards</h3>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mt-1">
                         <div className="flex items-center gap-2">
                                     <span className="text-white/80 text-sm font-semibold">Level {level}</span>
                                     <div className="w-1 h-1 bg-white/40 rounded-full"></div>
@@ -2454,19 +2456,19 @@ const PraxisRewardsWidget: React.FC<{
                             </div>
                         </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right">
                         <div className="text-xs text-white/60 font-semibold">Next Level</div>
-                        <div className="text-white font-bold text-lg">{nextLevelPoints - currentPoints} pts</div>
+                        <div className="text-white font-bold text-base sm:text-lg">{nextLevelPoints - currentPoints} pts</div>
                     </div>
                 </div>
 
-                {/* Condensed Health Insights Integration */}
-                <div className="mb-6 p-4 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
-                    <div className="flex items-center gap-3 mb-3">
-                        <HeartIcon className="w-5 h-5 text-red-400" />
+                {/* Condensed Health Insights Integration - Mobile optimized */}
+                <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-3">
+                        <HeartIcon className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
                         <h4 className="text-white font-semibold text-sm">Health Status</h4>
                     </div>
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                         {[
                             { name: 'Energy', value: healthData.energyLevel?.charAt(0).toUpperCase() + healthData.energyLevel?.slice(1) || 'Medium', icon: ZapIcon, color: healthData.energyLevel === 'high' ? '#10b981' : healthData.energyLevel === 'low' ? '#ef4444' : '#f59e0b' },
                             { name: 'Sleep', value: `${healthData.avgSleepHours || 0}h`, icon: ClockIcon, color: (healthData.avgSleepHours || 0) >= 8 ? '#10b981' : (healthData.avgSleepHours || 0) >= 6 ? '#f59e0b' : '#ef4444' },
@@ -2480,8 +2482,8 @@ const PraxisRewardsWidget: React.FC<{
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1 }}
                             >
-                                <div className="w-8 h-8 rounded-lg mx-auto mb-1 flex items-center justify-center bg-white/15">
-                                    <metric.icon className="w-4 h-4" style={{ color: metric.color }} />
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg mx-auto mb-1 sm:mb-2 flex items-center justify-center bg-white/15">
+                                    <metric.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: metric.color }} />
                                 </div>
                                 <p className="text-xs text-white/80 font-semibold">{metric.name}</p>
                                 <p className="text-xs text-white font-bold">{metric.value}</p>
@@ -2490,39 +2492,39 @@ const PraxisRewardsWidget: React.FC<{
             </div>
                     </div>
 
-                {/* Expandable Unlock Progress Section */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between mb-3">
+                {/* Expandable Unlock Progress Section - Mobile optimized */}
+                <div className="mb-4 sm:mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2 sm:gap-0">
                         <h4 className="text-white font-semibold text-sm">Unlock Progress</h4>
                         <button 
                             onClick={() => setShowRewardsDetail(!showRewardsDetail)}
-                            className="text-white/70 hover:text-white text-xs transition-colors px-2 py-1 rounded-lg hover:bg-white/10"
+                            className="text-white/70 hover:text-white text-xs transition-colors px-2 py-1 rounded-lg hover:bg-white/10 active:scale-95"
                         >
                             {showRewardsDetail ? 'Minimize' : 'Preview'} Themes
                         </button>
                     </div>
                     
-                    {/* Compact Progress Display */}
-                    <div className="grid grid-cols-2 gap-3 text-xs mb-3">
-                        <div className="text-center p-2 bg-white/10 rounded-lg">
+                    {/* Compact Progress Display - Mobile optimized */}
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs mb-3">
+                        <div className="text-center p-2 sm:p-3 bg-white/10 rounded-lg">
                             <div className="text-white font-bold text-sm">{insights.unlockedThemes}/{themes.length}</div>
                             <div className="text-white/60 text-xs">Themes</div>
                         </div>
-                        <div className="text-center p-2 bg-white/10 rounded-lg">
+                        <div className="text-center p-2 sm:p-3 bg-white/10 rounded-lg">
                             <div className="text-white font-bold text-sm">{insights.unlockedBackgrounds}/{focusBackgrounds.length}</div>
                             <div className="text-white/60 text-xs">Focus BGs</div>
+                        </div>
                     </div>
-                </div>
                     
                     <div className="text-xs text-white/80 text-center">
                         {getNextUnlockRecommendation()}
                     </div>
                 </div>
 
-                {/* Animated Theme Preview Section */}
+                {/* Animated Theme Preview Section - Mobile optimized */}
                 {showRewardsDetail && (
                     <motion.div
-                        className="mb-6 p-4 bg-white/5 rounded-xl backdrop-blur-sm border border-white/10"
+                        className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white/5 rounded-xl backdrop-blur-sm border border-white/10"
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
@@ -2533,16 +2535,17 @@ const PraxisRewardsWidget: React.FC<{
                             Theme Previews
                         </h5>
                         
-                        {/* Animated Theme Cards */}
-                        <div className="grid grid-cols-2 gap-3 mb-4">
+                        {/* Animated Theme Cards - Mobile optimized */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                             {themes.slice(0, 4).map((theme, index) => (
                                 <motion.div
                                     key={theme.id}
-                                    className="relative overflow-hidden rounded-lg border border-white/20"
+                                    className="relative overflow-hidden rounded-lg border border-white/20 h-20 sm:h-24"
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ delay: index * 0.1 }}
                                     whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
                                 >
                                     {/* Animated Background Preview */}
                                     <div 
@@ -2590,12 +2593,12 @@ const PraxisRewardsWidget: React.FC<{
                                         )}
                                     </div>
                                     
-                                    {/* Theme Info */}
-                                    <div className="p-2 bg-white/10">
+                                    {/* Theme Info - Mobile optimized */}
+                                    <div className="p-2 sm:p-3 bg-white/10">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-2 h-2 rounded-full ${theme.unlocked ? 'bg-green-400' : 'bg-gray-400'}`} />
-                                                <span className="text-white text-xs font-semibold truncate">{theme.name}</span>
+                                                <span className="text-white text-xs sm:text-sm font-semibold truncate">{theme.name}</span>
                                             </div>
                                             <span className="text-yellow-400 text-xs font-bold">{theme.cost}</span>
                                         </div>
@@ -2611,12 +2614,13 @@ const PraxisRewardsWidget: React.FC<{
                                 {focusBackgrounds.map((bg, index) => (
                                     <motion.div
                                         key={bg.id}
-                                        className="flex items-center justify-between p-2 bg-white/10 rounded-lg"
+                                        className="flex items-center justify-between p-2 sm:p-3 bg-white/10 rounded-lg"
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.5 + index * 0.1 }}
+                                        whileTap={{ scale: 0.98 }}
                                     >
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 sm:gap-3">
                                             {/* Mini preview circle */}
                                             <div 
                                                 className="w-6 h-6 rounded-full border border-white/30"
@@ -2628,7 +2632,7 @@ const PraxisRewardsWidget: React.FC<{
                                             />
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-2 h-2 rounded-full ${bg.unlocked ? 'bg-green-400' : 'bg-gray-400'}`} />
-                                                <span className="text-white text-xs font-semibold">{bg.name}</span>
+                                                <span className="text-white text-xs sm:text-sm font-semibold">{bg.name}</span>
                                             </div>
                                         </div>
                                         <span className="text-yellow-400 text-xs font-bold">{bg.cost}</span>
@@ -3114,7 +3118,7 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
             <PraxisHeader />
             
         <motion.div
-            className="min-h-screen relative"
+            className="min-h-screen relative overflow-x-hidden"
             style={{ backgroundColor: 'var(--color-bg)' }}
             variants={containerVariants}
             initial="hidden"
@@ -3123,18 +3127,18 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
             {/* Floating particles background */}
             <FloatingParticles count={50} />
 
-            {/* Main Content - Full width with proper padding */}
-            <div className="w-full px-2 sm:px-4 lg:px-6 xl:px-8 py-4 md:py-6 pt-20">
+            {/* Main Content - Mobile-first responsive design with proper touch targets */}
+            <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 pt-16 sm:pt-20">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
                     className="space-y-6"
                 >
-                    {/* Top Row - Daily Greeting and Weather Side by Side */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Daily Greeting - Left Side */}
-                        <div className="lg:col-span-2">
+                    {/* Top Row - Mobile-first responsive layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                        {/* Daily Greeting - Mobile: full width, Desktop: 2/3 */}
+                        <div className="lg:col-span-2 order-1">
                             <DailyGreeting 
                                 tasks={tasks} 
                                 categoryColors={categoryColors} 
@@ -3149,8 +3153,8 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
                             />
                         </div>
                         
-                        {/* Praxis Rewards Widget - Right Side */}
-                        <div className="lg:col-span-1">
+                        {/* Praxis Rewards Widget - Mobile: full width, Desktop: 1/3 */}
+                        <div className="lg:col-span-1 order-2">
                                 <PraxisRewardsWidget
                                     tasks={tasks}
                                     healthData={healthData}
@@ -3164,10 +3168,10 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
 
 
 
-                    {/* Main Content Grid - Clean Two Column Layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-                        {/* Task Toggle */}
-                        <div className="lg:col-span-1">
+                    {/* Main Content Grid - Mobile-first responsive layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                        {/* Task Toggle - Mobile: full width, Desktop: 1/2 */}
+                        <div className="lg:col-span-1 order-1">
                             <TaskToggle
                                 tasks={tasks}
                                 categoryColors={categoryColors}
@@ -3178,16 +3182,16 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
                             />
                         </div>
 
-                        {/* Habit Insights */}
-                        <div className="lg:col-span-1">
+                        {/* Habit Insights - Mobile: full width, Desktop: 1/2 */}
+                        <div className="lg:col-span-1 order-2">
                             <HabitInsights
                                 healthData={healthData}
                             />
                         </div>
                     </div>
 
-                    {/* Focus Timer - Full Width */}
-                    <div className="grid grid-cols-1 gap-4 lg:gap-6">
+                    {/* Focus Timer - Full Width with proper mobile spacing */}
+                    <div className="w-full">
                             <FocusTimerWidget
                                 tasks={tasks}
                                 healthData={healthData}

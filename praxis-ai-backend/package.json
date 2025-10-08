@@ -1,0 +1,68 @@
+{
+  "name": "praxis-ai-backend",
+  "version": "1.0.0",
+  "description": "Production-ready backend for Praxis-AI productivity app",
+  "main": "src/app.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:simple": "node --loader ts-node/esm src/simple-server.ts",
+    "dev:local": "node --loader ts-node/esm src/server.ts",
+    "dev:full": "wrangler dev",
+    "start": "node dist/server.js",
+    "deploy": "wrangler deploy",
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "db:generate-types": "supabase gen types typescript --local > src/types/database.ts",
+    "db:reset": "supabase db reset",
+    "db:migrate": "supabase migration up",
+    "db:seed": "supabase db seed"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.1",
+    "@google/generative-ai": "^0.24.1",
+    "@hono/node-server": "^1.12.0",
+    "@notionhq/client": "^2.3.0",
+    "@supabase/supabase-js": "^2.45.4",
+    "@trpc/client": "^11.0.0",
+    "@trpc/server": "^11.0.0",
+    "axios": "^1.7.7",
+    "date-fns": "^4.1.0",
+    "hono": "^4.6.3",
+    "jose": "^5.9.6",
+    "nanoid": "^5.0.9",
+    "node-fetch": "^3.3.2",
+    "openai": "^4.67.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "eslint": "^9.17.0",
+    "supabase": "^1.200.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "wrangler": "^3.95.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "productivity",
+    "ai",
+    "backend",
+    "hono",
+    "trpc",
+    "supabase",
+    "typescript"
+  ],
+  "author": "Surface Tension LLC",
+  "license": "PROPRIETARY"
+}

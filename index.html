@@ -4,11 +4,20 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Permissions-Policy" content="browsing-topics=(), camera=(), microphone=(), geolocation=()" />
     <title>Praxis by Surface Tension</title>
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#A855F7">
     <link rel="apple-touch-icon" href="/icon.svg">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS will be handled by PostCSS in production -->
+    <script>
+      // Development-only Tailwind CSS via CDN
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.tailwindcss.com';
+        document.head.appendChild(script);
+      }
+    </script>
     <script>
       tailwind.config = {
         darkMode: 'class',

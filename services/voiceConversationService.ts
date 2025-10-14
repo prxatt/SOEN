@@ -8,15 +8,84 @@ const supabase = {
   from: (table: string) => ({
     select: (columns: string) => ({
       eq: (column: string, value: any) => ({
-        single: () => Promise.resolve({ data: null, error: null })
+        single: () => Promise.resolve({ 
+          data: getMockData(table, 'single'), 
+          error: null 
+        })
       })
     }),
-    insert: (data: any) => Promise.resolve({ data: null, error: null }),
+    insert: (data: any) => Promise.resolve({ 
+      data: getMockData(table, 'insert'), 
+      error: null 
+    }),
     update: (data: any) => ({
-      eq: (column: string, value: any) => Promise.resolve({ data: null, error: null })
+      eq: (column: string, value: any) => Promise.resolve({ 
+        data: getMockData(table, 'update'), 
+        error: null 
+      })
     })
   })
 };
+
+// Mock data generator based on table and operation type
+function getMockData(table: string, operation: string): any {
+  const mockData: Record<string, Record<string, any>> = {
+    'profiles': {
+      single: {
+        id: 'mock-user-id',
+        email: 'user@example.com',
+        mira_voice_preference: 'neutral',
+        mira_personality_mode: 'supportive'
+      },
+      insert: {
+        id: 'mock-user-id',
+        email: 'user@example.com',
+        mira_voice_preference: 'neutral',
+        mira_personality_mode: 'supportive'
+      },
+      update: {
+        id: 'mock-user-id',
+        mira_voice_preference: 'neutral',
+        mira_personality_mode: 'supportive'
+      }
+    },
+    'voice_sessions': {
+      single: {
+        id: 'mock-session-id',
+        user_id: 'mock-user-id',
+        voice_service_provider: 'openai_realtime',
+        transcript_encrypted: 'mock-encrypted-transcript',
+        transcript_iv: 'mock-iv',
+        realtime_transcription: [],
+        mira_animation_states: {
+          current: 'idle',
+          emotion: 'neutral'
+        },
+        duration_seconds: 0,
+        audio_url: null,
+        created_at: new Date().toISOString(),
+        ended_at: null
+      },
+      insert: {
+        id: 'mock-session-id',
+        user_id: 'mock-user-id',
+        voice_service_provider: 'openai_realtime',
+        created_at: new Date().toISOString()
+      },
+      update: {
+        id: 'mock-session-id',
+        audio_url: null,
+        mira_animation_states: {
+          current: 'idle',
+          emotion: 'neutral'
+        },
+        ended_at: new Date().toISOString()
+      }
+    }
+  };
+
+  return mockData[table]?.[operation] || null;
+}
 
 class VoiceConversationService {
   private sessions: Map<string, VoiceSession> = new Map();
@@ -28,7 +97,7 @@ class VoiceConversationService {
     // Initialize OpenAI Realtime API client
     this.realtimeClient = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-      dangerouslyAllowAPIKeyInBrowser: false
+      dangerouslyAllowBrowser: false
     });
     
     // Initialize ElevenLabs client
@@ -56,7 +125,7 @@ class VoiceConversationService {
       isActive: true,
       miraAnimationState: {
         current: 'idle',
-        emotion: this.mapPersonalityToEmotion(profile?.mira_personality_mode || 'supportive')
+        emotion: this.mapPersonalityToEmotion(profile?.mira_personality_mode || 'supportive') as 'neutral' | 'happy' | 'focused' | 'encouraging' | 'serious' | 'playful'
       },
       transcription: [],
       createdAt: new Date()
@@ -139,7 +208,7 @@ class VoiceConversationService {
   private onUserSpeechStart(sessionId: string) {
     this.updateMiraAnimation(sessionId, {
       current: 'listening',
-      emotion: 'focused'
+      emotion: 'focused' as 'neutral' | 'happy' | 'focused' | 'encouraging' | 'serious' | 'playful'
     });
     
     this.broadcastToClient(sessionId, {
@@ -168,7 +237,7 @@ class VoiceConversationService {
     // Mira transitions to thinking
     this.updateMiraAnimation(session.id, {
       current: 'thinking',
-      emotion: 'focused'
+      emotion: 'focused' as 'neutral' | 'happy' | 'focused' | 'encouraging' | 'serious' | 'playful'
     });
   }
 
@@ -179,7 +248,7 @@ class VoiceConversationService {
     
     this.updateMiraAnimation(session.id, {
       current: 'speaking',
-      emotion: this.detectEmotionFromAudio(mockAudioBuffer),
+      emotion: this.detectEmotionFromAudio(mockAudioBuffer) as 'neutral' | 'happy' | 'focused' | 'encouraging' | 'serious' | 'playful',
       mouthMovement
     });
 
@@ -441,7 +510,7 @@ IMPORTANT VOICE GUIDELINES:
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
-    session.miraAnimationState.emotion = this.mapPersonalityToEmotion(personalityMode);
+    session.miraAnimationState.emotion = this.mapPersonalityToEmotion(personalityMode) as 'neutral' | 'happy' | 'focused' | 'encouraging' | 'serious' | 'playful';
     
     // Update instructions for the session
     // This would require reinitializing the realtime connection

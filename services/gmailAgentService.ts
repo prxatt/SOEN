@@ -7,15 +7,266 @@ const supabase = {
   from: (table: string) => ({
     select: (columns: string) => ({
       eq: (column: string, value: any) => ({
-        single: () => Promise.resolve({ data: null, error: null })
+        single: () => Promise.resolve({ 
+          data: getMockData(table, 'single'), 
+          error: null 
+        }),
+        order: (column: string, options: any) => ({
+          limit: (count: number) => Promise.resolve({ 
+            data: getMockData(table, 'array'), 
+            error: null 
+          })
+        })
+      }),
+      order: (column: string, options: any) => ({
+        limit: (count: number) => Promise.resolve({ 
+          data: getMockData(table, 'array'), 
+          error: null 
+        })
       })
     }),
-    insert: (data: any) => Promise.resolve({ data: null, error: null }),
+    insert: (data: any) => Promise.resolve({ 
+      data: getMockData(table, 'insert'), 
+      error: null 
+    }),
     update: (data: any) => ({
-      eq: (column: string, value: any) => Promise.resolve({ data: null, error: null })
+      eq: (column: string, value: any) => Promise.resolve({ 
+        data: getMockData(table, 'update'), 
+        error: null 
+      })
     })
   })
 };
+
+// Mock data generator based on table and operation type
+function getMockData(table: string, operation: string): any {
+  const mockData: Record<string, Record<string, any>> = {
+    'gmail_integrations': {
+      single: {
+        id: 1,
+        user_id: 'mock-user-id',
+        access_token_encrypted: 'mock-access-token',
+        refresh_token_encrypted: 'mock-refresh-token',
+        access_token_iv: 'mock-iv',
+        refresh_token_iv: 'mock-refresh-iv',
+        token_expires_at: new Date(Date.now() + 3600000).toISOString(),
+        gmail_watch_expiration: new Date(Date.now() + 86400000).toISOString(),
+        gmail_history_id: 'mock-history-id',
+        watch_labels: ['INBOX', 'UNREAD'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      array: [{
+        id: 1,
+        user_id: 'mock-user-id',
+        access_token_encrypted: 'mock-access-token',
+        refresh_token_encrypted: 'mock-refresh-token',
+        access_token_iv: 'mock-iv',
+        refresh_token_iv: 'mock-refresh-iv',
+        token_expires_at: new Date(Date.now() + 3600000).toISOString(),
+        gmail_watch_expiration: new Date(Date.now() + 86400000).toISOString(),
+        gmail_history_id: 'mock-history-id',
+        watch_labels: ['INBOX', 'UNREAD'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }],
+      insert: {
+        id: 1,
+        user_id: 'mock-user-id',
+        access_token_encrypted: 'mock-access-token',
+        refresh_token_encrypted: 'mock-refresh-token',
+        access_token_iv: 'mock-iv',
+        refresh_token_iv: 'mock-refresh-iv',
+        token_expires_at: new Date(Date.now() + 3600000).toISOString(),
+        watch_labels: ['INBOX', 'UNREAD'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      update: {
+        id: 1,
+        gmail_watch_expiration: new Date(Date.now() + 86400000).toISOString(),
+        gmail_history_id: 'mock-history-id',
+        updated_at: new Date().toISOString()
+      }
+    },
+    'gmail_parsed_events': {
+      single: {
+        id: 1,
+        user_id: 'mock-user-id',
+        gmail_message_id: 'mock-message-id',
+        subject: 'Mock Email Subject',
+        sender: 'sender@example.com',
+        received_at: new Date().toISOString(),
+        email_body_snippet: 'Mock email body snippet',
+        event_detected: true,
+        event_title: 'Mock Event Title',
+        event_date: new Date(Date.now() + 86400000).toISOString(),
+        event_location: 'Mock Location',
+        event_confidence: 0.95,
+        extracted_details: { mock: 'details' },
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      array: [{
+        id: 1,
+        user_id: 'mock-user-id',
+        gmail_message_id: 'mock-message-id',
+        subject: 'Mock Email Subject',
+        sender: 'sender@example.com',
+        received_at: new Date().toISOString(),
+        email_body_snippet: 'Mock email body snippet',
+        event_detected: true,
+        event_title: 'Mock Event Title',
+        event_date: new Date(Date.now() + 86400000).toISOString(),
+        event_location: 'Mock Location',
+        event_confidence: 0.95,
+        extracted_details: { mock: 'details' },
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }],
+      insert: {
+        id: 1,
+        user_id: 'mock-user-id',
+        gmail_message_id: 'mock-message-id',
+        subject: 'Mock Email Subject',
+        sender: 'sender@example.com',
+        received_at: new Date().toISOString(),
+        email_body_snippet: 'Mock email body snippet',
+        event_detected: true,
+        event_title: 'Mock Event Title',
+        event_date: new Date(Date.now() + 86400000).toISOString(),
+        event_location: 'Mock Location',
+        event_confidence: 0.95,
+        extracted_details: { mock: 'details' },
+        status: 'pending',
+        created_at: new Date().toISOString()
+      },
+      update: {
+        id: 1,
+        status: 'confirmed',
+        updated_at: new Date().toISOString()
+      }
+    },
+    'profiles': {
+      single: {
+        id: 'mock-user-id',
+        email: 'user@example.com',
+        mira_voice_preference: 'neutral',
+        mira_personality_mode: 'supportive'
+      },
+      array: [{
+        id: 'mock-user-id',
+        email: 'user@example.com',
+        mira_voice_preference: 'neutral',
+        mira_personality_mode: 'supportive'
+      }],
+      insert: {
+        id: 'mock-user-id',
+        email: 'user@example.com',
+        mira_voice_preference: 'neutral',
+        mira_personality_mode: 'supportive'
+      },
+      update: {
+        id: 'mock-user-id',
+        mira_voice_preference: 'neutral',
+        mira_personality_mode: 'supportive'
+      }
+    },
+    'tasks': {
+      single: {
+        id: 1,
+        user_id: 'mock-user-id',
+        title: 'Mock Task Title',
+        category: 'Meeting',
+        start_time: new Date(Date.now() + 86400000).toISOString(),
+        planned_duration: 60,
+        location: 'Mock Location',
+        notes: 'Mock task notes',
+        extracted_from_image: false,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      },
+      array: [{
+        id: 1,
+        user_id: 'mock-user-id',
+        title: 'Mock Task Title',
+        category: 'Meeting',
+        start_time: new Date(Date.now() + 86400000).toISOString(),
+        planned_duration: 60,
+        location: 'Mock Location',
+        notes: 'Mock task notes',
+        extracted_from_image: false,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      }],
+      insert: {
+        id: 1,
+        user_id: 'mock-user-id',
+        title: 'Mock Task Title',
+        category: 'Meeting',
+        start_time: new Date(Date.now() + 86400000).toISOString(),
+        planned_duration: 60,
+        location: 'Mock Location',
+        notes: 'Mock task notes',
+        extracted_from_image: false,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      },
+      update: {
+        id: 1,
+        status: 'completed',
+        updated_at: new Date().toISOString()
+      }
+    },
+    'notifications': {
+      single: {
+        id: 1,
+        user_id: 'mock-user-id',
+        title: 'Mock Notification',
+        message: 'Mock notification message',
+        type: 'info',
+        action_label: 'Mock Action',
+        action_data: { mock: 'data' },
+        read: false,
+        created_at: new Date().toISOString()
+      },
+      array: [{
+        id: 1,
+        user_id: 'mock-user-id',
+        title: 'Mock Notification',
+        message: 'Mock notification message',
+        type: 'info',
+        action_label: 'Mock Action',
+        action_data: { mock: 'data' },
+        read: false,
+        created_at: new Date().toISOString()
+      }],
+      insert: {
+        id: 1,
+        user_id: 'mock-user-id',
+        title: 'Mock Notification',
+        message: 'Mock notification message',
+        type: 'info',
+        action_label: 'Mock Action',
+        action_data: { mock: 'data' },
+        read: false,
+        created_at: new Date().toISOString()
+      },
+      update: {
+        id: 1,
+        read: true,
+        updated_at: new Date().toISOString()
+      }
+    }
+  };
+
+  return mockData[table]?.[operation] || null;
+}
 
 class GmailAgentService {
   private gmail: any;

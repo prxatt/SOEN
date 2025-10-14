@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Category, TaskStatus, Project, Note } from '../types';
 import { SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, ClockIcon, LinkIcon, ArrowPathIcon, LightBulbIcon, HeartIcon, RocketIcon, UserIcon, ChartBarIcon, FlagIcon } from './Icons';
 import { getAutocompleteSuggestions } from '../services/geminiService';
-import { parseTaskFromString } from '../services/kikoAIService';
+import { parseTaskFromString } from '../services/miraAIService';
 import { getTopCategories } from '../utils/taskUtils';
 
 interface NewTaskModalProps {

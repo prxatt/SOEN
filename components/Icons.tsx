@@ -322,8 +322,8 @@ export const UserCircleIcon: React.FC<IconProps> = ({ size = 24, ...props }) => 
     </svg>
 );
 
-// Enhanced Kiko Icon with better visual consistency
-export const KikoIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+// Enhanced Mira Icon with better visual consistency
+export const MiraIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     <svg 
         viewBox="0 0 24 24" 
         fill="none" 
@@ -1663,7 +1663,7 @@ export default {
     CalendarIcon,
     DocumentTextIcon,
     UserCircleIcon,
-    KikoIcon,
+    MiraIcon,
     
     // Actions
     SparklesIcon,

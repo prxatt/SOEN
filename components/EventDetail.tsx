@@ -5,7 +5,7 @@ import { CheckCircleIcon, XMarkIcon, SparklesIcon, DocumentTextIcon, LinkIcon, A
 import * as Icons from './Icons';
 import { ResponsiveContainer, BarChart, Bar, Cell, RadialBarChart, RadialBar, Tooltip } from 'recharts';
 import { getAutocompleteSuggestions } from '../services/geminiService';
-import { kikoRequest } from '../services/kikoAIService';
+import { miraRequest } from '../services/miraAIService';
 
 interface EventDetailProps {
     task: Task;
@@ -250,7 +250,7 @@ function EventDetail({
         
         setIsParsing(true);
         try {
-            const { data: updatePayload } = await kikoRequest('parse_task_update', { 
+            const { data: updatePayload } = await miraRequest('parse_task_update', { 
                 command: command, 
                 task: { ...currentTaskState, title: newTitleCandidate } 
             });

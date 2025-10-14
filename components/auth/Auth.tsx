@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Login from './Login';
 import Signup from './Signup';
-import { PraxisLogo } from '../Icons';
+import { SoenLogo } from '../Icons';
 
 interface AuthProps {
     onLogin: () => void;
@@ -59,8 +59,8 @@ function Auth({ onLogin }: AuthProps) {
                 transition={{ duration: 0.5 }}
                 className="text-center mb-8"
             >
-                <PraxisLogo className="w-16 h-16 mx-auto mb-3 text-black dark:text-white" />
-                <h1 className="text-4xl font-bold font-display text-black dark:text-white">Welcome to Praxis</h1>
+                <SoenLogo className="w-16 h-16 mx-auto mb-3 text-black dark:text-white" />
+                <h1 className="text-4xl font-bold font-display text-black dark:text-white">Welcome to Soen</h1>
                 <p className="text-md text-black/70 dark:text-white/70">Your AI-powered command center.</p>
             </motion.div>
                 

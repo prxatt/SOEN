@@ -214,10 +214,10 @@ type IconProps = React.SVGProps<SVGSVGElement> & {
   size?: number;
 };
 
-// Enhanced Praxis Logo with better proportions
-// FIX: Convert PraxisLogo to a motion.svg component to accept animation props like `variants`.
-// FIX: Use a combined type for PraxisLogo props to include standard SVG props and motion props.
-export const PraxisLogo: React.FC<IconProps & MotionProps> = ({ size = 24, ...props }) => (
+// Enhanced Soen Logo with better proportions
+// FIX: Convert SoenLogo to a motion.svg component to accept animation props like `variants`.
+// FIX: Use a combined type for SoenLogo props to include standard SVG props and motion props.
+export const SoenLogo: React.FC<IconProps & MotionProps> = ({ size = 24, ...props }) => (
     <motion.svg 
         viewBox="0 0 100 100" 
         fill="none" 
@@ -1656,7 +1656,7 @@ export const EyeIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
 // Layout Components Export
 export default {
     // Core brand
-    PraxisLogo,
+    SoenLogo,
     
     // Navigation
     HomeIcon,

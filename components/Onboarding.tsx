@@ -49,7 +49,7 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
     const steps = [
         {
             icon: <SparklesIcon />,
-            title: "Welcome to Praxis",
+            title: "Welcome to Soen",
             content: "Your AI-powered partner for turning knowledge into action. Let's set up your command center."
         },
         {
@@ -69,19 +69,19 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
         {
             icon: <FlagIcon />,
             title: "Define Your Vision",
-            content: "Everything starts with ambition. Praxis uses your goals as the foundation for its strategic insights.",
+            content: "Everything starts with ambition. Soen uses your goals as the foundation for its strategic insights.",
             isInput: false
         },
         {
             icon: <DocumentTextIcon />,
             title: "Build Your Second Brain",
-            content: "Your notes are more than text. Praxis analyzes them to find connections, suggest ideas, and turn thoughts into assets.",
+            content: "Your notes are more than text. Soen analyzes them to find connections, suggest ideas, and turn thoughts into assets.",
             isInput: false
         },
         {
             icon: <HeartIcon />,
             title: "Personalize Your Experience",
-            content: "Praxis works best when it knows you. What are some of your hobbies or interests?",
+            content: "Soen works best when it knows you. What are some of your hobbies or interests?",
             isInput: true,
             value: userHobbies,
             setter: setUserHobbies,
@@ -90,7 +90,7 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
         {
             icon: <RocketIcon />,
             title: "What is your ultimate goal?",
-            content: "Let's set your primary long-term objective. This will become the heart of your Praxis strategy.",
+            content: "Let's set your primary long-term objective. This will become the heart of your Soen strategy.",
             isInput: true,
             value: longTermGoal,
             setter: setLongTermGoal,

@@ -4,7 +4,7 @@ import { Screen, Note, ChatMessage, ChatSession, Notebook } from '../types';
 import { getChatContextualPrompts } from '../services/geminiService';
 import { UserIcon, PaperAirplaneIcon, PaperClipIcon, XMarkIcon, EllipsisVerticalIcon, TrashIcon, PencilIcon, DocumentPlusIcon, Bars3Icon, DocumentTextIcon, ArrowUpOnSquareIcon, BabyPenguinIcon, ArrowPathIcon, ChatBubbleOvalLeftEllipsisIcon } from './Icons';
 
-interface PraxisAIProps {
+interface SoenAIProps {
   chatHistory: ChatSession[];
   activeChatId: number | null;
   setActiveChatId: React.Dispatch<React.SetStateAction<number | null>>;
@@ -118,7 +118,7 @@ function ChatHistorySidebar({
                                     <p className={`text-xs truncate ${activeChatId === chat.id ? 'text-text/70' : 'text-text-secondary/80'}`}>
                                         {chat.messages.length > 0 ? (
                                             <>
-                                                <span className="font-medium">{chat.messages[chat.messages.length - 1].role === 'user' ? 'You: ' : 'Kiko: '}</span>
+                                                <span className="font-medium">{chat.messages[chat.messages.length - 1].role === 'user' ? 'You: ' : 'Mira: '}</span>
                                                 {chat.messages[chat.messages.length - 1].text}
                                             </>
                                         ) : 'No messages yet'}
@@ -237,7 +237,7 @@ function ChatInterface(props: {
     
     const formatChatForNote = () => {
         return activeChat.messages.map(m =>
-            `<p><strong>${m.role === 'user' ? 'You' : 'Kiko'}:</strong> ${m.text}</p>`
+            `<p><strong>${m.role === 'user' ? 'You' : 'Mira'}:</strong> ${m.text}</p>`
         ).join('');
     };
     
@@ -263,7 +263,7 @@ function ChatInterface(props: {
                 {activeChat.messages.length === 0 && (
                      <div className="text-center text-text-secondary animate-fade-in flex flex-col items-center justify-center h-full">
                         <BabyPenguinIcon className="w-24 h-24 mx-auto mb-4 text-accent/20" />
-                        <h3 className="text-2xl font-bold font-display text-text">Kiko is ready.</h3>
+                        <h3 className="text-2xl font-bold font-display text-text">Mira is ready.</h3>
                         <p className="text-base mt-2">Your strategic partner is listening.</p>
                         <div className="flex flex-wrap items-center justify-center gap-3 mt-10 max-w-2xl mx-auto">
                             {getChatContextualPrompts(previousScreen || 'Dashboard').map((prompt) => (
@@ -323,7 +323,7 @@ function ChatInterface(props: {
                 <form onSubmit={handleChatSubmit} className="flex items-center gap-2 p-2">
                     <input type="file" ref={fileInputRef} onChange={handleFileAttach} className="hidden" accept="image/*" />
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3.5 hover:bg-card rounded-full text-text-secondary"><PaperClipIcon className="w-6 h-6" /></button>
-                    <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ask Kiko anything..." className="flex-grow bg-card border-none focus:ring-0 rounded-full py-3 px-5 text-base" />
+                    <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ask Mira anything..." className="flex-grow bg-card border-none focus:ring-0 rounded-full py-3 px-5 text-base" />
                     <button type="submit" disabled={isAiReplying || (!chatInput.trim() && !chatAttachment)} className="p-3.5 rounded-full bg-accent text-white disabled:bg-zinc-300 dark:disabled:bg-zinc-600 transition-colors"><PaperAirplaneIcon className="w-6 h-6" /></button>
                 </form>
             </div>
@@ -335,7 +335,7 @@ function ChatInterface(props: {
 };
 
 
-function PraxisAI(props: PraxisAIProps) {
+function SoenAI(props: SoenAIProps) {
   const { chatHistory, activeChatId, setActiveChatId, onNewChat, onDeleteChat, onRenameChat, showToast, notes, addNote, updateNote, lastDeletedChat, onRestoreChat } = props;
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
   
@@ -364,7 +364,7 @@ function PraxisAI(props: PraxisAIProps) {
              <button onClick={() => setIsHistoryVisible(!isHistoryVisible)} className="p-2 mr-2 rounded-lg bg-card hover:bg-border">
                 <Bars3Icon className="w-6 h-6"/>
             </button>
-            <BabyPenguinIcon className="w-8 h-8 text-accent" /> Kiko AI
+            <BabyPenguinIcon className="w-8 h-8 text-accent" /> Mira AI
         </h2>
       </div>
 
@@ -455,4 +455,4 @@ const MenuItem = ({ icon, label, onClick, className }: { icon?: React.ReactNode;
     </button>
 );
 
-export default PraxisAI;
+export default SoenAI;

@@ -5,7 +5,7 @@ import type { Screen, Goal, GoalTerm } from '../types';
 import { REWARDS_CATALOG } from '../constants';
 
 interface ProfileProps {
-    praxisFlow: number;
+    soenFlow: number;
     setScreen: (screen: Screen) => void;
     goals: Goal[];
     setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
@@ -63,7 +63,7 @@ function GoalsHub({ goals, setGoals }: GoalsHubProps) {
     );
 };
 
-function Profile({ praxisFlow, setScreen, goals, setGoals, activeFocusBackground, setActiveFocusBackground, purchasedRewards }: ProfileProps) {
+function Profile({ soenFlow, setScreen, goals, setGoals, activeFocusBackground, setActiveFocusBackground, purchasedRewards }: ProfileProps) {
   const focusBackgrounds = REWARDS_CATALOG.filter(r => r.type === 'focus_background' && purchasedRewards.includes(r.id));
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="h-full overflow-y-auto pb-4">
@@ -98,13 +98,13 @@ function Profile({ praxisFlow, setScreen, goals, setGoals, activeFocusBackground
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
             >
-                <h3 className="font-bold mb-4 text-xl font-display">Praxis Flow & Rewards</h3>
+                <h3 className="font-bold mb-4 text-xl font-display">Soen Flow & Rewards</h3>
                 <div className="flex flex-col sm:flex-row justify-between items-center bg-bg p-4 rounded-xl">
                     <div className="text-center sm:text-left mb-4 sm:mb-0">
                         <p className="text-sm text-text-secondary">Your Balance</p>
                         <p className="text-4xl font-bold font-display flex items-center gap-2">
                             <SparklesIcon className="w-7 h-7 text-accent"/>
-                            {praxisFlow} Flow
+                            {soenFlow} Flow
                         </p>
                     </div>
                     <div className="flex gap-3">

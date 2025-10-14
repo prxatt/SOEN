@@ -1,5 +1,5 @@
 {
-  "name": "praxis-ai",
+  "name": "soen",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -16,12 +16,17 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.18.0",
     "@google/genai": "^1.15.0",
+    "@notionhq/client": "^5.2.0",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.3.0",
     "@types/three": "^0.180.0",
+    "deepgram": "^1.0.3",
     "framer-motion": "^11.18.2",
+    "googleapis": "^162.0.0",
     "lucide-react": "^0.544.0",
+    "openai": "^6.3.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-draggable": "4.4.6",

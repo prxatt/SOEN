@@ -1,0 +1,250 @@
+# Cloudflare Workers Configuration for Soen Backend
+name = "soen-backend"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+ENVIRONMENT = "production"
+MIRA_AI_VERSION = "1.0.0"
+SOEN_API_VERSION = "v1"
+
+# AI Service Configuration
+OPENAI_API_KEY = ""
+GOOGLE_API_KEY = ""
+ELEVENLABS_API_KEY = ""
+DEEPGRAM_API_KEY = ""
+
+# Database Configuration
+SUPABASE_URL = ""
+SUPABASE_ANON_KEY = ""
+SUPABASE_SERVICE_ROLE_KEY = ""
+
+# Gmail Integration
+GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_SECRET = ""
+GOOGLE_REDIRECT_URI = ""
+GOOGLE_CLOUD_PROJECT = ""
+
+# Notion Integration
+NOTION_API_KEY = ""
+
+# Security Configuration
+JWT_SECRET = ""
+ENCRYPTION_KEY = ""
+
+# Feature Flags
+ENABLE_VOICE_CONVERSATION = "true"
+ENABLE_VISION_AI = "true"
+ENABLE_GMAIL_INTEGRATION = "true"
+ENABLE_NOTION_SYNC = "true"
+
+# Rate Limiting
+RATE_LIMIT_REQUESTS_PER_MINUTE = "100"
+RATE_LIMIT_REQUESTS_PER_HOUR = "1000"
+
+# Mira AI Configuration
+MIRA_PERSONALITY_MODES = "supportive,tough_love,analytical,motivational"
+MIRA_VOICE_PREFERENCES = "neutral,energetic,calm,professional"
+MIRA_MAX_CONVERSATION_LENGTH = "50"
+
+# Soen App Configuration
+SOEN_MAX_NOTES_PER_USER = "1000"
+SOEN_MAX_TASKS_PER_USER = "500"
+SOEN_MAX_PROJECTS_PER_USER = "100"
+
+# Cache Configuration
+CACHE_TTL_SECONDS = "3600"
+CACHE_MAX_SIZE_MB = "100"
+
+# File Upload Configuration
+MAX_FILE_SIZE_MB = "10"
+ALLOWED_FILE_TYPES = "image/jpeg,image/png,image/gif,application/pdf,text/plain"
+
+# Notification Configuration
+NOTIFICATION_RETENTION_DAYS = "30"
+NOTIFICATION_BATCH_SIZE = "50"
+
+# Analytics Configuration
+ANALYTICS_ENABLED = "true"
+ANALYTICS_RETENTION_DAYS = "90"
+
+# Development Configuration
+DEBUG_MODE = "false"
+LOG_LEVEL = "info"
+
+# KV Namespaces for Caching and Session Management
+[[kv_namespaces]]
+binding = "SOEN_CACHE"
+id = "your-soen-cache-kv-namespace-id"
+preview_id = "your-soen-cache-preview-kv-namespace-id"
+
+[[kv_namespaces]]
+binding = "MIRA_SESSIONS"
+id = "your-mira-sessions-kv-namespace-id"
+preview_id = "your-mira-sessions-preview-kv-namespace-id"
+
+[[kv_namespaces]]
+binding = "USER_PREFERENCES"
+id = "your-user-preferences-kv-namespace-id"
+preview_id = "your-user-preferences-preview-kv-namespace-id"
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "your-rate-limits-kv-namespace-id"
+preview_id = "your-rate-limits-preview-kv-namespace-id"
+
+# R2 Buckets for File Storage
+[[r2_buckets]]
+binding = "USER_FILES"
+bucket_name = "soen-user-files"
+preview_bucket_name = "soen-user-files-preview"
+
+[[r2_buckets]]
+binding = "MIRA_VOICE_CACHE"
+bucket_name = "mira-voice-cache"
+preview_bucket_name = "mira-voice-cache-preview"
+
+[[r2_buckets]]
+binding = "VISION_AI_CACHE"
+bucket_name = "vision-ai-cache"
+preview_bucket_name = "vision-ai-cache-preview"
+
+[[r2_buckets]]
+binding = "NOTION_SYNC_CACHE"
+bucket_name = "notion-sync-cache"
+preview_bucket_name = "notion-sync-cache-preview"
+
+# Durable Objects for Real-time Features
+[[durable_objects.bindings]]
+name = "VOICE_SESSIONS"
+class_name = "VoiceSessionDO"
+
+[[durable_objects.bindings]]
+name = "REALTIME_NOTIFICATIONS"
+class_name = "RealtimeNotificationDO"
+
+[[durable_objects.bindings]]
+name = "MIRA_CONVERSATIONS"
+class_name = "MiraConversationDO"
+
+# Cron Triggers for Automated Tasks
+[triggers]
+crons = [
+  "0 7 * * *",   # Daily Mira briefing generation at 7 AM
+  "0 * * * *",   # Hourly AI request counter reset
+  "0 0 * * *",   # Daily cleanup of expired sessions
+  "0 2 * * *",   # Daily backup of user data
+  "0 6 * * 1",   # Weekly analytics report generation
+  "0 9 * * 1-5", # Weekday morning task prioritization
+  "0 18 * * 1-5", # Weekday evening progress review
+  "0 12 * * 0",  # Weekly Mira insights generation
+  "0 0 1 * *"    # Monthly user analytics and insights
+]
+
+# Environment-specific configurations
+[env.production]
+name = "soen-backend-prod"
+vars = { ENVIRONMENT = "production", DEBUG_MODE = "false" }
+
+[env.staging]
+name = "soen-backend-staging"
+vars = { ENVIRONMENT = "staging", DEBUG_MODE = "true" }
+
+[env.development]
+name = "soen-backend-dev"
+vars = { ENVIRONMENT = "development", DEBUG_MODE = "true", LOG_LEVEL = "debug" }
+
+# Build Configuration
+[build]
+command = "npm run build"
+cwd = "."
+
+# Deployment Configuration
+[deployment]
+workers = [
+  { name = "soen-backend-prod", environment = "production" },
+  { name = "soen-backend-staging", environment = "staging" }
+]
+
+# Monitoring and Observability
+[observability]
+metrics = true
+logs = true
+traces = true
+
+# Security Headers
+[security]
+headers = [
+  "X-Content-Type-Options: nosniff",
+  "X-Frame-Options: DENY",
+  "X-XSS-Protection: 1; mode=block",
+  "Strict-Transport-Security: max-age=31536000; includeSubDomains",
+  "Content-Security-Policy: default-src 'self'"
+]
+
+# CORS Configuration
+[cors]
+allowed_origins = [
+  "https://soen.app",
+  "https://app.soen.com",
+  "https://localhost:3000"
+]
+allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+allowed_headers = ["Content-Type", "Authorization", "X-Requested-With"]
+max_age = 86400
+
+# Rate Limiting Configuration
+[rate_limiting]
+enabled = true
+requests_per_minute = 100
+requests_per_hour = 1000
+burst_limit = 50
+
+# Mira AI Specific Configuration
+[mira_ai]
+max_conversation_length = 50
+personality_modes = ["supportive", "tough_love", "analytical", "motivational"]
+voice_preferences = ["neutral", "energetic", "calm", "professional"]
+response_timeout_ms = 30000
+max_retries = 3
+
+# Soen App Specific Configuration
+[soen_app]
+max_notes_per_user = 1000
+max_tasks_per_user = 500
+max_projects_per_user = 100
+max_file_size_mb = 10
+session_timeout_minutes = 60
+backup_retention_days = 30
+
+# Integration Configuration
+[integrations]
+gmail = { enabled = true, auto_add_threshold = 0.9 }
+notion = { enabled = true, sync_interval_minutes = 5 }
+google_calendar = { enabled = true, sync_interval_minutes = 10 }
+voice_conversation = { enabled = true, max_session_duration_minutes = 30 }
+vision_ai = { enabled = true, max_image_size_mb = 5 }
+
+# Performance Configuration
+[performance]
+enable_compression = true
+enable_caching = true
+cache_ttl_seconds = 3600
+max_concurrent_requests = 1000
+timeout_seconds = 30
+
+# Error Handling Configuration
+[error_handling]
+enable_error_reporting = true
+error_retention_days = 30
+max_error_logs_per_hour = 1000
+fallback_responses = true
+
+# Analytics Configuration
+[analytics]
+enabled = true
+retention_days = 90
+batch_size = 100
+flush_interval_seconds = 60
+track_user_behavior = true
+track_performance_metrics = true

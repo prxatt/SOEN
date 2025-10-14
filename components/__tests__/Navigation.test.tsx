@@ -39,12 +39,12 @@ describe('Navigation', () => {
     expect(screen.getByLabelText('Notes')).toBeInTheDocument()
   })
 
-  it('should render Kiko AI button prominently', () => {
+  it('should render Mira AI button prominently', () => {
     render(<Navigation {...defaultProps} />)
     
-    // Look for the Kiko AI button by text content instead of label
-    const kikoButton = screen.getByText('Kiko AI')
-    expect(kikoButton).toBeInTheDocument()
+    // Look for the Mira AI button by text content instead of label
+    const miraButton = screen.getByText('Mira AI')
+    expect(miraButton).toBeInTheDocument()
   })
 
   it('should expand on hover', async () => {

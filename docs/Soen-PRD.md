@@ -1,7 +1,7 @@
-# Praxis AI — Product Requirements Document (PRD)
+# Soen — Product Requirements Document (PRD)
 
 ## Executive Summary & Vision
-Praxis AI is a personal AI that plans, executes, and reflects with you, turning messy ambition into reliable output. It pairs a context-aware copilot with a minimal workflow OS (tasks, notes, calendar, focus), delivering Jobs-level simplicity, Bezos-level customer obsession, and Altman-level AI leverage. Target: the iPhone of productivity—magical, default-on, and indispensable.
+Soen is a personal AI that plans, executes, and reflects with you, turning messy ambition into reliable output. It pairs a context-aware copilot with a minimal workflow OS (tasks, notes, calendar, focus), delivering Jobs-level simplicity, Bezos-level customer obsession, and Altman-level AI leverage. Target: the iPhone of productivity—magical, default-on, and indispensable.
 
 ## Target Market & User Personas
 - Creators, entrepreneurs, productivity enthusiasts.

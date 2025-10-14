@@ -22,7 +22,7 @@ const generateMissionBriefingWithGemini = async (
     const notesSummary = notes.map(n => `- ${n.title}`).slice(0, 10).join('\n');
     
     const prompt = `
-    Act as Kiko, a world-class AI Systems Architect and strategic advisor for Pratt. Your mission is to provide a hyper-relevant, fun, and gamified intelligence report for the upcoming ${timeframe}. The current date is ${new Date().toDateString()}.
+    Act as Mira, a world-class AI Systems Architect and strategic advisor for Pratt. Your mission is to provide a hyper-relevant, fun, and gamified intelligence report for the upcoming ${timeframe}. The current date is ${new Date().toDateString()}.
 
     **Core Objective:** Analyze the provided data to find an actionable opportunity for a new prototype for his brand 'Surface Tension'. Your tone should be sharp, encouraging, and slightly edgy.
 
@@ -89,7 +89,7 @@ const generateMissionBriefingWithGemini = async (
     }
 }
 
-const getErrorFallbackData = (taskType: KikoTaskType, payload: any): any => {
+const getErrorFallbackData = (taskType: MiraTaskType, payload: any): any => {
     switch (taskType) {
         case 'parse_command':
         case 'parse_task_update':
@@ -104,7 +104,7 @@ const getErrorFallbackData = (taskType: KikoTaskType, payload: any): any => {
                         type: 'text',
                         title: 'AI Connection Error',
                         icon: 'BoltSlashIcon',
-                        content: "Kiko is currently unable to connect to the strategic insight network. Please check your API key configuration or try again later.",
+                        content: "Mira is currently unable to connect to the strategic insight network. Please check your API key configuration or try again later.",
                     },
                     {
                         type: 'metric',
@@ -122,7 +122,7 @@ const getErrorFallbackData = (taskType: KikoTaskType, payload: any): any => {
 };
 
 
-export type KikoTaskType = 
+export type MiraTaskType = 
     | 'generate_briefing' 
     | 'analyze_image' 
     | 'parse_command'
@@ -137,11 +137,11 @@ export type KikoTaskType =
     | 'generate_note_from_template'
     | 'generate_daily_image';
 
-export const kikoRequest = async (
-    taskType: KikoTaskType,
+export const miraRequest = async (
+    taskType: MiraTaskType,
     payload: any
 ): Promise<{ data: any; fallbackUsed: boolean; }> => {
-    console.log('Kiko orchestrator received request:', taskType);
+    console.log('Mira orchestrator received request:', taskType);
     let primaryAgent: Function, fallbackAgent: Function | null = null;
     let finalPayload = payload;
 
@@ -371,7 +371,7 @@ export const kikoRequest = async (
         }
 
         default:
-             console.error(`Unknown Kiko task type or no primary agent defined: ${taskType}`);
+             console.error(`Unknown Mira task type or no primary agent defined: ${taskType}`);
              return { data: null, fallbackUsed: false };
 
     }
@@ -398,7 +398,7 @@ export const kikoRequest = async (
     }
 };
 
-// FIX: Export a wrapper for the 'parse_command' Kiko task to be used in the NewTaskModal.
+// FIX: Export a wrapper for the 'parse_command' Mira task to be used in the NewTaskModal.
 export const parseTaskFromString = (command: string): Promise<{ data: Partial<Task>, fallbackUsed: boolean }> => {
-    return kikoRequest('parse_command', { command });
+    return miraRequest('parse_command', { command });
 };

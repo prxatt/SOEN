@@ -17,7 +17,7 @@ describe('Auth', () => {
     expect(authContainer).toHaveClass('bg-white', 'dark:bg-black')
   })
 
-  it('should render the Praxis logo with correct colors', () => {
+  it('should render the Soen logo with correct colors', () => {
     const { container } = render(<Auth onLogin={mockOnLogin} />)
     
     // Check that the SVG logo is rendered with brand colors
@@ -29,7 +29,7 @@ describe('Auth', () => {
   it('should render welcome text with proper colors', () => {
     render(<Auth onLogin={mockOnLogin} />)
     
-    const heading = screen.getByText('Welcome to Praxis')
+    const heading = screen.getByText('Welcome to Soen')
     expect(heading).toHaveClass('text-black', 'dark:text-white')
     
     const subtitle = screen.getByText('Your AI-powered command center.')

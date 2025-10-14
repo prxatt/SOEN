@@ -63,7 +63,7 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-h-[calc(100vh-8.5rem)] overflow-y-auto pb-4 pr-2 -mr-2">
       <div className="mb-8">
         <h2 className="text-3xl font-bold font-display flex items-center gap-2"><Cog6ToothIcon className="w-8 h-8"/> Settings</h2>
-        <p className="text-text-secondary">Manage your Praxis experience.</p>
+        <p className="text-text-secondary">Manage your Soen experience.</p>
       </div>
 
       <div className="space-y-8">
@@ -73,7 +73,7 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                 <SettingsRow 
                     icon={<GoogleCalendarIcon className="w-6 h-6 text-[#4285F4]" />}
                     title="Google Calendar"
-                    subtitle="Sync your events with Praxis"
+                    subtitle="Sync your events with Soen"
                     onClick={onSyncCalendar}
                 />
                 <SettingsRow 
@@ -132,7 +132,7 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                  <SettingsRow 
                     icon={<SparklesIcon className="w-6 h-6 text-purple-400" />}
                     title="Browser Push Notifications"
-                    subtitle="Get notifications even when Praxis is closed"
+                    subtitle="Get notifications even when Soen is closed"
                     action={
                         <button
                             onClick={async () => {

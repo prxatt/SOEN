@@ -1,6 +1,6 @@
-# How to Connect Other AI Models to Praxis
+# How to Connect Other AI Models to Soen
 
-Praxis is designed to be a powerful, multi-agent AI system. While it comes with Google's Gemini pre-configured, you can enhance its capabilities by connecting other powerful AI models from providers like OpenAI (for vision) and Groq (for high-speed tasks).
+Soen is designed to be a powerful, multi-agent AI system. While it comes with Google's Gemini pre-configured, you can enhance its capabilities by connecting other powerful AI models from providers like OpenAI (for vision) and Groq (for high-speed tasks).
 
 This guide will show you how to do this by using something called "environment variables."
 
@@ -32,7 +32,7 @@ First, you'll need to get the API keys from the services you want to use.
 
 ### Step 2: Add the Keys to Your Environment
 
-Now, you need to tell the Praxis application about these keys. The way you do this depends on where the application is hosted. In most modern hosting platforms (like Vercel, Netlify, or a custom server), you'll find a settings section for "Environment Variables."
+Now, you need to tell the Soen application about these keys. The way you do this depends on where the application is hosted. In most modern hosting platforms (like Vercel, Netlify, or a custom server), you'll find a settings section for "Environment Variables."
 
 You will need to add the following variables:
 
@@ -57,4 +57,4 @@ And another one:
 
 ### That's It!
 
-Once you have added these keys and redeployed or restarted your application, Praxis will automatically detect them and activate the corresponding AI agents. You'll notice faster command parsing and new capabilities for analyzing images in your notes and chats.
+Once you have added these keys and redeployed or restarted your application, Soen will automatically detect them and activate the corresponding AI agents. You'll notice faster command parsing and new capabilities for analyzing images in your notes and chats.

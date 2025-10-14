@@ -1,7 +1,7 @@
 /**
- * PraxisRewards Component
+ * SoenRewards Component
  * 
- * Enhanced 3D Praxis Rewards Visual with Motivation
+ * Enhanced 3D Soen Rewards Visual with Motivation
  * Features:
  * - 3D animated logo with progress ring
  * - Points calculation system
@@ -16,12 +16,12 @@ import { Task, HealthData } from '../../types';
 import { safeGet } from '../../utils/validation';
 import { SparklesIcon, FireIcon, CheckCircleIcon, BoltIcon } from '../Icons';
 
-interface PraxisRewardsProps {
+interface SoenRewardsProps {
     tasks: Task[];
     healthData: HealthData;
 }
 
-const PraxisRewards: React.FC<PraxisRewardsProps> = ({ tasks, healthData }) => {
+const SoenRewards: React.FC<SoenRewardsProps> = ({ tasks, healthData }) => {
     const [rotation, setRotation] = useState(0);
     const [pulseScale, setPulseScale] = useState(1);
     const [currentPoints, setCurrentPoints] = useState(0);
@@ -100,7 +100,7 @@ const PraxisRewards: React.FC<PraxisRewardsProps> = ({ tasks, healthData }) => {
             {/* Header with Level and Points */}
             <div className="flex items-center justify-between mb-4">
                 <div>
-                    <h3 className="text-white text-2xl font-bold mb-1">Praxis Rewards</h3>
+                    <h3 className="text-white text-2xl font-bold mb-1">Soen Rewards</h3>
                     <p className="text-gray-400 text-sm">Level {level} • {currentPoints} points</p>
                 </div>
                 <div className="text-right">
@@ -238,4 +238,4 @@ const PraxisRewards: React.FC<PraxisRewardsProps> = ({ tasks, healthData }) => {
     );
 };
 
-export default PraxisRewards;
+export default SoenRewards;

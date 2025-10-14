@@ -1,7 +1,7 @@
 import React from 'react';
 // FIX: Import Variants to correctly type animation variants.
 import { motion, Variants } from 'framer-motion';
-import { PraxisLogo } from './Icons';
+import { SoenLogo } from './Icons';
 
 // FIX: Explicitly type pathVariants as Variants to ensure correct type inference for properties like 'ease'.
 const pathVariants: Variants = {
@@ -32,7 +32,7 @@ function LoadingScreen() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            <PraxisLogo 
+            <SoenLogo 
                 className="w-24 h-24 text-black dark:text-white" 
                 variants={{
                     hidden: { opacity: 0 },
@@ -56,7 +56,7 @@ function LoadingScreen() {
                     stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"
                     variants={pathVariants}
                 />
-            </PraxisLogo>
+            </SoenLogo>
         </motion.div>
          <motion.p 
             className="mt-4 text-black/80 dark:text-white/80 font-semibold"
@@ -64,7 +64,7 @@ function LoadingScreen() {
             animate={{ opacity: 1 }}
             transition={{ delay: 1, duration: 0.5 }}
         >
-            Synchronizing with Kiko...
+            Synchronizing with Mira...
         </motion.p>
     </div>
   );

@@ -1,7 +1,7 @@
-# AI Insights for Kiko Backend Development
+# AI Insights for Mira Backend Development
 
 ## Overview
-This document outlines the AI-powered insights and intelligence features implemented in the Praxis Dashboard that should be integrated into the Kiko AI backend system. These insights are designed to help creative entrepreneurs optimize their productivity, health, and work-life balance.
+This document outlines the AI-powered insights and intelligence features implemented in the Soen Dashboard that should be integrated into the Mira AI backend system. These insights are designed to help creative entrepreneurs optimize their productivity, health, and work-life balance.
 
 ## Core AI Intelligence Features
 
@@ -318,6 +318,6 @@ GET /api/insights/focus-recommendations
 
 ## Conclusion
 
-These AI insights form the foundation of Praxis AI's intelligence system, designed to help creative entrepreneurs achieve optimal productivity while maintaining healthy work-life balance. The backend implementation should prioritize user privacy, data accuracy, and actionable recommendations that directly impact user success.
+These AI insights form the foundation of Soen's intelligence system, designed to help creative entrepreneurs achieve optimal productivity while maintaining healthy work-life balance. The backend implementation should prioritize user privacy, data accuracy, and actionable recommendations that directly impact user success.
 
 The system should be designed for scalability, allowing for continuous learning and improvement as more user data becomes available. Regular evaluation and iteration will ensure the insights remain relevant and valuable to users.

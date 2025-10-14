@@ -1,6 +1,6 @@
 // types.ts
 
-export type Screen = 'Dashboard' | 'Schedule' | 'Notes' | 'Profile' | 'Kiko' | 'Settings' | 'Rewards' | 'Projects' | 'Focus' | 'Notifications';
+export type Screen = 'Dashboard' | 'Schedule' | 'Notes' | 'Profile' | 'Mira' | 'Settings' | 'Rewards' | 'Projects' | 'Focus' | 'Notifications';
 
 export interface NotificationItem {
   id: string;
@@ -82,6 +82,7 @@ export interface Note {
   tags: string[];
   attachments?: NoteAttachment[];
   deletedAt?: Date;
+  notion_page_id?: string;
 }
 
 export interface Insight {
@@ -309,3 +310,131 @@ export interface RewardItem {
 
 export type ScheduleView = 'today' | 'month';
 export type NoteView = 'grid' | 'list' | 'board';
+
+// Notion Integration Types
+export interface NotionIntegration {
+  user_id: string;
+  notion_api_key: string;
+  workspace_id: string;
+  default_database_id?: string;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface NotionSyncLog {
+  user_id: string;
+  note_id: number;
+  notion_page_id?: string;
+  sync_direction: 'praxis_to_notion' | 'notion_to_praxis';
+  sync_status: 'success' | 'failed' | 'pending';
+  error_message?: string;
+  created_at: Date;
+}
+
+export interface NotionDatabase {
+  id: string;
+  title: string;
+  properties: Record<string, any>;
+}
+
+export interface NotionPage {
+  id: string;
+  properties: Record<string, any>;
+  children?: NotionBlock[];
+}
+
+export interface NotionBlock {
+  type: string;
+  [key: string]: any;
+}
+
+// Voice Conversation Types
+export interface MiraAnimationState {
+  current: 'idle' | 'listening' | 'thinking' | 'speaking' | 'success' | 'error';
+  emotion: 'neutral' | 'happy' | 'focused' | 'encouraging' | 'serious' | 'playful';
+  mouthMovement?: {
+    openness: number; // 0-1
+    shape: 'o' | 'a' | 'ee' | 'closed';
+  };
+}
+
+export interface TranscriptionLine {
+  role: 'user' | 'mira';
+  text: string;
+  timestamp: number;
+  confidence: number;
+  isPartial: boolean;
+}
+
+export interface VoiceSession {
+  id: string;
+  userId: string;
+  isActive: boolean;
+  miraAnimationState: MiraAnimationState;
+  transcription: TranscriptionLine[];
+  createdAt: Date;
+  endedAt?: Date;
+}
+
+export interface ExtractedEventData {
+  title?: string;
+  date?: string;
+  time?: string;
+  location?: string;
+  description?: string;
+  contactInfo?: string;
+  links?: string[];
+  confidence: number;
+}
+
+// Gmail Integration Types
+export interface GmailEvent {
+  messageId: string;
+  subject: string;
+  sender: string;
+  receivedAt: Date;
+  bodySnippet: string;
+  fullBody: string;
+}
+
+export interface GmailExtractedEventData {
+  eventDetected: boolean;
+  title: string;
+  date: Date;
+  time?: string;
+  location?: string;
+  duration?: number;
+  confidence: number;
+  extractedDetails: any;
+}
+
+export interface GmailIntegration {
+  user_id: string;
+  access_token_encrypted: string;
+  refresh_token_encrypted: string;
+  token_expires_at: Date;
+  gmail_watch_expiration?: Date;
+  gmail_history_id?: string;
+  watch_labels: string[];
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface GmailParsedEvent {
+  user_id: string;
+  gmail_message_id: string;
+  subject: string;
+  sender: string;
+  received_at: Date;
+  email_body_snippet: string;
+  event_detected: boolean;
+  event_title?: string;
+  event_date?: Date;
+  event_location?: string;
+  event_confidence: number;
+  extracted_details: any;
+  status: 'auto_added' | 'pending' | 'confirmed' | 'rejected';
+  created_at: Date;
+}

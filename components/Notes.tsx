@@ -2,11 +2,11 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import Draggable from 'react-draggable';
 import { Note, Notebook, Task, NoteView, NoteAttachment, Category } from '../types';
-import { kikoRequest } from '../services/kikoAIService';
+import { miraRequest } from '../services/miraAIService';
 import { PRESET_COLORS } from '../constants';
 import { 
     PlusIcon, TrashIcon, SparklesIcon, XMarkIcon, 
-    DocumentIcon, KikoIcon, ChevronDownIcon, BookOpenIcon, StarIcon, LightBulbIcon,
+    DocumentIcon, MiraIcon, ChevronDownIcon, BookOpenIcon, StarIcon, LightBulbIcon,
     BoldIcon, ItalicIcon, UnderlineIcon, PencilIcon, EllipsisVerticalIcon,
     MagnifyingGlassIcon, LinkIcon, Squares2X2Icon, Bars3Icon, ViewColumnsIcon, PaperClipIcon, CheckCircleIcon,
     SortAscendingIcon, SortDescendingIcon
@@ -949,7 +949,7 @@ function NoteEditorView({ note, onBack, updateNote, showToast, deleteNote }: Not
                         <div className="relative">
                              <Menu target={
                                 <button className="flex items-center gap-1 px-3 py-2 bg-accent/10 text-accent font-semibold rounded-lg hover:bg-accent/20">
-                                    <KikoIcon className="w-5 h-5"/>
+                                    <MiraIcon className="w-5 h-5"/>
                                     <EllipsisVerticalIcon className="w-4 h-4"/>
                                 </button>
                              }>

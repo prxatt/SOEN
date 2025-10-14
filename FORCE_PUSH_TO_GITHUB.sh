@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Praxis-AI Force Push Script
-echo "🚀 FORCING PUSH TO GITHUB - Praxis-AI Backend Implementation"
+# Soen Force Push Script
+echo "🚀 FORCING PUSH TO GITHUB - Soen Backend Implementation"
 echo ""
 
 # Check if we're in the right directory
 if [ ! -f "package.json" ]; then
-    echo "❌ Error: Please run this script from the Praxis-AI root directory"
+    echo "❌ Error: Please run this script from the Soen root directory"
     exit 1
 fi
 
@@ -25,13 +25,13 @@ echo "1. Go to: https://github.com/settings/tokens"
 echo "2. Click 'Generate new token (classic)'"
 echo "3. Select 'repo' scope"
 echo "4. Copy the token"
-echo "5. Run: git remote set-url origin https://YOUR_TOKEN@github.com/prxatt/Praxis-AI.git"
+echo "5. Run: git remote set-url origin https://YOUR_TOKEN@github.com/prxatt/Soen.git"
 echo "6. Run: git push origin main"
 echo ""
 
 echo "OPTION 2 - GitHub Desktop:"
 echo "1. Download GitHub Desktop from: https://desktop.github.com/"
-echo "2. Open Praxis-AI repository"
+echo "2. Open Soen repository"
 echo "3. Click 'Push origin'"
 echo ""
 
@@ -44,12 +44,12 @@ echo ""
 echo "OPTION 4 - Manual Git Commands:"
 echo "1. Create Personal Access Token (see Option 1)"
 echo "2. Run these exact commands:"
-echo "   git remote set-url origin https://YOUR_TOKEN@github.com/prxatt/Praxis-AI.git"
+echo "   git remote set-url origin https://YOUR_TOKEN@github.com/prxatt/Soen.git"
 echo "   git push origin main"
 echo ""
 
 echo "🎯 WHAT WILL BE PUSHED:"
-echo "✅ Complete Praxis-AI Backend Implementation (79 files)"
+echo "✅ Complete Soen Backend Implementation (79 files)"
 echo "✅ AI Orchestrator with multi-provider support"
 echo "✅ Vision AI services (OCR, event detection)"
 echo "✅ End-to-end encryption service"
@@ -74,7 +74,7 @@ fi
 
 echo ""
 echo "🚨 URGENT: You have 2 commits ready to push!"
-echo "   - feat: Complete Praxis-AI Backend Implementation"
+echo "   - feat: Complete Soen Backend Implementation"
 echo "   - docs: Add pull request description and creation script"
 echo ""
 echo "📈 IMPACT: 79 files, 28,256+ lines of code"

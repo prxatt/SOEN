@@ -290,11 +290,11 @@ function App() {
             setIsLoading(false);
         }, 3500);
 
-        const savedTheme = localStorage.getItem('praxis-theme') || 'obsidian';
+        const savedTheme = localStorage.getItem('soen-theme') || 'obsidian';
         setActiveTheme(savedTheme);
         document.documentElement.setAttribute('data-theme', savedTheme);
         
-        const savedUiMode = (localStorage.getItem('praxis-ui-mode') as 'dark' | 'glass') || 'glass';
+        const savedUiMode = (localStorage.getItem('soen-ui-mode') as 'dark' | 'glass') || 'glass';
         setUiMode(savedUiMode);
         if (savedUiMode === 'dark') {
             document.documentElement.classList.add('dark');
@@ -302,11 +302,22 @@ function App() {
             document.documentElement.classList.remove('dark');
         }
 
-        const savedFocusBg = localStorage.getItem('praxis-focus-bg') || 'synthwave';
+        const savedFocusBg = localStorage.getItem('soen-focus-bg') || 'synthwave';
         setActiveFocusBackground(savedFocusBg);
 
-        // Load browser push setting
-        const savedPushEnabled = localStorage.getItem('praxis-browser-push') === 'true';
+        // Load browser push setting with migration from old key
+        let savedPushEnabled = localStorage.getItem('soen-browser-push') === 'true';
+        
+        // Migrate from old praxis-browser-push key if it exists
+        const oldPushSetting = localStorage.getItem('praxis-browser-push');
+        if (oldPushSetting !== null && localStorage.getItem('soen-browser-push') === null) {
+            // Migrate the old setting to the new key
+            localStorage.setItem('soen-browser-push', oldPushSetting);
+            savedPushEnabled = oldPushSetting === 'true';
+            // Clean up the old key
+            localStorage.removeItem('praxis-browser-push');
+        }
+        
         setBrowserPushEnabled(savedPushEnabled);
 
         // Restore daily reward image if it's for today
@@ -472,7 +483,7 @@ function App() {
     };
     
     const handleLogout = () => {
-        localStorage.removeItem('praxis-authenticated');
+        localStorage.removeItem('soen-authenticated');
         setIsAuthenticated(false);
     };
 

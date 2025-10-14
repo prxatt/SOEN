@@ -29,7 +29,7 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
     
     const handleFinish = () => {
         if (userName.trim()) {
-            localStorage.setItem('praxis-user-name', userName.trim());
+            localStorage.setItem('soen-user-name', userName.trim());
         }
         if (longTermGoal.trim()) {
             const newGoal: Goal = {
@@ -41,7 +41,7 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
             setGoals(prev => [newGoal, ...prev]);
         }
         if (userHobbies.trim()) {
-            localStorage.setItem('praxis-user-hobbies', userHobbies.trim());
+            localStorage.setItem('soen-user-hobbies', userHobbies.trim());
         }
         onComplete();
     };

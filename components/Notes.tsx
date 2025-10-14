@@ -65,13 +65,13 @@ function Notes(props: NotesProps) {
     } = props;
     
     const [displayMode, setDisplayMode] = useState<'notes' | 'notebooks'>(
-        () => (localStorage.getItem('praxis-notes-view-mode') as 'notes' | 'notebooks') || 'notes'
+        () => (localStorage.getItem('soen-notes-view-mode') as 'notes' | 'notebooks') || 'notes'
     );
     const [selectedNoteIds, setSelectedNoteIds] = useState<number[]>([]);
 
     const handleSetDisplayMode = (mode: 'notes' | 'notebooks') => {
         setDisplayMode(mode);
-        localStorage.setItem('praxis-notes-view-mode', mode);
+        localStorage.setItem('soen-notes-view-mode', mode);
     };
     
     const handleSelectNote = (note: Note) => {
@@ -363,12 +363,12 @@ function NoteListView(props: NoteListViewProps) {
     const { notes, activeNotebookId, setActiveNotebookId, notebooks, updateNote } = props;
     const [searchQuery, setSearchQuery] = useState("");
     
-    const [view, setView] = useState<NoteView>(() => (localStorage.getItem('praxis-note-view') as NoteView) || 'grid');
+    const [view, setView] = useState<NoteView>(() => (localStorage.getItem('soen-note-view') as NoteView) || 'grid');
     const [sortBy, setSortBy] = useState<SortByType>('updatedAt');
     const [sortDir, setSortDir] = useState<SortDirType>('desc');
     
     useEffect(() => {
-        localStorage.setItem('praxis-note-view', view);
+        localStorage.setItem('soen-note-view', view);
     }, [view]);
 
     const filteredNotes = useMemo(() => {

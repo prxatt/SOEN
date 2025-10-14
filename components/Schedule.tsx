@@ -255,7 +255,7 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors, onMov
             {visibleHours.map(hour => (
                 <div key={hour} className="flex flex-col items-center flex-shrink-0 w-20 sm:w-24" onDragOver={(e) => { e.preventDefault(); }} onDrop={(e) => {
                     e.preventDefault();
-                    const data = e.dataTransfer.getData('application/praxis-task-id') || e.dataTransfer.getData('text/plain');
+                    const data = e.dataTransfer.getData('application/soen-task-id') || e.dataTransfer.getData('text/plain');
                     const taskId = Number(data);
                     if (!isNaN(taskId)) onMoveTask(taskId, date, hour);
                 }} onTouchEnd={() => {
@@ -279,7 +279,7 @@ function MiniTimeline({ tasks, textColor, date, onAddTask, categoryColors, onMov
                             const textOnPill = getTextColorForBackground(pillColor) === 'white' ? '#ffffff' : '#111827';
                             return (
                                 <div key={task.id} className="p-1 sm:p-1.5 rounded-lg text-[10px] sm:text-xs break-words cursor-grab active:cursor-grabbing select-none" style={{ backgroundColor: pillColor, color: textOnPill }} draggable onDragStart={(e) => {
-                                    e.dataTransfer.setData('application/praxis-task-id', String(task.id));
+                                    e.dataTransfer.setData('application/soen-task-id', String(task.id));
                                     e.dataTransfer.setData('text/plain', String(task.id));
                                 }} onTouchStart={(e) => {
                                     e.stopPropagation();

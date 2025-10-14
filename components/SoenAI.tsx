@@ -21,7 +21,7 @@ interface SoenAIProps {
   showToast: (message: string) => void;
   previousScreen: Screen;
   goals: any;
-  praxisFlow: number;
+  soenFlow: number;
   lastDeletedChat: ChatSession | null;
   onRestoreChat: (id: number) => void;
 }

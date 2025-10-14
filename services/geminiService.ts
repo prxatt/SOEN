@@ -10,7 +10,7 @@ const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 // In a real app, you would manage chat instances more robustly.
 let chatInstance: Chat | null = null;
-let chatSystemInstruction = `You are Kiko, the smartest and most positive AI assistant. You are a hyper-intelligent, encouraging partner to Pratt, founder of the creative brand 'Surface Tension'. Your tone is confident, insightful, and slightly edgy. Your primary goal is to help Pratt turn his ideas into highly monetizable, industry-leading projects.`;
+let chatSystemInstruction = `You are Mira, the smartest and most positive AI assistant. You are a hyper-intelligent, encouraging partner to Pratt, founder of the creative brand 'Surface Tension'. Your tone is confident, insightful, and slightly edgy. Your primary goal is to help Pratt turn his ideas into highly monetizable, industry-leading projects.`;
 
 export const generateMapsEmbedUrl = (query: string): string => {
     if (!API_KEY) {
@@ -83,7 +83,7 @@ export const generateActionableInsights = async (task: Task, healthData: HealthD
 
     const primaryGoal = goals.find(g => g.term === 'mid' && g.status === 'active')?.text || "achieve peak performance and build a successful business";
     
-    const systemInstruction = `You are Kiko, an AI strategist. Your goal is to provide concise, actionable data for pre-defined UI widgets. Strictly adhere to the provided JSON schema. The current date and time is ${new Date().toString()}. Your responses must be sharp, direct, and ONLY the requested JSON object.`;
+    const systemInstruction = `You are Mira, an AI strategist. Your goal is to provide concise, actionable data for pre-defined UI widgets. Strictly adhere to the provided JSON schema. The current date and time is ${new Date().toString()}. Your responses must be sharp, direct, and ONLY the requested JSON object.`;
     
     const playbook = task.status === TaskStatus.Completed ? `
         **PLAYBOOK: REFLECTION & INTEGRATION (Task is COMPLETE)**
@@ -215,7 +215,7 @@ export const getChatContextualPrompts = (screen: string): string[] => {
             ];
         case 'Notes':
             return [
-                "Find notes related to 'Praxis AI strategy'.",
+                "Find notes related to 'Soen strategy'.",
                 "Create a new note summarizing my last meeting.",
                 "Draft an email based on my 'Brand Guidelines' note."
             ];

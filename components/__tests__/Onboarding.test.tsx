@@ -25,7 +25,7 @@ describe('Onboarding', () => {
   it('should render the first step with proper colors', () => {
     render(<Onboarding goals={mockGoals} setGoals={mockSetGoals} onComplete={mockOnComplete} />)
     
-    const heading = screen.getByText('Welcome to Praxis')
+    const heading = screen.getByText('Welcome to Soen')
     expect(heading).toHaveClass('text-black', 'dark:text-white')
   })
 
@@ -42,7 +42,7 @@ describe('Onboarding', () => {
     render(<Onboarding goals={mockGoals} setGoals={mockSetGoals} onComplete={mockOnComplete} />)
     
     // Should show first step
-    expect(screen.getByText('Welcome to Praxis')).toBeInTheDocument()
+    expect(screen.getByText('Welcome to Soen')).toBeInTheDocument()
     
     // Click next
     const nextButton = screen.getByText('Next')

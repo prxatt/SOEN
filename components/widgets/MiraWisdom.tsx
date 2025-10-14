@@ -1,7 +1,7 @@
 /**
- * KikoWisdom Component
+ * MiraWisdom Component
  * 
- * AI-powered wisdom and insights from Kiko
+ * AI-powered wisdom and insights from Mira
  * Features:
  * - Contextual wisdom based on user data
  * - Animated wisdom display
@@ -15,7 +15,7 @@ import { Task, Note, HealthData } from '../../types';
 import { safeGet } from '../../utils/validation';
 import { BrainCircuitIcon, SparklesIcon, FireIcon, HeartIcon } from '../Icons';
 
-interface KikoWisdomProps {
+interface MiraWisdomProps {
     tasks: Task[];
     notes: Note[];
     healthData: HealthData;
@@ -28,7 +28,7 @@ interface WisdomData {
     category: 'motivation' | 'productivity' | 'health' | 'wisdom';
 }
 
-const KikoWisdom: React.FC<KikoWisdomProps> = ({ tasks, notes, healthData }) => {
+const MiraWisdom: React.FC<MiraWisdomProps> = ({ tasks, notes, healthData }) => {
     const [wisdom, setWisdom] = useState<WisdomData>({
         quote: '',
         context: '',
@@ -196,7 +196,7 @@ const KikoWisdom: React.FC<KikoWisdomProps> = ({ tasks, notes, healthData }) => 
                     >
                         <BrainCircuitIcon className="w-6 h-6 text-blue-400" />
                     </motion.div>
-                    <h3 className="text-white text-lg font-semibold">Kiko is thinking...</h3>
+                    <h3 className="text-white text-lg font-semibold">Mira is thinking...</h3>
                 </div>
                 <div className="flex items-center gap-2">
                     <motion.div
@@ -241,7 +241,7 @@ const KikoWisdom: React.FC<KikoWisdomProps> = ({ tasks, notes, healthData }) => 
                     <div className="flex items-center gap-3 mb-4">
                         {getCategoryIcon(wisdom.category)}
                         <div>
-                            <h3 className="text-white text-lg font-semibold">Kiko's Wisdom</h3>
+                            <h3 className="text-white text-lg font-semibold">Mira's Wisdom</h3>
                             <p className="text-white/70 text-sm">{wisdom.context}</p>
                         </div>
                     </div>
@@ -261,7 +261,7 @@ const KikoWisdom: React.FC<KikoWisdomProps> = ({ tasks, notes, healthData }) => 
                     {/* Footer */}
                     <div className="flex items-center justify-between">
                         <div className="text-white/60 text-sm">
-                            — Kiko's Wisdom
+                            — Mira's Wisdom
                         </div>
                         <button
                             onClick={generateWisdom}
@@ -280,4 +280,4 @@ const KikoWisdom: React.FC<KikoWisdomProps> = ({ tasks, notes, healthData }) => 
     );
 };
 
-export default KikoWisdom;
+export default MiraWisdom;

@@ -47,12 +47,12 @@ import { Screen, Task, Note, Notebook, Insight, Project, Goal, ChatSession, Sear
 // Import components
 import Navigation from './components/Navigation';
 import Notifications from './components/Notifications';
-import PraxisDashboard from './components/PraxisDashboard';
+import SoenDashboard from './components/SoenDashboard';
 import DailyMode from './components/DailyMode';
 import Schedule from './components/Schedule';
 import Notes from './components/Notes';
 import Profile from './components/Profile';
-import PraxisAI from './components/PraxisAI';
+import SoenAI from './components/SoenAI';
 import Settings from './components/Settings';
 import Projects from './components/Projects';
 import Rewards from './components/Rewards';
@@ -62,12 +62,12 @@ import FocusMode from './components/FocusMode';
 import Toast from './components/Toast';
 import IntegratedLoadingScreen from './components/IntegratedLoadingScreen'; // Integrated Loading Screen
 import ErrorBoundary from './components/ErrorBoundary'; // Error boundary for crash prevention
-import { PraxisLogo } from './components/Icons';
+import { SoenLogo } from './components/Icons';
 
 
 // Import services and utils
 import { syncCalendar } from './services/googleCalendarService';
-import { kikoRequest } from './services/kikoAIService';
+import { miraRequest } from './services/miraAIService';
 import { healthDataService } from './services/healthDataService';
 import { pomodoroService } from './services/pomodoroService';
 import { aiPriorityService } from './services/aiPriorityService';
@@ -78,7 +78,7 @@ import { MOCKED_BRIEFING, REWARDS_CATALOG, DEFAULT_CATEGORIES, CATEGORY_COLORS, 
 
 // --- MOCK DATA GENERATION ---
 const initialProjects: Project[] = [
-    { id: 1, title: 'Praxis AI Development', description: 'Core development for the Praxis AI application.'},
+    { id: 1, title: 'Soen Development', description: 'Core development for the Soen application.'},
     { id: 2, title: 'Surface Tension Branding', description: 'Brand identity and marketing materials.'},
 ];
 
@@ -89,7 +89,7 @@ const generateMockTasksForMonth = (year: number, month: number): Task[] => {
     const taskTitlesByCategory: Record<Category, string[]> = {
         'Prototyping': ['Develop new feature', 'UI/UX design session', 'Fix login bug', 'Refactor database schema'],
         'Learning': ['Complete AI course module', 'Read chapter on system design', 'Watch tutorial on Framer Motion', 'Study market trends'],
-        'Meeting': ['Client check-in call', 'Weekly sync with team', 'Praxis AI strategy session', 'Investor pitch prep'],
+        'Meeting': ['Client check-in call', 'Weekly sync with team', 'Soen strategy session', 'Investor pitch prep'],
         'Workout': ['5k morning run', 'Boxing session', 'Leg day at the gym', 'Yoga and meditation'],
         'Editing': ['Edit promotional video', 'Review brand copy', 'Photo editing for lookbook', 'Finalize blog post'],
         'Personal': ['Schedule dentist appointment', 'Cook dinner: Tacos', 'Pay monthly bills', 'Call family'],
@@ -167,7 +167,7 @@ if(upcomingTaskIndex > -1) {
 
 const initialNotebooks: Notebook[] = [
     { id: 1, title: 'Quick Notes', color: '#F59E0B' },
-    { id: 2, title: 'Praxis AI', color: '#A855F7' },
+    { id: 2, title: 'Soen', color: '#A855F7' },
     { id: 3, title: 'Surface Tension', color: '#3B82F6' },
     { id: 4, title: 'Personal', color: '#10B981' },
 ];
@@ -205,7 +205,7 @@ function App() {
     ]);
     const [activeChatId, setActiveChatId] = useState<number | null>(chatHistory[0]?.id || null);
     const [isAiReplying, setIsAiReplying] = useState(false);
-    const [praxisFlow, setPraxisFlow] = useState(500);
+    const [soenFlow, setSoenFlow] = useState(500);
     const [purchasedRewards, setPurchasedRewards] = useState<string[]>(['theme-obsidian', 'focus-synthwave']);
     const [focusTask, setFocusTask] = useState<Task | null>(null);
     const [activeFocusBackground, setActiveFocusBackground] = useState<string>('synthwave');
@@ -221,8 +221,8 @@ function App() {
     const [notifications, setNotifications] = useState<NotificationItem[]>([
         {
             id: "1",
-            title: "Welcome to Praxis AI",
-            message: "Your productivity journey starts here! Kiko is ready to help you organize your day.",
+            title: "Welcome to Soen",
+            message: "Your productivity journey starts here! Mira is ready to help you organize your day.",
             timestamp: new Date(),
             type: 'info'
         }
@@ -251,7 +251,7 @@ function App() {
         // Save to notifications store
         const notification: NotificationItem = {
             id: `toast-${Date.now()}`,
-            title: 'Praxis Update',
+            title: 'Soen Update',
             message,
             timestamp: new Date(),
             type: 'info',
@@ -261,7 +261,7 @@ function App() {
         
         // Send browser push notification if enabled
         if (browserPushEnabled && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification('Praxis AI', { body: message, icon: '/icon.svg' });
+            new Notification('Soen', { body: message, icon: '/icon.svg' });
         }
     };
 
@@ -275,13 +275,13 @@ function App() {
 
     // --- EFFECTS ---
     useEffect(() => {
-        // Show Praxis preview first, then loading, then auth check
-        const authStatus = localStorage.getItem('praxis-authenticated') === 'true';
-        const onboardingStatus = localStorage.getItem('praxis-onboarding-complete') === 'true';
+        // Show Soen preview first, then loading, then auth check
+        const authStatus = localStorage.getItem('soen-authenticated') === 'true';
+        const onboardingStatus = localStorage.getItem('soen-onboarding-complete') === 'true';
 
         // For testing - you can uncomment this to reset auth state
-        // localStorage.removeItem('praxis-authenticated');
-        // localStorage.removeItem('praxis-onboarding-complete');
+        // localStorage.removeItem('soen-authenticated');
+        // localStorage.removeItem('soen-onboarding-complete');
 
         // Show integrated loading screen for 3.5 seconds total
         setTimeout(() => {
@@ -403,7 +403,7 @@ function App() {
             try {
                 const todaysTasks = tasks.filter(t => new Date(t.startTime).toDateString() === new Date().toDateString());
                 
-                const { data: newBriefing, fallbackUsed } = await kikoRequest('generate_briefing', {
+                const { data: newBriefing, fallbackUsed } = await miraRequest('generate_briefing', {
                     timeframe: 'day',
                     tasks: todaysTasks,
                     notes,
@@ -411,7 +411,7 @@ function App() {
                 });
 
                 if (fallbackUsed) {
-                    showToast("Kiko's primary brain is offline. Briefing generated by backup agent.");
+                    showToast("Mira's primary brain is offline. Briefing generated by backup agent.");
                 }
 
                 if (newBriefing) {
@@ -422,7 +422,7 @@ function App() {
 
             } catch (error) {
                 console.error("Failed to generate mission briefing:", error);
-                showToast("Kiko couldn't generate the daily briefing.");
+                showToast("Mira couldn't generate the daily briefing.");
             } finally {
                 setIsBriefingLoading(false);
             }
@@ -443,12 +443,12 @@ function App() {
             const generateImage = async () => {
                 try {
                     showToast("Daily Reward Unlocked! Generating your image...");
-                    const { data: imageUrl } = await kikoRequest('generate_daily_image', { date: new Date(), tasks: todaysTasks });
+                    const { data: imageUrl } = await miraRequest('generate_daily_image', { date: new Date(), tasks: todaysTasks });
                     setDailyCompletionImage(imageUrl);
                     localStorage.setItem('dailyReward', JSON.stringify({ date: dayIdentifier, url: imageUrl }));
                 } catch (error) {
                     console.error("Failed to generate daily reward image:", error);
-                    showToast("Couldn't generate reward image. Kiko might be busy.");
+                    showToast("Couldn't generate reward image. Mira might be busy.");
                 }
             };
             generateImage();
@@ -464,9 +464,9 @@ function App() {
     
     // --- AUTH & ONBOARDING HANDLERS ---
     const handleLogin = () => {
-        localStorage.setItem('praxis-authenticated', 'true');
+        localStorage.setItem('soen-authenticated', 'true');
         // For existing users, automatically complete onboarding
-        localStorage.setItem('praxis-onboarding-complete', 'true');
+        localStorage.setItem('soen-onboarding-complete', 'true');
         setIsAuthenticated(true);
         setIsOnboardingComplete(true);
     };
@@ -477,7 +477,7 @@ function App() {
     };
 
     const handleOnboardingComplete = () => {
-        localStorage.setItem('praxis-onboarding-complete', 'true');
+        localStorage.setItem('soen-onboarding-complete', 'true');
         setIsOnboardingComplete(true);
     };
 
@@ -485,7 +485,7 @@ function App() {
     const toggleUiMode = () => {
         const newMode = uiMode === 'dark' ? 'glass' : 'dark';
         setUiMode(newMode);
-        localStorage.setItem('praxis-ui-mode', newMode);
+        localStorage.setItem('soen-ui-mode', newMode);
         document.documentElement.classList.toggle('dark', newMode === 'dark');
     };
     
@@ -493,7 +493,7 @@ function App() {
         const theme = REWARDS_CATALOG.find(r => r.value === themeValue);
         if (theme && purchasedRewards.includes(theme.id)) {
             setActiveTheme(themeValue);
-            localStorage.setItem('praxis-theme', themeValue);
+            localStorage.setItem('soen-theme', themeValue);
             document.documentElement.setAttribute('data-theme', themeValue);
             showToast(`Theme changed to ${theme.name}`);
         } else {
@@ -505,7 +505,7 @@ function App() {
         const reward = REWARDS_CATALOG.find(r => r.value === bgValue && r.type === 'focus_background');
         if (reward && purchasedRewards.includes(reward.id)) {
             setActiveFocusBackground(bgValue);
-            localStorage.setItem('praxis-focus-bg', bgValue);
+            localStorage.setItem('soen-focus-bg', bgValue);
             showToast(`Focus background set to ${reward.name}`);
         } else {
             showToast("Focus background not purchased yet!");
@@ -513,8 +513,8 @@ function App() {
     };
     
     const handlePurchaseReward = (reward: RewardItem) => {
-        if (praxisFlow >= reward.cost && !purchasedRewards.includes(reward.id)) {
-            setPraxisFlow(prev => prev - reward.cost);
+        if (soenFlow >= reward.cost && !purchasedRewards.includes(reward.id)) {
+            setSoenFlow(prev => prev - reward.cost);
             setPurchasedRewards(prev => [...prev, reward.id]);
             showToast(`Unlocked ${reward.name}!`);
             if (reward.type === 'theme') {
@@ -794,12 +794,12 @@ function App() {
                 ? { taskType: 'analyze_image', payload: { ...attachment, prompt: message } }
                 : { taskType: 'generate_note_text', payload: { instruction: 'summarize', text: message } };
             
-            const { data: responseText } = await kikoRequest(requestPayload.taskType as any, requestPayload.payload);
+            const { data: responseText } = await miraRequest(requestPayload.taskType as any, requestPayload.payload);
             const modelMessage: ChatMessage = { role: 'model', text: responseText };
             handleUpdateActiveChatMessages([...updatedMessages, modelMessage]);
 
         } catch (error) {
-            console.error("Error sending message via Kiko:", error);
+            console.error("Error sending message via Mira:", error);
             const errorMessage: ChatMessage = { role: 'model', text: "Sorry, I'm having trouble connecting right now." };
             handleUpdateActiveChatMessages([...updatedMessages, errorMessage]);
         } finally {
@@ -816,11 +816,11 @@ function App() {
         };
         setChatHistory(prev => [newChat, ...prev]);
         setActiveChatId(newChat.id);
-        navigateTo('Kiko');
+        navigateTo('Mira');
         handleSendMessage(context);
     };
 
-    const redirectToKikoAIWithChat = (history: ChatMessage[]) => {
+    const redirectToMiraAIWithChat = (history: ChatMessage[]) => {
         const newChat: ChatSession = {
             id: Date.now(),
             title: history[0]?.text.substring(0, 30) + '...' || 'New Session',
@@ -829,7 +829,7 @@ function App() {
         };
         setChatHistory(prev => [newChat, ...prev]);
         setActiveChatId(newChat.id);
-        navigateTo('Kiko');
+        navigateTo('Mira');
     };
     
     // --- END KIKO HANDLERS ---
@@ -841,7 +841,7 @@ function App() {
         updateTask(revertedTask);
 
         const points = Math.round((taskToUndo.actualDuration || taskToUndo.plannedDuration) * 0.5);
-        setPraxisFlow(prev => prev - points);
+        setSoenFlow(prev => prev - points);
 
         showToast(`"${taskToUndo.title}" marked as pending.`);
     };
@@ -855,15 +855,15 @@ function App() {
         setFocusTask(null);
     
         const points = Math.round(actualDuration * 0.5);
-        setPraxisFlow(prev => prev + points);
+        setSoenFlow(prev => prev + points);
         
         showToast(`+${points} Flow! Great work!`, { label: 'Undo', onClick: () => handleUndoCompleteTask(optimisticTask) });
     
         (async () => {
             try {
                 const [summaryResult, imageResult] = await Promise.all([
-                    kikoRequest('generate_completion_summary', { task: optimisticTask }),
-                    kikoRequest('generate_completion_image', { task: optimisticTask })
+                    miraRequest('generate_completion_summary', { task: optimisticTask }),
+                    miraRequest('generate_completion_image', { task: optimisticTask })
                 ]);
     
                 const summary = summaryResult.data as CompletionSummary;
@@ -882,16 +882,16 @@ function App() {
     const triggerInsightGeneration = useCallback(async (task: Task, isRegeneration: boolean) => {
         try {
             updateTask({ ...task, isGeneratingInsights: true });
-            const { data: insightData, fallbackUsed } = await kikoRequest('generate_task_insights', {
+            const { data: insightData, fallbackUsed } = await miraRequest('generate_task_insights', {
                 task, healthData, notes, goals, allTasks: tasks, isRegeneration
             });
 
-            if (fallbackUsed) showToast("Kiko's primary brain had a glitch. Using a creative backup!");
+            if (fallbackUsed) showToast("Mira's primary brain had a glitch. Using a creative backup!");
 
             updateTask({ ...task, insights: insightData, isGeneratingInsights: false });
         } catch (error) {
-            console.error("Failed to generate insights via Kiko orchestrator", error);
-            showToast("Kiko seems to be offline. Could not generate insights.");
+            console.error("Failed to generate insights via Mira orchestrator", error);
+            showToast("Mira seems to be offline. Could not generate insights.");
             updateTask({ ...task, isGeneratingInsights: false });
         }
     }, [tasks, notes, goals, healthData]);
@@ -904,12 +904,12 @@ function App() {
     // --- RENDER LOGIC ---
     const renderScreen = () => {
         switch (activeScreen) {
-            case 'Dashboard': return <PraxisDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} />;
-            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToKikoAIWithChat={redirectToKikoAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
+            case 'Dashboard': return <SoenDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} />;
+            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToMiraAIWithChat={redirectToMiraAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
             case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
-            case 'Profile': return <Profile praxisFlow={praxisFlow} setScreen={navigateTo} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} />;
+            case 'Profile': return <Profile soenFlow={soenFlow} setScreen={navigateTo} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;
-            case 'Kiko': return <PraxisAI 
+            case 'Mira': return <SoenAI 
                 chatHistory={chatHistory} 
                 activeChatId={activeChatId} 
                 setActiveChatId={setActiveChatId}
@@ -924,15 +924,15 @@ function App() {
                 updateNote={updateNote}
                 showToast={showToast}
                 goals={goals} 
-                praxisFlow={praxisFlow}
+                soenFlow={soenFlow}
                 lastDeletedChat={lastDeletedChat}
                 onRestoreChat={handleRestoreChat}
             />;
             case 'Settings': return <Settings uiMode={uiMode} toggleUiMode={toggleUiMode} onSyncCalendar={handleSyncCalendar} onLogout={handleLogout} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} purchasedRewards={purchasedRewards} browserPushEnabled={browserPushEnabled} setBrowserPushEnabled={setBrowserPushEnabled} />;
             case 'Notifications': return <Notifications items={notifications} />;
-            case 'Rewards': return <Rewards onBack={() => navigateTo('Profile')} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
+            case 'Rewards': return <Rewards onBack={() => navigateTo('Profile')} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
-            default: return <PraxisDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} praxisFlow={praxisFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} />;
+            default: return <SoenDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} />;
         }
     };
     

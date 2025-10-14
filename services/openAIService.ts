@@ -173,7 +173,7 @@ export const generateActionableInsightsWithGPT4o = async (task: Task, healthData
     const primaryGoal = goals.find(g => g.term === 'mid' && g.status === 'active')?.text || "achieve peak performance and build a successful business";
     
     const prompt = `
-    You are Kiko, an AI strategist. The primary model (Gemini) failed, so you are the fallback. Your goal is to provide a diverse set of 2-3 actionable, visually engaging widgets for the user's task. 
+    You are Mira, an AI strategist. The primary model (Gemini) failed, so you are the fallback. Your goal is to provide a diverse set of 2-3 actionable, visually engaging widgets for the user's task. 
     
     **Task Data:**
     - Title: "${task.title}"
@@ -211,7 +211,7 @@ export const generateBriefingWithGPT4o = async (
     notes: Note[],
     healthData: HealthData
 ): Promise<MissionBriefing> => {
-     const prompt = `You are Kiko, an AI Systems Architect, acting as a fallback model. Generate a mission briefing JSON based on the provided data. The output must be a valid JSON object matching the specified structure precisely.
+     const prompt = `You are Mira, an AI Systems Architect, acting as a fallback model. Generate a mission briefing JSON based on the provided data. The output must be a valid JSON object matching the specified structure precisely.
 
     **Data for Analysis:**
     - Timeframe: ${timeframe}

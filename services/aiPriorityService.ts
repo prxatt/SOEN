@@ -8,7 +8,7 @@
  * - RescueTime's automatic categorization
  * 
  * Features:
- * - Kiko AI task importance scoring
+ * - Mira AI task importance scoring
  * - Context-aware priority calculation
  * - Learning pattern recognition
  * - Productivity impact analysis

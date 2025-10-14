@@ -12,7 +12,7 @@ function Notifications({ items = [] }: NotificationsProps) {
       <div className="max-w-4xl mx-auto">
         <div className="rounded-3xl p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg">
           <h1 className="text-2xl font-bold font-display text-gray-900 dark:text-white">Notifications</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Your recent app updates and Kiko nudges will appear here.</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Your recent app updates and Mira nudges will appear here.</p>
         </div>
 
         {items.length === 0 ? (

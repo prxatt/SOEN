@@ -11,7 +11,7 @@ describe('LoadingScreen', () => {
     expect(loadingContainer).toHaveClass('bg-white', 'dark:bg-black')
   })
 
-  it('should render the Praxis logo with correct colors', () => {
+  it('should render the Soen logo with correct colors', () => {
     const { container } = render(<LoadingScreen />)
     
     // Check that the SVG logo is rendered with brand colors
@@ -23,13 +23,13 @@ describe('LoadingScreen', () => {
   it('should render the loading message', () => {
     render(<LoadingScreen />)
     
-    expect(screen.getByText('Synchronizing with Kiko...')).toBeInTheDocument()
+    expect(screen.getByText('Synchronizing with Mira...')).toBeInTheDocument()
   })
 
   it('should have proper text colors for light and dark modes', () => {
     render(<LoadingScreen />)
     
-    const messageElement = screen.getByText('Synchronizing with Kiko...')
+    const messageElement = screen.getByText('Synchronizing with Mira...')
     expect(messageElement).toHaveClass('text-black/80', 'dark:text-white/80')
   })
 

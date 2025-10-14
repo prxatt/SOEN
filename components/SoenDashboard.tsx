@@ -1,10 +1,10 @@
 /**
- * PRAXIS DASHBOARD - Enhanced Visual Design
+ * SOEN DASHBOARD - Enhanced Visual Design
  * 
  * Features:
  * - EnhancedDashboard.tsx visual excellence with Schedule.tsx Today view styling
  * - Daily greeting with user personalization
- * - Praxis AI branding in top left corner
+ * - Soen branding in top left corner
  * - Today and tomorrow task previews with pill-shaped interactions
  * - Advanced animations and micro-interactions
  * - Real-time weather with animations
@@ -40,7 +40,7 @@ import {
     ArrowRightIcon, CheckIcon, PencilIcon, TrashIcon
 } from './Icons';
 
-interface PraxisDashboardProps {
+interface SoenDashboardProps {
     tasks: Task[];
     notes: Note[];
     healthData: HealthData;
@@ -54,14 +54,14 @@ interface PraxisDashboardProps {
     inferredLocation: string | null;
     setScreen: (screen: Screen) => void;
     onCompleteTask: (taskId: number) => void;
-    praxisFlow?: number;
+    soenFlow?: number;
     purchasedRewards?: string[];
     activeTheme?: string;
     activeFocusBackground?: string;
 }
 
 // Enhanced color scheme matching EnhancedDashboard
-const PRAXIS_COLORS = {
+const SOEN_COLORS = {
     background: '#0a0a0a',
     surface: '#1a1a1a',
     surfaceLight: '#2a2a2a',
@@ -136,7 +136,7 @@ function FloatingParticles({ count = 50 }) {
     );
 }
 
-// Ultra-Cute Kiko Baby Penguin with Engaging Design
+// Ultra-Cute Mira Baby Penguin with Engaging Design
 const GhibliPenguin: React.FC = () => {
     return (
         <motion.div
@@ -254,8 +254,8 @@ const GhibliPenguin: React.FC = () => {
     );
 };
 
-// Praxis AI Header Component with Studio Ghibli Penguin
-const PraxisHeader: React.FC = () => {
+// Soen Header Component with Studio Ghibli Penguin
+const SoenHeader: React.FC = () => {
     return (
         <motion.div
             className="fixed top-3 left-3 sm:top-4 sm:left-20 z-50"
@@ -268,7 +268,7 @@ const PraxisHeader: React.FC = () => {
                 <div className="w-8 h-8 sm:w-10 sm:h-10">
                 <GhibliPenguin />
                 </div>
-                <span className="font-bold text-lg sm:text-2xl text-white">Praxis AI</span>
+                <span className="font-bold text-lg sm:text-2xl text-white">Soen</span>
             </div>
         </motion.div>
     );
@@ -2188,15 +2188,15 @@ const DailyGreeting: React.FC<{
     );
 };
 
-// Enhanced Gamified Praxis Rewards Widget with Flow Points Integration
-const PraxisRewardsWidget: React.FC<{
+// Enhanced Gamified Soen Rewards Widget with Flow Points Integration
+const SoenRewardsWidget: React.FC<{
     tasks: Task[];
     healthData: HealthData;
-    praxisFlow?: number;
+    soenFlow?: number;
     purchasedRewards?: string[];
     activeTheme?: string;
     activeFocusBackground?: string;
-}> = ({ tasks, healthData, praxisFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' }) => {
+}> = ({ tasks, healthData, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' }) => {
     const [currentPoints, setCurrentPoints] = useState(0);
     const [level, setLevel] = useState(1);
     const [showTooltip, setShowTooltip] = useState<string | null>(null);
@@ -2330,8 +2330,8 @@ const PraxisRewardsWidget: React.FC<{
     const getSmartInsights = () => {
         const unlockedThemes = themes.filter(t => t.unlocked).length;
         const unlockedBackgrounds = focusBackgrounds.filter(b => b.unlocked).length;
-        const nextAffordableTheme = themes.find(t => !t.unlocked && praxisFlow >= t.cost);
-        const nextAffordableBackground = focusBackgrounds.find(b => !b.unlocked && praxisFlow >= b.cost);
+        const nextAffordableTheme = themes.find(t => !t.unlocked && soenFlow >= t.cost);
+        const nextAffordableBackground = focusBackgrounds.find(b => !b.unlocked && soenFlow >= b.cost);
         
         return {
             unlockedThemes,
@@ -2442,7 +2442,7 @@ const PraxisRewardsWidget: React.FC<{
                             <SparklesIcon className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-400 drop-shadow-lg" />
                         </motion.div>
                         <div>
-                            <h3 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Praxis Rewards</h3>
+                            <h3 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Soen Rewards</h3>
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mt-1">
                         <div className="flex items-center gap-2">
                                     <span className="text-white/80 text-sm font-semibold">Level {level}</span>
@@ -2451,7 +2451,7 @@ const PraxisRewardsWidget: React.FC<{
                                 </div>
                                 <div className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-full">
                                     <SparklesIcon className="w-3 h-3 text-yellow-400" />
-                                    <span className="text-yellow-400 font-bold text-sm">{praxisFlow}</span>
+                                    <span className="text-yellow-400 font-bold text-sm">{soenFlow}</span>
                                 </div>
                             </div>
                         </div>
@@ -2652,7 +2652,7 @@ const PraxisRewardsWidget: React.FC<{
                         exit={{ opacity: 0, y: 5 }}
                     >
                         <p className="leading-relaxed">
-                            Praxis Rewards gamify your productivity journey! Earn points by completing tasks, 
+                            Soen Rewards gamify your productivity journey! Earn points by completing tasks, 
                             maintaining streaks, and staying healthy. Level up every 500 points to unlock new achievements.
                         </p>
                     </motion.div>
@@ -2869,8 +2869,8 @@ const PraxisRewardsWidget: React.FC<{
 
 
 // Main Dashboard Component
-const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
-    const { tasks, notes, healthData, briefing, isBriefingLoading, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, praxisFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' } = props;
+const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
+    const { tasks, notes, healthData, briefing, isBriefingLoading, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' } = props;
     
     // Focus mode state
     const [isFocusMode, setIsFocusMode] = useState(false);
@@ -3114,8 +3114,8 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
 
     return (
         <>
-            {/* Praxis AI Header - Fixed outside main container */}
-            <PraxisHeader />
+            {/* Soen Header - Fixed outside main container */}
+            <SoenHeader />
             
         <motion.div
             className="min-h-screen relative overflow-x-hidden"
@@ -3153,12 +3153,12 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
                             />
                         </div>
                         
-                        {/* Praxis Rewards Widget - Mobile: full width, Desktop: 1/3 */}
+                        {/* Soen Rewards Widget - Mobile: full width, Desktop: 1/3 */}
                         <div className="lg:col-span-1 order-2">
-                                <PraxisRewardsWidget
+                                <SoenRewardsWidget
                                     tasks={tasks}
                                     healthData={healthData}
-                                praxisFlow={praxisFlow}
+                                soenFlow={soenFlow}
                                 purchasedRewards={purchasedRewards}
                                 activeTheme={activeTheme}
                                 activeFocusBackground={activeFocusBackground}
@@ -3209,4 +3209,4 @@ const PraxisDashboard: React.FC<PraxisDashboardProps> = (props) => {
     );
 };
 
-export default PraxisDashboard;
+export default SoenDashboard;

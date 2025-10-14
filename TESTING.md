@@ -1,4 +1,4 @@
-# Testing Guide for Praxis AI
+# Testing Guide for Soen
 
 This project uses **Vitest** for unit testing with React Testing Library for component tests.
 

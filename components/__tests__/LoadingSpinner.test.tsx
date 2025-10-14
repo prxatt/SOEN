@@ -16,7 +16,7 @@ describe('LoadingSpinner', () => {
     expect(screen.getByText(customMessage)).toBeInTheDocument()
   })
 
-  it('should render the Praxis logo', () => {
+  it('should render the Soen logo', () => {
     const { container } = render(<LoadingSpinner />)
     
     // Check that the SVG logo is rendered

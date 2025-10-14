@@ -23,7 +23,7 @@ interface EventDetailProps {
     categoryColors: Record<Category, string>;
     onAddNewCategory: (name: string) => boolean;
     triggerInsightGeneration: (task: Task, isRegeneration: boolean) => void;
-    redirectToKikoAIWithChat: (history: ChatMessage[]) => void;
+    redirectToMiraAIWithChat: (history: ChatMessage[]) => void;
     deleteTask: (taskId: number) => void;
 }
 
@@ -217,7 +217,7 @@ function EventDetail({
     notebooks, 
     deleteTask, 
     triggerInsightGeneration,
-    redirectToKikoAIWithChat
+    redirectToMiraAIWithChat
 }: EventDetailProps) {
     const [isEditMode, setIsEditMode] = useState(false);
     const [editableTask, setEditableTask] = useState(task);
@@ -331,10 +331,10 @@ function EventDetail({
         triggerInsightGeneration(task, !!task.insights);
     };
 
-    const handleDiscussWithKiko = () => {
+    const handleDiscussWithMira = () => {
         const prompt = `Let's discuss my upcoming task: "${task.title}". Based on its details (Category: ${task.category}, Duration: ${task.plannedDuration} mins), can you give me some key points to focus on or potential challenges to watch out for?`;
         const initialChat: ChatMessage[] = [{ role: 'user', text: prompt }];
-        redirectToKikoAIWithChat(initialChat);
+        redirectToMiraAIWithChat(initialChat);
         onClose(); // Close the modal after redirecting
     };
 
@@ -421,10 +421,10 @@ function EventDetail({
                                         )}
                                     </button>
                                      <button 
-                                        onClick={handleDiscussWithKiko}
+                                        onClick={handleDiscussWithMira}
                                         className="p-1.5 rounded-lg transition-colors text-sm"
                                         style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
-                                        aria-label="Discuss task with Kiko"
+                                        aria-label="Discuss task with Mira"
                                     >
                                         <ChatBubbleLeftEllipsisIcon className="w-4 h-4" />
                                     </button>
@@ -436,7 +436,7 @@ function EventDetail({
                                         exit={{ opacity: 0 }}
                                         className="opacity-70 text-sm"
                                     >
-                                        ✨ Kiko is ready to help you organize your day
+                                        ✨ Mira is ready to help you organize your day
                                     </motion.p>
                                 )}
                             </div>

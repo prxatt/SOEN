@@ -1,4 +1,4 @@
-# Praxis AI - Private Development Repository
+# Soen - Private Development Repository
 
 ### The AI-Powered Operating System for Creative Entrepreneurs
 
@@ -23,19 +23,19 @@ This is a **private repository** containing proprietary software. This code is:
 
 ---
 
-## 🎯 About Praxis AI
+## 🎯 About Soen
 
-Praxis is a hyper-personalized web application designed for creators and entrepreneurs. It seamlessly integrates daily tasks, learning, and long-term goals with powerful AI insights from the Google Gemini API. Praxis is built to be your "second brain" and strategic partner, turning abstract knowledge into concrete action.
+Soen is a hyper-personalized web application designed for creators and entrepreneurs. It seamlessly integrates daily tasks, learning, and long-term goals with powerful AI insights from the Google Gemini API. Soen is built to be your "second brain" and strategic partner, turning abstract knowledge into concrete action.
 
 ### ✨ Core Features
 
 #### 🧠 Intelligent Partner (Powered by Google Gemini)
-- **Strategic Daily Briefing:** Get a personalized morning report synthesizing your goal progress, health data, recent learnings, and new opportunities in the Kiko Hub.
+- **Strategic Daily Briefing:** Get a personalized morning report synthesizing your goal progress, health data, recent learnings, and new opportunities in the Mira Hub.
 - **Dynamic Mind Mapping:** Visualize the connections between your goals, tasks, and notes with an AI-generated mind map.
 - **Actionable Insights:** Generate concrete project ideas and applications from your course notes and readings.
 - **Smart Notes:** Utilize AI to summarize, expand, find action items, and even generate proposal drafts directly within the note editor.
 - **Explore Hub:** Perform grounded web searches with Google Search and analyze images to get quick answers and inspiration.
-- **Kiko Chat:** A conversational AI assistant, "Kiko," that is aware of your goals and can help you brainstorm or retrieve information.
+- **Mira Chat:** A conversational AI assistant, "Mira," that is aware of your goals and can help you brainstorm or retrieve information.
 
 #### 🚀 Productivity & Workflow
 - **Widget-Based Dashboard:** A fully customizable and visually rich dashboard that aggregates your schedule, calendar, actions, weather, and key events in one glanceable view.
@@ -44,7 +44,7 @@ Praxis is a hyper-personalized web application designed for creators and entrepr
 - **Offline First:** Core application data is cached for offline access, ensuring you can always view your schedule and notes.
 
 #### 🎨 Personalization & Gamification
-- **Praxis Flow:** Earn points for completing tasks and applying AI-generated insights, gamifying your productivity.
+- **Soen Flow:** Earn points for completing tasks and applying AI-generated insights, gamifying your productivity.
 - **Rewards Hub:** Spend your "Flow" points to unlock new app themes.
 - **Daily Streaks:** Stay consistent and build momentum with a daily task completion streak.
 - **Custom Themes:** Switch between light/dark modes and unlock vibrant color themes like Solaris, Crimson, and Oceanic.
@@ -70,8 +70,8 @@ To run this project locally, you will need to have Node.js and a package manager
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/prxatt/Praxis-AI.git
-   cd Praxis-AI
+   git clone https://github.com/prxatt/Soen.git
+   cd Soen
    ```
 
 2. **Install dependencies:**

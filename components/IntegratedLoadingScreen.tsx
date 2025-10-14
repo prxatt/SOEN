@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PraxisLogo } from './Icons';
+import { SoenLogo } from './Icons';
 
 interface IntegratedLoadingScreenProps {
   onComplete: () => void;
@@ -11,8 +11,8 @@ const IntegratedLoadingScreen = ({ onComplete }: IntegratedLoadingScreenProps) =
   const [progress, setProgress] = useState(0);
 
   const steps = [
-    { text: "Initializing Praxis", duration: 800 },
-    { text: "Connecting to Kiko AI", duration: 1200 },
+    { text: "Initializing Soen", duration: 800 },
+    { text: "Connecting to Mira AI", duration: 1200 },
     { text: "Loading your workspace", duration: 1000 },
     { text: "Ready to begin", duration: 500 }
   ];
@@ -79,7 +79,7 @@ const IntegratedLoadingScreen = ({ onComplete }: IntegratedLoadingScreenProps) =
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        {/* Praxis Logo with enhanced animation */}
+        {/* Soen Logo with enhanced animation */}
         <motion.div
           className="mb-8"
           animate={{
@@ -91,7 +91,7 @@ const IntegratedLoadingScreen = ({ onComplete }: IntegratedLoadingScreenProps) =
             ease: "linear",
           }}
         >
-          <PraxisLogo 
+          <SoenLogo 
             className="w-32 h-32 text-white mx-auto" 
             variants={{
               hidden: { opacity: 0, scale: 0.5 },
@@ -128,17 +128,17 @@ const IntegratedLoadingScreen = ({ onComplete }: IntegratedLoadingScreenProps) =
               animate={{ pathLength: 1 }}
               transition={{ duration: 2, delay: 0.5, ease: "easeInOut" }}
             />
-          </PraxisLogo>
+          </SoenLogo>
         </motion.div>
 
-        {/* Praxis Title */}
+        {/* Soen Title */}
         <motion.h1
           className="text-6xl font-bold text-white mb-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.8 }}
         >
-          Praxis
+          Soen
         </motion.h1>
         
         <motion.p

@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { PraxisLogo } from './Icons';
+import { SoenLogo } from './Icons';
 
-const PraxisPreview = () => {
+const SoenPreview = () => {
   return (
     <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black">
       <style>{`
@@ -35,7 +35,7 @@ const PraxisPreview = () => {
         ))}
       </div>
 
-      {/* Main Praxis logo and text */}
+      {/* Main Soen logo and text */}
       <motion.div
         className="relative z-10 text-center"
         initial={{ opacity: 0, scale: 0.8 }}
@@ -53,7 +53,7 @@ const PraxisPreview = () => {
             ease: "linear",
           }}
         >
-          <PraxisLogo 
+          <SoenLogo 
             className="w-32 h-32 text-white mx-auto" 
             variants={{
               hidden: { opacity: 0, scale: 0.5 },
@@ -90,7 +90,7 @@ const PraxisPreview = () => {
               animate={{ pathLength: 1 }}
               transition={{ duration: 2, delay: 0.5, ease: "easeInOut" }}
             />
-          </PraxisLogo>
+          </SoenLogo>
         </motion.div>
 
         <motion.h1
@@ -99,7 +99,7 @@ const PraxisPreview = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.8 }}
         >
-          Praxis
+          Soen
         </motion.h1>
         
         <motion.p
@@ -151,4 +151,4 @@ const PraxisPreview = () => {
   );
 };
 
-export default PraxisPreview;
+export default SoenPreview;

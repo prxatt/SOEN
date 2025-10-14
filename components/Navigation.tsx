@@ -185,7 +185,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
                     <span className="text-black font-bold text-sm">P</span>
                   </div>
                   <div>
-                    <h1 className="text-white font-bold text-lg tracking-tight">Praxis</h1>
+                    <h1 className="text-white font-bold text-lg tracking-tight">Soen</h1>
                     <p className="text-white/60 text-xs">AI Command Center</p>
                   </div>
             </motion.div>
@@ -193,14 +193,14 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
             </AnimatePresence>
           </div>
 
-          {/* Kiko AI Button - Special prominence */}
+          {/* Mira AI Button - Special prominence */}
           <div className="p-4">
             <motion.button
-              onClick={() => handleTabClick('Kiko')}
+              onClick={() => handleTabClick('Mira')}
               className={`
                 w-full flex items-center justify-center transition-all duration-300
                 ${collapsed ? 'h-12 rounded-xl' : 'h-12 px-4 rounded-xl'}
-                ${activeScreen === 'Kiko'
+                ${activeScreen === 'Mira'
                   ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/25'
                   : 'bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-white/20'
                 }
@@ -218,7 +218,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
                     transition={{ duration: 0.2 }}
                     className="text-sm font-semibold whitespace-nowrap"
                   >
-                    Kiko AI
+                    Mira AI
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -293,9 +293,9 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
             <span className="text-xs font-medium">Schedule</span>
           </motion.button>
 
-          {/* Central Kiko button */}
+          {/* Central Mira button */}
               <motion.button
-                onClick={() => setScreen('Kiko')}
+                onClick={() => setScreen('Mira')}
             className="relative p-4 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-lg shadow-purple-500/25"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

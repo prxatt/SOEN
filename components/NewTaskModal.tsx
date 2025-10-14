@@ -96,7 +96,7 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
             const { data: parsedDetails, fallbackUsed } = await parseTaskFromString(title);
 
             if (fallbackUsed) {
-                showToast("Kiko is using a backup model for command parsing.");
+                showToast("Mira is using a backup model for command parsing.");
             }
             
             setTaskDetails(prev => ({ ...prev, ...parsedDetails }));
@@ -236,7 +236,7 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
                                         exit={{ opacity: 0 }}
                                         className="opacity-70 mt-0.5 text-sm"
                                     >
-                                        ✨ Kiko is ready to help you organize your day
+                                        ✨ Mira is ready to help you organize your day
                                     </motion.p>
                                 )}
                             </div>

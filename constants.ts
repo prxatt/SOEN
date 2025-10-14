@@ -121,8 +121,8 @@ export const REWARDS_CATALOG: RewardItem[] = [
 
 
 export const MOCKED_BRIEFING: MissionBriefing = {
-  title: "Connecting to Praxis AI...",
-  summary: "Stand by, syncing with Kiko to generate your daily intelligence report. Displaying last known data.",
+  title: "Connecting to Soen...",
+  summary: "Stand by, syncing with Mira to generate your daily intelligence report. Displaying last known data.",
   metrics: [
     { label: "Flow Earned", value: "120", icon: "SparklesIcon" },
     { label: "Tasks Done", value: "3/5", icon: "CheckCircleIcon" },

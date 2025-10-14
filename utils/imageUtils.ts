@@ -29,7 +29,7 @@ export const applyWatermark = (base64Image: string): Promise<string> => {
             ctx.fillText(dateStr, margin, canvas.height - margin);
 
             // --- Add Watermark Text (Bottom Center) ---
-            const watermarkText = 'Praxis AI';
+            const watermarkText = 'Soen';
             ctx.font = `bold ${fontSize * 0.8}px "Instrument Sans", sans-serif`;
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.textAlign = 'center';

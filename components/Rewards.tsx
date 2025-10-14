@@ -6,7 +6,7 @@ import { CheckCircleIcon, ChevronLeftIcon, SparklesIcon } from './Icons';
 
 interface RewardsProps {
     onBack: () => void;
-    praxisFlow: number;
+    soenFlow: number;
     purchasedRewards: string[];
     activeTheme: string;
     setActiveTheme: (themeValue: string) => void;
@@ -105,7 +105,7 @@ function RewardCard({ item, isPurchased, isActive, canAfford, onPurchase, onAppl
     );
 }
 
-function Rewards({ onBack, praxisFlow, purchasedRewards, activeTheme, setActiveTheme, onPurchase, activeFocusBackground, setActiveFocusBackground }: RewardsProps) {
+function Rewards({ onBack, soenFlow, purchasedRewards, activeTheme, setActiveTheme, onPurchase, activeFocusBackground, setActiveFocusBackground }: RewardsProps) {
     const themes = REWARDS_CATALOG.filter(r => r.type === 'theme');
     const focusBackgrounds = REWARDS_CATALOG.filter(r => r.type === 'focus_background');
 
@@ -115,7 +115,7 @@ function Rewards({ onBack, praxisFlow, purchasedRewards, activeTheme, setActiveT
                 <button onClick={onBack} className="p-2 rounded-full hover:bg-card transition-colors"><ChevronLeftIcon className="w-6 h-6"/></button>
                 <div>
                     <h2 className="text-3xl font-bold font-display">Rewards Hub</h2>
-                    <p className="text-text-secondary">Customize your Praxis workspace.</p>
+                    <p className="text-text-secondary">Customize your Soen workspace.</p>
                 </div>
             </div>
             
@@ -129,7 +129,7 @@ function Rewards({ onBack, praxisFlow, purchasedRewards, activeTheme, setActiveT
                                 item={item}
                                 isPurchased={purchasedRewards.includes(item.id)}
                                 isActive={activeTheme === item.value}
-                                canAfford={praxisFlow >= item.cost}
+                                canAfford={soenFlow >= item.cost}
                                 onPurchase={() => onPurchase(item)}
                                 onApply={() => setActiveTheme(item.value)}
                             />
@@ -146,7 +146,7 @@ function Rewards({ onBack, praxisFlow, purchasedRewards, activeTheme, setActiveT
                                 item={item}
                                 isPurchased={purchasedRewards.includes(item.id)}
                                 isActive={activeFocusBackground === item.value}
-                                canAfford={praxisFlow >= item.cost}
+                                canAfford={soenFlow >= item.cost}
                                 onPurchase={() => onPurchase(item)}
                                 onApply={() => setActiveFocusBackground(item.value)}
                             />

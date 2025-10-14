@@ -1,4 +1,4 @@
-# 🔒 Praxis AI Security & Production Readiness Checklist
+# 🔒 Soen Security & Production Readiness Checklist
 
 ## ✅ Security Measures Implemented
 

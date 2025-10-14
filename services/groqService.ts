@@ -40,10 +40,10 @@ export const parseCommandWithLlama3 = async (command: string): Promise<Partial<T
     - **Output:** The output MUST be only the JSON object, with no surrounding text, explanations, or markdown.
 
     **Example 1:**
-    User Input: "/meeting with Apoorva for Praxis AI @ 3pm in Blue Bottle FiDi for 90 mins"
+    User Input: "/meeting with Apoorva for Soen @ 3pm in Blue Bottle FiDi for 90 mins"
     JSON Output for Example 1:
     {
-      "title": "Meeting with Apoorva for Praxis AI",
+      "title": "Meeting with Apoorva for Soen",
       "category": "Meeting",
       "location": "Blue Bottle FiDi",
       "plannedDuration": 90,

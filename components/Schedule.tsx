@@ -18,7 +18,7 @@ interface ScheduleProps {
     onCompleteTask: (taskId: number, actualDuration: number) => void;
     onUndoCompleteTask: (task: Task) => void;
     triggerInsightGeneration: (task: Task, isRegeneration: boolean) => void;
-    redirectToKikoAIWithChat: (history: ChatMessage[]) => void;
+    redirectToMiraAIWithChat: (history: ChatMessage[]) => void;
     addNote: (title: string, content: string, notebookId: number) => void;
     deleteTask: (taskId: number) => void;
     addTask: (task: Partial<Task> & { title: string }) => void;
@@ -718,7 +718,7 @@ function Schedule(props: ScheduleProps) {
                             setSelectedTask(null);
                             setIsEventDetailOpen(false);
                         }}
-                        redirectToKikoAIWithChat={props.redirectToKikoAIWithChat}
+                        redirectToMiraAIWithChat={props.redirectToMiraAIWithChat}
                         addNote={props.addNote}
                         triggerInsightGeneration={props.triggerInsightGeneration}
                         deleteTask={props.deleteTask}

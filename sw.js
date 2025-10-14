@@ -1,4 +1,4 @@
-const CACHE_NAME = 'praxis-cache-v1';
+const CACHE_NAME = 'soen-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',

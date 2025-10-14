@@ -140,11 +140,11 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                                     const permission = await Notification.requestPermission();
                                     if (permission === 'granted') {
                                         setBrowserPushEnabled(true);
-                                        localStorage.setItem('praxis-browser-push', 'true');
+                                        localStorage.setItem('soen-browser-push', 'true');
                                     }
                                 } else {
                                     setBrowserPushEnabled(false);
-                                    localStorage.setItem('praxis-browser-push', 'false');
+                                    localStorage.setItem('soen-browser-push', 'false');
                                 }
                             }}
                             role="switch" 

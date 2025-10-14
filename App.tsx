@@ -404,8 +404,8 @@ function App() {
     // Listen for global event to open Daily Mode (triggered from Dashboard CTA)
     useEffect(() => {
         const handler = () => setIsDailyModeOpen(true);
-        window.addEventListener('praxis:open-daily-mode', handler);
-        return () => window.removeEventListener('praxis:open-daily-mode', handler);
+        window.addEventListener('soen:open-daily-mode', handler);
+        return () => window.removeEventListener('soen:open-daily-mode', handler);
     }, []);
 
     useEffect(() => {

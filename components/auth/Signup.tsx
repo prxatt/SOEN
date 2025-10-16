@@ -1,35 +1,63 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GoogleIcon, AppleIcon } from '../Icons';
 
 interface SignupProps {
-    onLogin: () => void; // For MVP, signup will also just log the user in
+    onSignup: (email: string, password: string, fullName: string) => void;
+    isLoading?: boolean;
 }
 
-function Signup({ onLogin }: SignupProps) {
+function Signup({ onSignup, isLoading = false }: SignupProps) {
+    const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onLogin();
+        onSignup(email, password, fullName);
     };
 
     return (
         <div>
             <h2 className="text-2xl font-bold text-center mb-6 font-display">Create Account</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-                 <div>
+                <div>
                     <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-1">Full Name</label>
-                    <input type="text" id="name" name="name" required 
-                           className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent" />
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        required 
+                        disabled={isLoading}
+                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50" 
+                    />
                 </div>
                 <div>
                     <label htmlFor="email-signup" className="block text-sm font-medium text-text-secondary mb-1">Email</label>
-                    <input type="email" id="email-signup" name="email" required 
-                           className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent" />
+                    <input 
+                        type="email" 
+                        id="email-signup" 
+                        name="email" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required 
+                        disabled={isLoading}
+                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50" 
+                    />
                 </div>
                 <div>
-                    <label htmlFor="password-signup"className="block text-sm font-medium text-text-secondary mb-1">Password</label>
-                    <input type="password" id="password-signup" name="password" required 
-                           className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent" />
+                    <label htmlFor="password-signup" className="block text-sm font-medium text-text-secondary mb-1">Password</label>
+                    <input 
+                        type="password" 
+                        id="password-signup" 
+                        name="password" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required 
+                        disabled={isLoading}
+                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50" 
+                    />
                 </div>
 
                 <div className="flex items-start gap-2 pt-2">
@@ -39,9 +67,12 @@ function Signup({ onLogin }: SignupProps) {
                     </label>
                 </div>
 
-                <button type="submit" 
-                        className="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-all duration-200">
-                    Create Account
+                <button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isLoading ? 'Creating Account...' : 'Create Account'}
                 </button>
             </form>
 
@@ -55,11 +86,19 @@ function Signup({ onLogin }: SignupProps) {
             </div>
             
             <div className="space-y-3">
-                 <button className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-bg hover:bg-border/50 border border-border text-text font-semibold rounded-xl transition-colors">
+                <button 
+                    type="button"
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-bg hover:bg-border/50 border border-border text-text font-semibold rounded-xl transition-colors disabled:opacity-50"
+                >
                     <GoogleIcon className="w-5 h-5" />
                     Sign up with Google
                 </button>
-                 <button className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-bg hover:bg-border/50 border border-border text-text font-semibold rounded-xl transition-colors">
+                <button 
+                    type="button"
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-bg hover:bg-border/50 border border-border text-text font-semibold rounded-xl transition-colors disabled:opacity-50"
+                >
                     <AppleIcon className="w-5 h-5" />
                     Sign up with Apple
                 </button>

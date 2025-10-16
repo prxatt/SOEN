@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { parseCommandWithLlama3, parseUpdateCommandWithLlama3 } from './groqService';
 import { analyzeImageWithGPT4o, generateTextWithGPT4o, generateBriefingWithGPT4o, generateActionableInsightsWithGPT4o } from './openAIService';
 import { generateImageWithImagen, parseCommandWithGemini, generateCompletionSummaryWithGemini, generateActionableInsights, getAutocompleteSuggestions, generateTextWithGemini } from './geminiService';
+import { miraAIRouter, AI_ROUTING_STRATEGY } from './aiModelSelectionService';
 import { Task, Note, HealthData, MissionBriefing, CompletionSummary, ActionItem, Goal, ActionableInsight } from '../types';
 import { extractJson } from "../utils/jsonUtils";
 import { inferHomeLocation } from "../utils/taskUtils";
@@ -137,6 +138,64 @@ export type MiraTaskType =
     | 'generate_note_from_template'
     | 'generate_daily_image';
 
+// Enhanced Mira AI Request Router with Cost Optimization
+export const miraRequestWithRouting = async (
+    taskType: MiraTaskType,
+    payload: any,
+    userId: string = 'default',
+    userTier: string = 'free'
+): Promise<{ data: any; fallbackUsed: boolean; modelUsed: string; cost: number; }> => {
+    console.log('Mira orchestrator received request with routing:', taskType);
+    
+    // Map task types to routing strategy use cases
+    const useCaseMapping: Record<MiraTaskType, keyof typeof AI_ROUTING_STRATEGY> = {
+        'generate_briefing': 'strategic_planning',
+        'generate_task_insights': 'task_parsing',
+        'generate_note_from_template': 'note_generation',
+        'generate_daily_image': 'vision_ocr',
+        'parse_command': 'quick_chat',
+        'parse_update_command': 'quick_chat',
+        'generate_completion_summary': 'completion_summary',
+        'generate_actionable_insights': 'strategic_planning',
+        'get_autocomplete_suggestions': 'quick_chat',
+        'generate_text': 'note_generation',
+        'analyze_image': 'vision_ocr',
+        'generate_image': 'vision_ocr'
+    };
+
+    const useCase = useCaseMapping[taskType] || 'fallback';
+    
+    try {
+        // Route request through the AI router
+        const response = await miraAIRouter.routeRequest({
+            useCase,
+            message: JSON.stringify(payload),
+            context: { taskType, payload },
+            userId,
+            userTier,
+            priority: userTier === 'enterprise' ? 'high' : 'medium'
+        });
+
+        return {
+            data: response.content,
+            fallbackUsed: false,
+            modelUsed: response.model,
+            cost: response.usage ? (response.usage.inputTokens * 0.001 + response.usage.outputTokens * 0.001) : 0
+        };
+    } catch (error) {
+        console.error('AI routing failed, falling back to original method:', error);
+        
+        // Fallback to original method
+        const originalResult = await miraRequest(taskType, payload);
+        return {
+            ...originalResult,
+            modelUsed: 'fallback',
+            cost: 0
+        };
+    }
+};
+
+// Original Mira AI Request Router (kept for backward compatibility)
 export const miraRequest = async (
     taskType: MiraTaskType,
     payload: any

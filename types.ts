@@ -326,7 +326,7 @@ export interface NotionSyncLog {
   user_id: string;
   note_id: number;
   notion_page_id?: string;
-  sync_direction: 'praxis_to_notion' | 'notion_to_praxis';
+  sync_direction: 'soen_to_notion' | 'notion_to_soen';
   sync_status: 'success' | 'failed' | 'pending';
   error_message?: string;
   created_at: Date;

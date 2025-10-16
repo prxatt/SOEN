@@ -1,10 +1,10 @@
 # Notion Real-Time Sync Implementation
 
-This implementation provides real-time synchronization between Praxis-AI notes and Notion pages, allowing users to seamlessly work with their notes across both platforms.
+This implementation provides real-time synchronization between Soen notes and Notion pages, allowing users to seamlessly work with their notes across both platforms.
 
 ## Features
 
-- **Bidirectional Sync**: Sync notes from Praxis to Notion and vice versa
+- **Bidirectional Sync**: Sync notes from Soen to Notion and vice versa
 - **HTML to Notion Blocks Conversion**: Converts rich HTML content to Notion's block format
 - **Database Management**: Automatically creates and manages Notion databases
 - **Sync Logging**: Comprehensive logging of all sync operations
@@ -17,8 +17,8 @@ This implementation provides real-time synchronization between Praxis-AI notes a
 The main service that handles all Notion synchronization logic:
 
 - **NotionSyncService Class**: Core service with methods for:
-  - `syncNoteToNotion()`: Sync Praxis notes to Notion
-  - `syncNotionToPraxis()`: Sync Notion pages to Praxis
+  - `syncNoteToNotion()`: Sync Soen notes to Notion
+  - `syncNotionToSoen()`: Sync Notion pages to Soen
   - `setupNotionIntegration()`: Setup user's Notion integration
   - `getSyncStatus()`: Get sync history and status
 
@@ -71,7 +71,7 @@ CREATE TABLE notion_sync_log (
   user_id TEXT NOT NULL,
   note_id INTEGER NOT NULL,
   notion_page_id TEXT,
-  sync_direction TEXT NOT NULL CHECK (sync_direction IN ('praxis_to_notion', 'notion_to_praxis')),
+  sync_direction TEXT NOT NULL CHECK (sync_direction IN ('soen_to_notion', 'notion_to_soen')),
   sync_status TEXT NOT NULL CHECK (sync_status IN ('success', 'failed', 'pending')),
   error_message TEXT,
   created_at TIMESTAMP DEFAULT NOW()

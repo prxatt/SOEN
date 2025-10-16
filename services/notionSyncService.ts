@@ -96,7 +96,7 @@ class NotionSyncService {
         user_id: userId,
         note_id: noteId,
         notion_page_id: note.notion_page_id,
-        sync_direction: 'praxis_to_notion',
+        sync_direction: 'soen_to_notion',
         sync_status: 'success'
       });
 
@@ -108,7 +108,7 @@ class NotionSyncService {
       await this.logSync({
         user_id: userId,
         note_id: noteId,
-        sync_direction: 'praxis_to_notion',
+        sync_direction: 'soen_to_notion',
         sync_status: 'failed',
         error_message: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -117,7 +117,7 @@ class NotionSyncService {
     }
   }
 
-  async syncNotionToPraxis(userId: string, notionPageId: string): Promise<boolean> {
+  async syncNotionToSoen(userId: string, notionPageId: string): Promise<boolean> {
     if (!this.notion) {
       throw new Error('Notion client not initialized');
     }
@@ -137,7 +137,7 @@ class NotionSyncService {
       // Extract title from page properties
       const title = this.extractTitleFromNotionPage(page as any);
 
-      // Create or update note in Praxis
+      // Create or update note in Soen
       const { data: existingNote } = await this.supabase
         .from('notes')
         .select('*')
@@ -173,19 +173,19 @@ class NotionSyncService {
         user_id: userId,
         note_id: existingNote?.id || 0,
         notion_page_id: notionPageId,
-        sync_direction: 'notion_to_praxis',
+        sync_direction: 'notion_to_soen',
         sync_status: 'success'
       });
 
       return true;
     } catch (error) {
-      console.error('Error syncing Notion to Praxis:', error);
+      console.error('Error syncing Notion to Soen:', error);
       
       // Log failed sync
       await this.logSync({
         user_id: userId,
         notion_page_id: notionPageId,
-        sync_direction: 'notion_to_praxis',
+        sync_direction: 'notion_to_soen',
         sync_status: 'failed',
         error_message: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -212,7 +212,7 @@ class NotionSyncService {
         .eq('id', notebookId)
         .single();
 
-      const databaseTitle = notebook?.title || `Praxis Notes - Notebook ${notebookId}`;
+      const databaseTitle = notebook?.title || `Soen Notes - Notebook ${notebookId}`;
 
       // Create new database
       const database = await this.notion.databases.create({

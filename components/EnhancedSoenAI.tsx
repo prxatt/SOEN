@@ -241,16 +241,17 @@ export const EnhancedSoenAI: React.FC<EnhancedSoenAIProps> = ({
   // Delete conversation
   const deleteConversation = async (conversationId: string) => {
     try {
-      // Note: You'll need to add a delete function to your Supabase client
+      // TODO: Implement and call a `db.deleteMiraConversation(conversationId)` function.
       // For now, just remove from local state
-      setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      const newConversations = conversations.filter(conv => conv.id !== conversationId);
+      setConversations(newConversations);
       
       if (activeConversationId === conversationId) {
-        setActiveConversationId(null);
-        setMessages([]);
+        // Set the new active conversation to the first one in the list, or null if empty
+        setActiveConversationId(newConversations.length > 0 ? newConversations[0].id : null);
       }
       
-      showToast('Conversation deleted');
+      showToast('Conversation deleted (locally)');
     } catch (error) {
       console.error('Error deleting conversation:', error);
       showToast('Failed to delete conversation');

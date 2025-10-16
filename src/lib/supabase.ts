@@ -252,6 +252,8 @@ export const db = {
         conversation_id: conversationId,
         role,
         content_plaintext: content,
+        // TODO: Replace this with actual encryption. This is a temporary fix to satisfy the NOT NULL constraint.
+        content_encrypted: content,
         ...metadata
       })
       .select()

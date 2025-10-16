@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GoogleIcon, AppleIcon } from '../Icons';
 
 interface LoginProps {
-    onLogin: () => void;
+    onLogin: (email: string, password: string) => void;
+    isLoading?: boolean;
 }
 
-function Login({ onLogin }: LoginProps) {
+function Login({ onLogin, isLoading = false }: LoginProps) {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onLogin();
+        onLogin(email, password);
     };
 
     return (
@@ -18,13 +21,29 @@ function Login({ onLogin }: LoginProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-1">Email</label>
-                    <input type="email" id="email" name="email" required 
-                           className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors" />
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required 
+                        disabled={isLoading}
+                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors disabled:opacity-50" 
+                    />
                 </div>
                 <div>
                     <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-1">Password</label>
-                    <input type="password" id="password" name="password" required 
-                           className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors" />
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required 
+                        disabled={isLoading}
+                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors disabled:opacity-50" 
+                    />
                 </div>
 
                 <div className="flex items-center justify-between text-xs">
@@ -35,9 +54,12 @@ function Login({ onLogin }: LoginProps) {
                     <a href="#" className="font-medium text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:underline transition-colors">Forgot Password?</a>
                 </div>
 
-                <button type="submit" 
-                        className="w-full py-3 px-4 bg-black hover:bg-gray-800 text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-all duration-200 border border-gray-800 hover:border-gray-600">
-                    Login
+                <button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className="w-full py-3 px-4 bg-black hover:bg-gray-800 text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-all duration-200 border border-gray-800 hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isLoading ? 'Signing in...' : 'Login'}
                 </button>
             </form>
 
@@ -51,11 +73,19 @@ function Login({ onLogin }: LoginProps) {
             </div>
             
             <div className="space-y-3">
-                <button className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-bg hover:bg-border/50 border border-border text-text font-semibold rounded-xl transition-colors">
+                <button 
+                    type="button"
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-bg hover:bg-border/50 border border-border text-text font-semibold rounded-xl transition-colors disabled:opacity-50"
+                >
                     <GoogleIcon className="w-5 h-5" />
                     Sign in with Google
                 </button>
-                 <button className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-bg hover:bg-border/50 border border-border text-text font-semibold rounded-xl transition-colors">
+                <button 
+                    type="button"
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-bg hover:bg-border/50 border border-border text-text font-semibold rounded-xl transition-colors disabled:opacity-50"
+                >
                     <AppleIcon className="w-5 h-5" />
                     Sign in with Apple
                 </button>

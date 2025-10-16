@@ -8,6 +8,7 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#A855F7">
     <link rel="apple-touch-icon" href="/icon.svg">
+    <!-- Temporary Tailwind CDN for development -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -22,15 +23,6 @@
               'border': 'var(--color-border)',
               'text': 'var(--color-text)',
               'text-secondary': 'var(--color-text-secondary)',
-              
-              // Chart colors for new Mission Control
-              'chart-pink': '#EC4899',
-              'chart-purple': '#A855F7',
-              'chart-blue': '#3B82F6',
-              'chart-cyan': '#06B6D4',
-              'chart-green': '#22C55E',
-              'chart-yellow': '#F59E0B',
-              'chart-orange': '#F97316',
             },
             borderRadius: {
               'xl': '1rem',
@@ -97,96 +89,9 @@
         }
       }
     </script>
-     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Poppins:wght@600;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      /* Default Theme: Obsidian */
-      --color-accent: #000000;
-      --color-accent-hover: #333333;
-
-      /* Default Mode: Dark */
-      --color-bg: #101010;
-      --color-card: #1C1C1E;
-      --color-border: #404040; /* Increased contrast for UI elements */
-      --color-text: #F3F4F6;
-      --color-text-secondary: #B0B0B0; /* Increased contrast for readability (WCAG AA) */
-    }
-    
-    html:not(.dark) {
-      /* Glass Mode */
-      --color-bg: #F0F2F5;
-      --color-card: rgba(255, 255, 255, 0.7);
-      --color-border: rgba(0, 0, 0, 0.1);
-      --color-text: #111827;
-      --color-text-secondary: #4B5563;
-    }
-
-    /* Theme Definitions (Accent Colors Only) */
-    [data-theme="obsidian"] { --color-accent: #000000; --color-accent-hover: #333333; }
-    [data-theme="synthwave"] { --color-accent: #EC4899; --color-accent-hover: #DB2777; }
-    [data-theme="solarpunk"] { --color-accent: #84CC16; --color-accent-hover: #65A30D; }
-    [data-theme="luxe"] { --color-accent: #EAB308; --color-accent-hover: #CA8A04; } /* Gold */
-    [data-theme="aurelian"] { --color-accent: #F59E0B; --color-accent-hover: #D97706; }
-    [data-theme="crimson"] { --color-accent: #DC2626; --color-accent-hover: #B91C1C; }
-    [data-theme="oceanic"] { --color-accent: #0EA5E9; --color-accent-hover: #0284C7; }
-    
-    body {
-      color: var(--color-text);
-      background-color: var(--color-bg);
-      overflow-x: hidden; /* Prevent horizontal scroll on mobile */
-    }
-
-    .card {
-      background-color: var(--color-card);
-      border: 1px solid var(--color-border);
-    }
-    
-    html:not(.dark) .card {
-      -webkit-backdrop-filter: blur(24px);
-      backdrop-filter: blur(24px);
-      border: 1px solid transparent;
-      background-color: var(--color-card);
-    }
-    
-    /* Consistent focus styles */
-    input:focus, select:focus, textarea:focus, button:focus-visible, [contenteditable]:focus {
-        @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg rounded-sm;
-    }
-    .break-word {
-      overflow-wrap: break-word;
-    }
-    .break-all {
-        word-break: break-all;
-    }
-
-    /* New Focus Mode Backgrounds */
-    [data-focus-theme="synthwave"] {
-        background: linear-gradient(-45deg, #f87171, #d946ef, #7c3aed, #4f46e5);
-        background-size: 400% 400%;
-        animation: gradient-shift 15s ease infinite;
-    }
-    [data-focus-theme="lofi"] {
-        background: linear-gradient(135deg, #1e293b, #334155, #475569);
-        background-size: 400% 400%;
-        animation: gradient-shift 20s ease infinite;
-    }
-    [data-focus-theme="solarpunk"] {
-        background: linear-gradient(-45deg, #a3e635, #22c55e, #06b6d4, #3b82f6);
-        background-size: 400% 400%;
-        animation: gradient-shift 15s ease infinite;
-    }
-    
-    /* Invisible Scrollbar Utility */
-    .hide-scrollbar::-webkit-scrollbar {
-        display: none;
-    }
-    .hide-scrollbar {
-        -ms-overflow-style: none; /* IE and Edge */
-        scrollbar-width: none; /* Firefox */
-    }
-  </style>
   <script type="importmap">
 {
   "imports": {

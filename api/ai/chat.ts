@@ -319,16 +319,116 @@ function buildMessages(message: string, context: any): Array<{role: 'user' | 'as
   return messages;
 }
 
+/**
+ * Calculate the cost of AI model usage based on tokens
+ * @param model - The AI model name
+ * @param tokens - Number of tokens used
+ * @returns Cost in cents
+ */
 function calculateCost(model: string, tokens: number): number {
+  // Comprehensive cost mapping for all supported AI models
   const costs: Record<string, {input: number; output: number}> = {
+    // OpenAI Models
+    'gpt-4o': { input: 2.50, output: 10.00 },
     'gpt-4o-mini': { input: 0.15, output: 0.60 },
+    'gpt-4-turbo': { input: 10.00, output: 30.00 },
+    'gpt-4': { input: 30.00, output: 60.00 },
+    'gpt-3.5-turbo': { input: 0.50, output: 1.50 },
+    
+    // Anthropic Models
+    'claude-3.5-sonnet': { input: 3.00, output: 15.00 },
     'claude-3.5-haiku': { input: 0.80, output: 4.00 },
-    'gemini-1.5-flash': { input: 0.00, output: 0.00 }
+    'claude-3-opus': { input: 15.00, output: 75.00 },
+    'claude-3-sonnet': { input: 3.00, output: 15.00 },
+    'claude-3-haiku': { input: 0.25, output: 1.25 },
+    
+    // Google Models
+    'gemini-2.5-flash': { input: 0.00, output: 0.00 },
+    'gemini-1.5-flash': { input: 0.00, output: 0.00 },
+    'gemini-1.5-pro': { input: 1.25, output: 5.00 },
+    'gemini-pro': { input: 0.50, output: 1.50 },
+    
+    // Grok Models
+    'grok-beta': { input: 0.00, output: 0.00 },
+    'grok-2': { input: 0.00, output: 0.00 },
+    
+    // Perplexity Models
+    'llama-3.1-sonar': { input: 0.20, output: 0.20 },
+    'llama-3.1-sonar-large': { input: 0.20, output: 0.20 },
+    
+    // DALL-E Models
+    'dall-e-3': { input: 0.00, output: 0.00 }, // Per image pricing
+    'dall-e-2': { input: 0.00, output: 0.00 }, // Per image pricing
   };
 
-  const modelCost = costs[model.split(' ')[0]] || { input: 0, output: 0 };
+  // Robust model name parsing - handle various formats
+  const normalizedModel = normalizeModelName(model);
+  const modelCost = costs[normalizedModel];
+  
+  if (!modelCost) {
+    console.warn(`Unknown model "${model}" (normalized: "${normalizedModel}"), using default cost`);
+    // Default to a reasonable cost for unknown models
+    return Math.round((tokens / 1_000_000) * 1.00 * 100); // $1 per million tokens
+  }
+
   const tokensInMillion = tokens / 1_000_000;
   
+  // Calculate cost based on typical input/output ratio (30% input, 70% output)
   const costUSD = (tokensInMillion * 0.3 * modelCost.input) + (tokensInMillion * 0.7 * modelCost.output);
   return Math.round(costUSD * 100);
+}
+
+/**
+ * Normalize model name to match cost mapping
+ * @param model - Raw model name from API
+ * @returns Normalized model name
+ */
+function normalizeModelName(model: string): string {
+  if (!model) return 'unknown';
+  
+  // Convert to lowercase and handle common variations
+  const normalized = model.toLowerCase().trim();
+  
+  // Handle OpenAI models with version numbers
+  if (normalized.includes('gpt-4o')) {
+    if (normalized.includes('mini')) return 'gpt-4o-mini';
+    return 'gpt-4o';
+  }
+  
+  // Handle Claude models
+  if (normalized.includes('claude-3.5')) {
+    if (normalized.includes('sonnet')) return 'claude-3.5-sonnet';
+    if (normalized.includes('haiku')) return 'claude-3.5-haiku';
+    return 'claude-3.5-sonnet'; // Default to sonnet
+  }
+  
+  if (normalized.includes('claude-3')) {
+    if (normalized.includes('opus')) return 'claude-3-opus';
+    if (normalized.includes('sonnet')) return 'claude-3-sonnet';
+    if (normalized.includes('haiku')) return 'claude-3-haiku';
+    return 'claude-3-sonnet'; // Default to sonnet
+  }
+  
+  // Handle Gemini models
+  if (normalized.includes('gemini-2.5')) return 'gemini-2.5-flash';
+  if (normalized.includes('gemini-1.5')) {
+    if (normalized.includes('pro')) return 'gemini-1.5-pro';
+    return 'gemini-1.5-flash';
+  }
+  if (normalized.includes('gemini-pro')) return 'gemini-pro';
+  
+  // Handle Grok models
+  if (normalized.includes('grok-2')) return 'grok-2';
+  if (normalized.includes('grok')) return 'grok-beta';
+  
+  // Handle Perplexity models
+  if (normalized.includes('llama-3.1-sonar-large')) return 'llama-3.1-sonar-large';
+  if (normalized.includes('llama-3.1-sonar')) return 'llama-3.1-sonar';
+  
+  // Handle DALL-E models
+  if (normalized.includes('dall-e-3')) return 'dall-e-3';
+  if (normalized.includes('dall-e-2')) return 'dall-e-2';
+  
+  // Return the original normalized name if no specific match
+  return normalized;
 }

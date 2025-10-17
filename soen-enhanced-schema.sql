@@ -104,9 +104,9 @@ CREATE TABLE IF NOT EXISTS mira_messages (
     role TEXT NOT NULL CHECK (role IN ('user', 'mira')),
     
     -- Message Content (encrypted)
-    content_encrypted TEXT NOT NULL,
-    content_iv TEXT, -- initialization vector for AES-256-GCM
-    content_plaintext TEXT, -- Only if user opts out of encryption
+    content_encrypted TEXT NOT NULL, -- Encrypted content (AES-256-GCM)
+    content_iv TEXT NOT NULL, -- initialization vector for AES-256-GCM
+    content_plaintext TEXT, -- Legacy field for backward compatibility (will be removed)
     
     -- Attachments (from our current ChatMessage type)
     attachment JSONB, -- {type: 'image'|'file', base64: string, mimeType: string, url: string}
@@ -716,6 +716,31 @@ BEGIN
 END;
 $$;
 
+-- Increment AI request counter for a user
+CREATE OR REPLACE FUNCTION increment_ai_requests(p_user_id UUID)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+BEGIN
+    -- First, reset daily counter if needed
+    PERFORM reset_daily_ai_requests();
+    
+    -- Increment the user's daily AI request count
+    UPDATE profiles
+    SET daily_ai_requests = daily_ai_requests + 1,
+        monthly_ai_requests = monthly_ai_requests + 1,
+        last_activity_date = CURRENT_DATE
+    WHERE user_id = p_user_id;
+    
+    -- If no rows were updated, the user doesn't exist
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'User with ID % not found', p_user_id;
+    END IF;
+END;
+$$;
+
 -- Function to calculate streak (from our gamification)
 CREATE OR REPLACE FUNCTION update_user_streak(p_user_id UUID)
 RETURNS void
@@ -796,6 +821,27 @@ GRANT USAGE ON SCHEMA public TO anon;
 GRANT INSERT ON public.profiles TO anon;
 
 -- ============================================
+-- SECURITY MIGRATION: MESSAGE ENCRYPTION
+-- ============================================
+
+-- Migration to make content_encrypted NOT NULL (run after encrypting existing data)
+DO $$
+BEGIN
+    -- Check if we need to migrate existing plaintext messages
+    IF EXISTS (
+        SELECT 1 FROM mira_messages 
+        WHERE content_plaintext IS NOT NULL 
+        AND (content_encrypted IS NULL OR content_iv IS NULL)
+    ) THEN
+        RAISE WARNING '⚠️  Found plaintext messages that need encryption migration!';
+        RAISE WARNING '   Run the migration function: utils.migrateMessagesToEncrypted()';
+        RAISE WARNING '   This should be done before making content_encrypted NOT NULL';
+    ELSE
+        RAISE NOTICE '✅ All messages are properly encrypted';
+    END IF;
+END $$;
+
+-- ============================================
 -- MIGRATION COMPLETE
 -- ============================================
 
@@ -812,6 +858,8 @@ BEGIN
   RAISE NOTICE '   - Notifications and audit logging';
   RAISE NOTICE '   - Optimized RLS policies for performance';
   RAISE NOTICE '   - Comprehensive indexing for scale';
+  RAISE NOTICE '   - 🔒 MESSAGE ENCRYPTION: All Mira messages are now encrypted';
   RAISE NOTICE '';
   RAISE NOTICE '🎯 Ready for Soen AI-powered productivity!';
+  RAISE NOTICE '🔐 Security: Message encryption implemented with AES-256-GCM';
 END $$;

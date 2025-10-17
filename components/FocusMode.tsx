@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, TaskPrep } from '../types';
 import { getActualDuration } from '../utils/taskUtils';
-import { generateTaskPrimer } from '../services/geminiService';
+import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
+import { auth } from '../src/lib/supabase-client';
 import { PauseIcon, PlayIcon, CheckCircleIcon, XMarkIcon, LightBulbIcon, ClipboardDocumentListIcon, ChatBubbleLeftRightIcon, LinkIcon, CheckIcon } from './Icons';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -26,10 +27,38 @@ function FocusMode({ task, onComplete, onClose, activeFocusBackground }: FocusMo
     useEffect(() => {
         const fetchPrimer = async () => {
             setIsLoadingPrep(true);
-            const primerData = await generateTaskPrimer(task);
-            setPrep(primerData);
-            if (primerData?.action_plan) {
-                setCompletedActionItems(new Array(primerData.action_plan.length).fill(false));
+            try {
+                // Use AI Orchestrator for enhanced task primer generation
+                const currentUser = await auth.getCurrentUser();
+                if (!currentUser) {
+                    throw new Error('No authenticated user found');
+                }
+                const userContext = await getUserContext(currentUser.id);
+                const primerData = await miraRequestWithRouting(
+                    currentUser.id,
+                    'generate_actionable_insights',
+                    { task: task },
+                    {
+                        conversationHistory: [],
+                        userGoals: [],
+                        recentTasks: userContext.recentTasks,
+                        recentNotes: userContext.recentNotes
+                    }
+                );
+                setPrep(primerData);
+                if (primerData?.action_plan) {
+                    setCompletedActionItems(new Array(primerData.action_plan.length).fill(false));
+                }
+            } catch (error) {
+                console.error('Failed to generate task primer:', error);
+                // Fallback to basic primer matching TaskPrep shape
+                setPrep({
+                    action_plan: ['Start the task', 'Stay focused', 'Complete successfully'],
+                    key_takeaways: ['Eliminate distractions', 'Take short breaks as needed'],
+                    inquiry_prompts: ['What is the next concrete step?', 'Any blockers to remove?'],
+                    related_links: []
+                });
+                setCompletedActionItems([false, false, false]);
             }
             setIsLoadingPrep(false);
         };

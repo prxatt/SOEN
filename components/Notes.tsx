@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import Draggable from 'react-draggable';
 import { Note, Notebook, Task, NoteView, NoteAttachment, Category } from '../types';
-import { miraRequest } from '../services/miraAIService';
+import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
 import { PRESET_COLORS } from '../constants';
 import { 
     PlusIcon, TrashIcon, SparklesIcon, XMarkIcon, 

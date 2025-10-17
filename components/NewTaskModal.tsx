@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Category, TaskStatus, Project, Note } from '../types';
 import { SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, ClockIcon, LinkIcon, ArrowPathIcon, LightBulbIcon, HeartIcon, RocketIcon, UserIcon, ChartBarIcon, FlagIcon } from './Icons';
 import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
+import { auth } from '../src/lib/supabase-client';
 import { getTopCategories } from '../utils/taskUtils';
 
 interface NewTaskModalProps {
@@ -93,9 +94,11 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
         setIsParsing(true);
         try {
             // Use AI Orchestrator for enhanced task parsing
-            const userContext = await getUserContext('current-user'); // You'll need to pass actual user ID
+            const currentUser = await auth.getCurrentUser();
+            if (!currentUser) return;
+            const userContext = await getUserContext(currentUser.id);
             const parsedDetails = await miraRequestWithRouting(
-                'current-user', // You'll need to pass actual user ID
+                currentUser.id,
                 'parse_command',
                 { command: title },
                 {

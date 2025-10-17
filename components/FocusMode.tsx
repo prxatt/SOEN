@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Task, TaskPrep } from '../types';
 import { getActualDuration } from '../utils/taskUtils';
 import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
+import { auth } from '../src/lib/supabase-client';
 import { PauseIcon, PlayIcon, CheckCircleIcon, XMarkIcon, LightBulbIcon, ClipboardDocumentListIcon, ChatBubbleLeftRightIcon, LinkIcon, CheckIcon } from './Icons';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -28,9 +29,13 @@ function FocusMode({ task, onComplete, onClose, activeFocusBackground }: FocusMo
             setIsLoadingPrep(true);
             try {
                 // Use AI Orchestrator for enhanced task primer generation
-                const userContext = await getUserContext('current-user'); // You'll need to pass actual user ID
+                const currentUser = await auth.getCurrentUser();
+                if (!currentUser) {
+                    throw new Error('No authenticated user found');
+                }
+                const userContext = await getUserContext(currentUser.id);
                 const primerData = await miraRequestWithRouting(
-                    'current-user', // You'll need to pass actual user ID
+                    currentUser.id,
                     'generate_actionable_insights',
                     { task: task },
                     {
@@ -46,13 +51,12 @@ function FocusMode({ task, onComplete, onClose, activeFocusBackground }: FocusMo
                 }
             } catch (error) {
                 console.error('Failed to generate task primer:', error);
-                // Fallback to basic primer
+                // Fallback to basic primer matching TaskPrep shape
                 setPrep({
-                    title: `Focus on: ${task.title}`,
-                    description: `Complete this task with focus and determination.`,
                     action_plan: ['Start the task', 'Stay focused', 'Complete successfully'],
-                    resources: [],
-                    tips: ['Eliminate distractions', 'Take breaks as needed']
+                    key_takeaways: ['Eliminate distractions', 'Take short breaks as needed'],
+                    inquiry_prompts: ['What is the next concrete step?', 'Any blockers to remove?'],
+                    related_links: []
                 });
                 setCompletedActionItems([false, false, false]);
             }

@@ -1,7 +1,7 @@
 // Enhanced SoenAI component using new AI Orchestrator
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db, auth } from '../src/lib/supabase';
+import { db, auth } from '../src/lib/supabase-client';
 import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
 import { UserIcon, PaperAirplaneIcon, PaperClipIcon, XMarkIcon, EllipsisVerticalIcon, TrashIcon, PencilIcon, DocumentPlusIcon, Bars3Icon, DocumentTextIcon, ArrowUpOnSquareIcon, BabyPenguinIcon, ArrowPathIcon, ChatBubbleOvalLeftEllipsisIcon } from './Icons';
 
@@ -190,8 +190,8 @@ export const EnhancedSoenAI: React.FC<EnhancedSoenAIProps> = ({
       try {
         const aiResponse = await miraRequestWithRouting(
           user.id,
-          'parse_command', // This will be mapped to 'mira_chat' in the orchestrator
-          { command: message },
+          'mira_chat', // Use mira_chat directly for general conversation
+          { message: message },
           {
             conversationHistory,
             userGoals: goals || [],

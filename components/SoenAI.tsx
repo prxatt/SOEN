@@ -2,7 +2,74 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { Screen, Note, ChatMessage, ChatSession, Notebook } from '../types';
 import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
+import { auth } from '../src/lib/supabase-client';
 import { UserIcon, PaperAirplaneIcon, PaperClipIcon, XMarkIcon, EllipsisVerticalIcon, TrashIcon, PencilIcon, DocumentPlusIcon, Bars3Icon, DocumentTextIcon, ArrowUpOnSquareIcon, BabyPenguinIcon, ArrowPathIcon, ChatBubbleOvalLeftEllipsisIcon } from './Icons';
+
+// New function using AI orchestrator for contextual prompts
+const getChatContextualPrompts = async (screen: string): Promise<string[]> => {
+    try {
+        const currentUser = await auth.getCurrentUser();
+        if (!currentUser) {
+            // Fallback to static prompts if no user
+            return getStaticContextualPrompts(screen);
+        }
+
+        const userContext = await getUserContext(currentUser.id);
+        const result = await miraRequestWithRouting(
+            currentUser.id,
+            'generate_contextual_prompts',
+            { screen },
+            {
+                conversationHistory: [],
+                userGoals: userContext.userGoals || [],
+                recentTasks: userContext.recentTasks || [],
+                recentNotes: userContext.recentNotes || []
+            }
+        );
+
+        return result.prompts || getStaticContextualPrompts(screen);
+    } catch (error) {
+        console.error('Failed to get contextual prompts:', error);
+        // Fallback to static prompts on error
+        return getStaticContextualPrompts(screen);
+    }
+};
+
+// Fallback static prompts (same as the old geminiService function)
+const getStaticContextualPrompts = (screen: string): string[] => {
+    switch (screen) {
+        case 'Dashboard':
+            return [
+                "Summarize my day's performance.",
+                "What's the most important task left today?",
+                "Suggest a new short-term goal based on today's focus."
+            ];
+        case 'Schedule':
+            return [
+                "Find free time for a 1-hour meeting tomorrow.",
+                "What are my priorities for this week?",
+                "Create a new 'Deep Work' session for Friday morning."
+            ];
+        case 'Notes':
+            return [
+                "Find notes related to 'Soen strategy'.",
+                "Create a new note summarizing my last meeting.",
+                "Draft an email based on my 'Brand Guidelines' note."
+            ];
+        case 'Profile':
+            return [
+                "How can I earn more Flow points?",
+                "Review my long-term goals with me.",
+                "What theme should I unlock next?"
+            ];
+        default:
+            return [
+                "Summarize my day.",
+                "What's my top priority?",
+                "Help me brainstorm ideas for a new project."
+            ];
+    }
+};
 
 interface SoenAIProps {
   chatHistory: ChatSession[];
@@ -206,11 +273,31 @@ function ChatInterface(props: {
     const { activeChat, onSendMessage, isAiReplying, previousScreen, onRename, notes, onAddToNote, onNewNoteFromChat, showToast } = props;
     const [chatInput, setChatInput] = useState('');
     const [chatAttachment, setChatAttachment] = useState<ChatMessage['attachment'] & { url: string } | null>(null);
+    const [contextualPrompts, setContextualPrompts] = useState<string[]>([]);
+    const [isLoadingPrompts, setIsLoadingPrompts] = useState(true);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [activeChat.messages, isAiReplying]);
+
+    // Load contextual prompts when component mounts or screen changes
+    useEffect(() => {
+        const loadPrompts = async () => {
+            setIsLoadingPrompts(true);
+            try {
+                const prompts = await getChatContextualPrompts(previousScreen || 'Dashboard');
+                setContextualPrompts(prompts);
+            } catch (error) {
+                console.error('Failed to load contextual prompts:', error);
+                // Fallback to static prompts
+                setContextualPrompts(getStaticContextualPrompts(previousScreen || 'Dashboard'));
+            } finally {
+                setIsLoadingPrompts(false);
+            }
+        };
+        loadPrompts();
+    }, [previousScreen]);
 
     const handleChatSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -266,15 +353,22 @@ function ChatInterface(props: {
                         <h3 className="text-2xl font-bold font-display text-text">Mira is ready.</h3>
                         <p className="text-base mt-2">Your strategic partner is listening.</p>
                         <div className="flex flex-wrap items-center justify-center gap-3 mt-10 max-w-2xl mx-auto">
-                            {getChatContextualPrompts(previousScreen || 'Dashboard').map((prompt) => (
-                                <button 
-                                    key={prompt} 
-                                    onClick={() => handleContextualPromptClick(prompt)} 
-                                    className="text-sm px-4 py-2 bg-card/50 dark:bg-zinc-900/40 backdrop-blur-lg border border-white/10 hover:border-white/20 hover:bg-card/70 rounded-xl flex-shrink-0 transition-all duration-300 font-semibold shadow-lg"
-                                >
-                                    {prompt}
-                                </button>
-                            ))}
+                            {isLoadingPrompts ? (
+                                <div className="flex items-center gap-2 text-text-secondary">
+                                    <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                                    <span className="text-sm">Loading suggestions...</span>
+                                </div>
+                            ) : (
+                                contextualPrompts.map((prompt) => (
+                                    <button 
+                                        key={prompt} 
+                                        onClick={() => handleContextualPromptClick(prompt)} 
+                                        className="text-sm px-4 py-2 bg-card/50 dark:bg-zinc-900/40 backdrop-blur-lg border border-white/10 hover:border-white/20 hover:bg-card/70 rounded-xl flex-shrink-0 transition-all duration-300 font-semibold shadow-lg"
+                                    >
+                                        {prompt}
+                                    </button>
+                                ))
+                            )}
                         </div>
                     </div>
                 )}

@@ -2,8 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Category, TaskStatus, Project, Note } from '../types';
 import { SparklesIcon, XMarkIcon, BriefcaseIcon, DocumentTextIcon, MapPinIcon, VideoCameraIcon, ClockIcon, LinkIcon, ArrowPathIcon, LightBulbIcon, HeartIcon, RocketIcon, UserIcon, ChartBarIcon, FlagIcon } from './Icons';
-import { getAutocompleteSuggestions } from '../services/geminiService';
-import { parseTaskFromString } from '../services/miraAIService';
+import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
 import { getTopCategories } from '../utils/taskUtils';
 
 interface NewTaskModalProps {
@@ -93,12 +92,20 @@ function NewTaskModal({ onClose, addTask, selectedDate, projects, notes, categor
         }
         setIsParsing(true);
         try {
-            const { data: parsedDetails, fallbackUsed } = await parseTaskFromString(title);
+            // Use AI Orchestrator for enhanced task parsing
+            const userContext = await getUserContext('current-user'); // You'll need to pass actual user ID
+            const parsedDetails = await miraRequestWithRouting(
+                'current-user', // You'll need to pass actual user ID
+                'parse_command',
+                { command: title },
+                {
+                    conversationHistory: [],
+                    userGoals: [],
+                    recentTasks: userContext.recentTasks,
+                    recentNotes: userContext.recentNotes
+                }
+            );
 
-            if (fallbackUsed) {
-                showToast("Mira is using a backup model for command parsing.");
-            }
-            
             setTaskDetails(prev => ({ ...prev, ...parsedDetails }));
 
             if (parsedDetails.startTime instanceof Date) {

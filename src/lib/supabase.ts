@@ -1,8 +1,24 @@
 import { createClient } from '@supabase/supabase-js'
+import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'crypto'
+import { promisify } from 'util'
 
 // Supabase configuration
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://afowfefzjonwbqtthacq.supabase.co'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmb3dmZWZ6am9ud2JxdHRoYWNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1MTcyMTQsImV4cCI6MjA3MjA5MzIxNH0.3V2q6dfsG-JB8HRxEvwXW0Nt9duVMUMtQrZH-ENSyqg'
+
+// Encryption configuration
+const ENCRYPTION_ALGORITHM = 'aes-256-gcm'
+const SALT_LENGTH = 32
+const IV_LENGTH = 16
+const TAG_LENGTH = 16
+const KEY_LENGTH = 32
+
+// Get encryption key from environment or use a default (in production, this should be properly managed)
+const getEncryptionKey = async (): Promise<Buffer> => {
+  const keyString = import.meta.env.VITE_ENCRYPTION_KEY || 'default-key-change-in-production'
+  const scryptAsync = promisify(scrypt)
+  return scryptAsync(keyString, 'salt', KEY_LENGTH) as Promise<Buffer>
+}
 
 // Create Supabase client with error handling
 let supabase: any = null;
@@ -37,6 +53,54 @@ try {
 }
 
 export { supabase }
+
+// Encryption utility functions
+const encryptText = async (text: string): Promise<{ encrypted: string; iv: string }> => {
+  try {
+    const key = await getEncryptionKey()
+    const iv = randomBytes(IV_LENGTH)
+    const cipher = createCipheriv(ENCRYPTION_ALGORITHM, key, iv)
+    cipher.setAAD(Buffer.from('mira-message', 'utf8'))
+    
+    let encrypted = cipher.update(text, 'utf8', 'hex')
+    encrypted += cipher.final('hex')
+    
+    const tag = cipher.getAuthTag()
+    const encryptedWithTag = encrypted + tag.toString('hex')
+    
+    return {
+      encrypted: encryptedWithTag,
+      iv: iv.toString('hex')
+    }
+  } catch (error) {
+    console.error('Encryption error:', error)
+    throw new Error('Failed to encrypt message content')
+  }
+}
+
+const decryptText = async (encryptedText: string, iv: string): Promise<string> => {
+  try {
+    const key = await getEncryptionKey()
+    const ivBuffer = Buffer.from(iv, 'hex')
+    const encryptedBuffer = Buffer.from(encryptedText, 'hex')
+    
+    // Extract tag from the end of encrypted data
+    const tag = encryptedBuffer.slice(-TAG_LENGTH)
+    const encrypted = encryptedBuffer.slice(0, -TAG_LENGTH)
+    
+    const decipher = createDecipheriv(ENCRYPTION_ALGORITHM, key, ivBuffer)
+    decipher.setAAD(Buffer.from('mira-message', 'utf8'))
+    decipher.setAuthTag(tag)
+    
+    let decrypted = decipher.update(encrypted, undefined, 'utf8')
+    decrypted += decipher.final('utf8')
+    
+    return decrypted
+  } catch (error) {
+    console.error('Decryption error:', error)
+    throw new Error('Failed to decrypt message content')
+  }
+}
 
 // Auth helper functions
 export const auth = {
@@ -242,18 +306,86 @@ export const db = {
       .select('*')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true })
-    return { data, error }
+    
+    if (error || !data) {
+      return { data, error }
+    }
+
+    // Decrypt messages
+    try {
+      const decryptedMessages = await Promise.all(
+        data.map(async (message) => {
+          if (message.content_encrypted && message.content_iv) {
+            try {
+              const decryptedContent = await decryptText(message.content_encrypted, message.content_iv)
+              return {
+                ...message,
+                content_plaintext: decryptedContent,
+                content_encrypted: undefined, // Remove encrypted content from response
+                content_iv: undefined // Remove IV from response
+              }
+            } catch (decryptError) {
+              console.error('Failed to decrypt message:', decryptError)
+              // Fallback to plaintext if decryption fails (for backward compatibility)
+              return {
+                ...message,
+                content_plaintext: message.content_plaintext || '[Encrypted message - decryption failed]'
+              }
+            }
+          } else if (message.content_plaintext) {
+            // Handle legacy messages that only have plaintext
+            return message
+          } else {
+            // No content available
+            return {
+              ...message,
+              content_plaintext: '[No content available]'
+            }
+          }
+        })
+      )
+      
+      return { data: decryptedMessages, error: null }
+    } catch (error) {
+      console.error('Error decrypting messages:', error)
+      return { data, error }
+    }
   },
 
   async createMiraMessage(conversationId: string, role: 'user' | 'mira', content: string, metadata: any = {}) {
+    try {
+      // Encrypt the message content
+      const { encrypted, iv } = await encryptText(content)
+      
+      const { data, error } = await supabase
+        .from('mira_messages')
+        .insert({
+          conversation_id: conversationId,
+          role,
+          content_encrypted: encrypted,
+          content_iv: iv,
+          content_plaintext: null, // No longer store plaintext
+          ...metadata
+        })
+        .select()
+      return { data, error }
+    } catch (encryptionError) {
+      console.error('Failed to encrypt message:', encryptionError)
+      return { 
+        data: null, 
+        error: { 
+          message: 'Failed to encrypt message content',
+          details: encryptionError instanceof Error ? encryptionError.message : 'Unknown encryption error'
+        } 
+      }
+    }
+  },
+
+  async deleteMiraConversation(conversationId: string) {
     const { data, error } = await supabase
-      .from('mira_messages')
-      .insert({
-        conversation_id: conversationId,
-        role,
-        content_plaintext: content,
-        ...metadata
-      })
+      .from('mira_conversations')
+      .delete()
+      .eq('id', conversationId)
       .select()
     return { data, error }
   },
@@ -446,6 +578,63 @@ export const utils = {
       if (error) {
         console.error('Failed to create user profile:', error)
       }
+    }
+  },
+
+  // Migrate existing plaintext messages to encrypted format
+  async migrateMessagesToEncrypted() {
+    try {
+      console.log('Starting message encryption migration...')
+      
+      // Get all messages that have plaintext but no encrypted content
+      const { data: messages, error } = await supabase
+        .from('mira_messages')
+        .select('id, content_plaintext')
+        .not('content_plaintext', 'is', null)
+        .is('content_encrypted', null)
+      
+      if (error) {
+        console.error('Failed to fetch messages for migration:', error)
+        return { success: false, error }
+      }
+
+      if (!messages || messages.length === 0) {
+        console.log('No messages need migration')
+        return { success: true, migrated: 0 }
+      }
+
+      console.log(`Found ${messages.length} messages to migrate`)
+
+      // Migrate each message
+      let migratedCount = 0
+      for (const message of messages) {
+        try {
+          const { encrypted, iv } = await encryptText(message.content_plaintext)
+          
+          const { error: updateError } = await supabase
+            .from('mira_messages')
+            .update({
+              content_encrypted: encrypted,
+              content_iv: iv,
+              content_plaintext: null // Remove plaintext after encryption
+            })
+            .eq('id', message.id)
+          
+          if (updateError) {
+            console.error(`Failed to migrate message ${message.id}:`, updateError)
+          } else {
+            migratedCount++
+          }
+        } catch (encryptError) {
+          console.error(`Failed to encrypt message ${message.id}:`, encryptError)
+        }
+      }
+
+      console.log(`Successfully migrated ${migratedCount} out of ${messages.length} messages`)
+      return { success: true, migrated: migratedCount, total: messages.length }
+    } catch (error) {
+      console.error('Migration failed:', error)
+      return { success: false, error }
     }
   }
 }

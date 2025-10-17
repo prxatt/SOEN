@@ -4,8 +4,7 @@ import { Task, Note, Project, Goal, TaskStatus, Category, Notebook, ChatMessage,
 import { CheckCircleIcon, XMarkIcon, SparklesIcon, DocumentTextIcon, LinkIcon, ArrowPathIcon, PlusIcon, VideoCameraIcon, LightBulbIcon, ClockIcon, MapPinIcon, UserIcon, PhotoIcon, ChartBarIcon, HeartIcon, RocketIcon, FlagIcon, ChatBubbleLeftEllipsisIcon, BriefcaseIcon, ChevronDownIcon, CheckIcon, SunIcon, CloudIcon, BoltIcon } from './Icons';
 import * as Icons from './Icons';
 import { ResponsiveContainer, BarChart, Bar, Cell, RadialBarChart, RadialBar, Tooltip } from 'recharts';
-import { getAutocompleteSuggestions } from '../services/geminiService';
-import { miraRequest } from '../services/miraAIService';
+import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
 
 interface EventDetailProps {
     task: Task;

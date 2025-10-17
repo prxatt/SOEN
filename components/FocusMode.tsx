@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, TaskPrep } from '../types';
 import { getActualDuration } from '../utils/taskUtils';
-import { generateTaskPrimer } from '../services/geminiService';
+import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
 import { PauseIcon, PlayIcon, CheckCircleIcon, XMarkIcon, LightBulbIcon, ClipboardDocumentListIcon, ChatBubbleLeftRightIcon, LinkIcon, CheckIcon } from './Icons';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -26,10 +26,35 @@ function FocusMode({ task, onComplete, onClose, activeFocusBackground }: FocusMo
     useEffect(() => {
         const fetchPrimer = async () => {
             setIsLoadingPrep(true);
-            const primerData = await generateTaskPrimer(task);
-            setPrep(primerData);
-            if (primerData?.action_plan) {
-                setCompletedActionItems(new Array(primerData.action_plan.length).fill(false));
+            try {
+                // Use AI Orchestrator for enhanced task primer generation
+                const userContext = await getUserContext('current-user'); // You'll need to pass actual user ID
+                const primerData = await miraRequestWithRouting(
+                    'current-user', // You'll need to pass actual user ID
+                    'generate_actionable_insights',
+                    { task: task },
+                    {
+                        conversationHistory: [],
+                        userGoals: [],
+                        recentTasks: userContext.recentTasks,
+                        recentNotes: userContext.recentNotes
+                    }
+                );
+                setPrep(primerData);
+                if (primerData?.action_plan) {
+                    setCompletedActionItems(new Array(primerData.action_plan.length).fill(false));
+                }
+            } catch (error) {
+                console.error('Failed to generate task primer:', error);
+                // Fallback to basic primer
+                setPrep({
+                    title: `Focus on: ${task.title}`,
+                    description: `Complete this task with focus and determination.`,
+                    action_plan: ['Start the task', 'Stay focused', 'Complete successfully'],
+                    resources: [],
+                    tips: ['Eliminate distractions', 'Take breaks as needed']
+                });
+                setCompletedActionItems([false, false, false]);
             }
             setIsLoadingPrep(false);
         };

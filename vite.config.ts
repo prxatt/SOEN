@@ -28,6 +28,21 @@ export default defineConfig(({ mode }) => {
             strict: false
           }
         }
+      },
+      build: {
+        // Increase chunk size warning limit to reduce build warnings
+        chunkSizeWarningLimit: 1000,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              // Split vendor chunks for better caching
+              'react-vendor': ['react', 'react-dom'],
+              'ui-vendor': ['framer-motion', 'lucide-react'],
+              'ai-vendor': ['openai', '@google/genai', 'deepgram'],
+              'supabase-vendor': ['@supabase/supabase-js']
+            }
+          }
+        }
       }
     };
 });

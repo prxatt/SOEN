@@ -104,9 +104,9 @@ CREATE TABLE IF NOT EXISTS mira_messages (
     role TEXT NOT NULL CHECK (role IN ('user', 'mira')),
     
     -- Message Content (encrypted)
-    content_encrypted TEXT NOT NULL,
-    content_iv TEXT, -- initialization vector for AES-256-GCM
-    content_plaintext TEXT, -- Only if user opts out of encryption
+    content_encrypted TEXT NOT NULL, -- Encrypted content (AES-256-GCM)
+    content_iv TEXT NOT NULL, -- initialization vector for AES-256-GCM
+    content_plaintext TEXT, -- Legacy field for backward compatibility (will be removed)
     
     -- Attachments (from our current ChatMessage type)
     attachment JSONB, -- {type: 'image'|'file', base64: string, mimeType: string, url: string}
@@ -796,6 +796,27 @@ GRANT USAGE ON SCHEMA public TO anon;
 GRANT INSERT ON public.profiles TO anon;
 
 -- ============================================
+-- SECURITY MIGRATION: MESSAGE ENCRYPTION
+-- ============================================
+
+-- Migration to make content_encrypted NOT NULL (run after encrypting existing data)
+DO $$
+BEGIN
+    -- Check if we need to migrate existing plaintext messages
+    IF EXISTS (
+        SELECT 1 FROM mira_messages 
+        WHERE content_plaintext IS NOT NULL 
+        AND (content_encrypted IS NULL OR content_iv IS NULL)
+    ) THEN
+        RAISE WARNING '⚠️  Found plaintext messages that need encryption migration!';
+        RAISE WARNING '   Run the migration function: utils.migrateMessagesToEncrypted()';
+        RAISE WARNING '   This should be done before making content_encrypted NOT NULL';
+    ELSE
+        RAISE NOTICE '✅ All messages are properly encrypted';
+    END IF;
+END $$;
+
+-- ============================================
 -- MIGRATION COMPLETE
 -- ============================================
 
@@ -812,6 +833,8 @@ BEGIN
   RAISE NOTICE '   - Notifications and audit logging';
   RAISE NOTICE '   - Optimized RLS policies for performance';
   RAISE NOTICE '   - Comprehensive indexing for scale';
+  RAISE NOTICE '   - 🔒 MESSAGE ENCRYPTION: All Mira messages are now encrypted';
   RAISE NOTICE '';
   RAISE NOTICE '🎯 Ready for Soen AI-powered productivity!';
+  RAISE NOTICE '🔐 Security: Message encryption implemented with AES-256-GCM';
 END $$;

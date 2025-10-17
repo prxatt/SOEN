@@ -176,37 +176,31 @@ class ClientAIService {
     const startTime = Date.now();
     
     try {
-      // Use Gemini API directly from client (with API key)
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
-      }
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      // Use server-side endpoint to avoid exposing API key
+      const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: this.buildPrompt(request)
-            }]
-          }]
+          message: this.buildPrompt(request),
+          model: 'gemini-1.5-flash',
+          userId: request.userId,
+          feature: request.feature
         })
       });
 
       if (!response.ok) {
-        throw new Error('Gemini API request failed');
+        throw new Error('Server-side Gemini request failed');
       }
 
       const result = await response.json();
-      const content = result.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+      const content = result.content || 'No response generated';
 
       return {
         content,
         modelUsed: 'gemini-1.5-flash',
-        tokensUsed: result.usageMetadata?.totalTokenCount || 0,
+        tokensUsed: result.tokensUsed || 0,
         processingTimeMs: Date.now() - startTime,
         confidence: 0.80,
         costCents: 0, // Free tier

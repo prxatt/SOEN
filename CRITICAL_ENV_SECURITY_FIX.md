@@ -5,6 +5,8 @@
 ### **Issue Identified:**
 1. A `.env` file containing sensitive environment variables was accidentally committed to the repository
 2. The `soen.env.example` file contained real API keys instead of placeholders, creating additional security risks
+3. **CRITICAL:** Client-side API key exposure through Vite configuration and direct API calls
+4. **CRITICAL:** Server-side services being imported into client-side code, exposing API keys in browser
 
 ### **Risk Assessment:**
 - **Severity:** CRITICAL
@@ -28,12 +30,19 @@
 - ✅ Fixed Anthropic, Notion, and other service API keys
 - ✅ Ensured all example values are safe placeholders
 
-### **3. Git History Cleanup**
+### **3. Client-Side API Key Exposure Fix**
+- ✅ **CRITICAL:** Removed API key exposure from `vite.config.ts`
+- ✅ **CRITICAL:** Fixed `executeGeminiFallback` to use server-side endpoint
+- ✅ **CRITICAL:** Removed `VITE_GEMINI_API_KEY` from example configuration
+- ✅ **CRITICAL:** Ensured all AI API calls go through server-side endpoints
+- ✅ **CRITICAL:** Prevented server-side services from being used client-side
+
+### **4. Git History Cleanup**
 - ✅ Used `git filter-branch` to remove `.env` from entire repository history
 - ✅ Force-pushed cleaned history to remote repository
 - ✅ Ensured no traces of sensitive data remain in git history
 
-### **4. Prevention Measures**
+### **5. Prevention Measures**
 - ✅ Updated `.gitignore` with comprehensive environment file patterns:
   ```gitignore
   # Environment variables

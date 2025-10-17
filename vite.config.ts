@@ -7,8 +7,8 @@ export default defineConfig(({ mode }) => {
     return {
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        // SECURITY: Never expose API keys to client-side
+        // All API calls must go through server-side endpoints
       },
       resolve: {
         alias: {

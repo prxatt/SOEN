@@ -154,13 +154,14 @@ export const miraRequestWithRouting = async (
         'generate_note_from_template': 'note_generation',
         'generate_daily_image': 'vision_ocr',
         'parse_command': 'quick_chat',
-        'parse_update_command': 'quick_chat',
-        'generate_completion_summary': 'completion_summary',
-        'generate_actionable_insights': 'strategic_planning',
-        'get_autocomplete_suggestions': 'quick_chat',
-        'generate_text': 'note_generation',
-        'analyze_image': 'vision_ocr',
-        'generate_image': 'vision_ocr'
+        'parse_task_update': 'quick_chat',
+        'generate_completion_summary': 'note_generation',
+        'generate_completion_image': 'vision_ocr',
+        'generate_note_thumbnail': 'vision_ocr',
+        'generate_note_text': 'note_generation',
+        'generate_note_tags': 'note_generation',
+        'generate_note_title': 'note_generation',
+        'analyze_image': 'vision_ocr'
     };
 
     const useCase = useCaseMapping[taskType] || 'fallback';

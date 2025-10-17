@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Screen, Note, ChatMessage, ChatSession, Notebook } from '../types';
-import { getChatContextualPrompts } from '../services/geminiService';
+import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
 import { UserIcon, PaperAirplaneIcon, PaperClipIcon, XMarkIcon, EllipsisVerticalIcon, TrashIcon, PencilIcon, DocumentPlusIcon, Bars3Icon, DocumentTextIcon, ArrowUpOnSquareIcon, BabyPenguinIcon, ArrowPathIcon, ChatBubbleOvalLeftEllipsisIcon } from './Icons';
 
 interface SoenAIProps {

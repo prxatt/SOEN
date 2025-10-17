@@ -16,6 +16,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.67.0",
     "@elevenlabs/elevenlabs-js": "^2.18.0",
     "@google/genai": "^1.15.0",
     "@notionhq/client": "^5.2.0",
@@ -48,5 +49,15 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "overrides": {
+    "frisbee": {
+      "engines": {
+        "node": ">=18.0.0"
+      }
+    }
   }
 }

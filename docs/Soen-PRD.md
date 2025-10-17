@@ -28,10 +28,13 @@ Soen is a personal AI that plans, executes, and reflects with you, turning messy
   - Smart Priorities; Focus Timer + auto-logging.
   - Calendar write; Email/Calendar ingestion.
   - Command Palette; Offline-ready PWA.
+  - User phone number verification for additional filtering and account security.
 - V1.5 (3–4 months)
   - Memory Graph; Routines & Habits; Project briefs; AI compose for updates.
+  - OTP-based sign-up for iOS/mobile browser users, with email collection planned for future stage.
 - V2 (6–9 months)
   - iOS app; integrations marketplace; collaborative sharing; voice capture; agentic scheduling.
+  - Two-way sync with iOS/iCloud and Google Calendar, including auto-sorting into predefined category colors.
 
 ## Technical Architecture Requirements
 - Frontend
@@ -45,9 +48,13 @@ Soen is a personal AI that plans, executes, and reflects with you, turning messy
   - Privacy-first memory controls; evaluation harness for reliability.
 - Integrations
   - Google Calendar (later iCloud/Outlook), Gmail, Notion import, Apple Health (iOS later).
+  - Two-way calendar sync with iOS/iCloud and Google Calendar with auto-categorization.
+- Authentication & Security
+  - OAuth, encryption in transit/at rest; SOC2-ready controls over time.
+  - Phone number verification for enhanced account security and filtering.
+  - OTP-based mobile sign-up flow for iOS/mobile browser users.
 - Observability & Security
   - OpenTelemetry, structured logging, analytics, feature flags.
-  - OAuth, encryption in transit/at rest; SOC2-ready controls over time.
 
 ## Monetization Strategy
 - Free: capture + tasks + basic chat.
@@ -95,4 +102,7 @@ Columns: ID,Title,Type,Priority,Estimate,Owner,Description,Acceptance Criteria
 8,"Analytics: PQA + event schema",Chore,P1,1d,BE,"Implement activation events; WAU/MAU; Daily Mode events","Events visible in dashboard; funnels queryable"
 9,"Testing: E2E smoke (Daily Mode + Chat actions)",Chore,P1,2d,FE,"Cypress/Playwright basic flows; CI gate","Green runs on PR; catches broken flows"
 10,"Security: OAuth + token storage hardening",Chore,P1,2d,BE,"PKCE; httpOnly; rotation; secret management","Passes basic security checklist; tokens never in localStorage"
+11,"Authentication: Phone number verification system",Feature,P2,3d,BE,"SMS OTP verification; Twilio/AWS SNS integration; user filtering","Users can verify phone numbers; enhanced security filtering"
+12,"Mobile Auth: OTP-based sign-up for iOS/mobile",Feature,P2,4d,FE+BE,"Mobile-first sign-up flow; OTP verification; email collection later","iOS/mobile users can sign up with phone; email requested in future"
+13,"Calendar Sync: Two-way iOS/iCloud + Google integration",Feature,P2,6d,BE,"EventKit integration; Google Calendar API; auto-categorization","Events sync bidirectionally; auto-sorted by predefined category colors"
 

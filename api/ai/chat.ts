@@ -218,12 +218,8 @@ export default async function handler(req: Request, res: Response) {
 
     await supabaseClient.rpc('increment_ai_requests', { p_user_id: userId });
     
-    // Update cache with new request count
-    const cached = userProfileCache.get(userId);
-    if (cached) {
-      cached.daily_ai_requests += 1;
-      cached.cachedAt = Date.now(); // Reset cache timestamp
-    }
+    // Invalidate the user's profile cache to ensure the next request fetches the updated count.
+    invalidateUserProfileCache(userId);
 
     res.status(200).json(aiResponse);
 

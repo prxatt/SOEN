@@ -1,8 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://afowfefzjonwbqtthacq.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmb3dmZWZ6am9ud2JxdHRoYWNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1MTcyMTQsImV4cCI6MjA3MjA5MzIxNH0.3V2q6dfsG-JB8HRxEvwXW0Nt9duVMUMtQrZH-ENSyqg'
+// Supabase configuration - Environment variables are required for security
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+// Validate required environment variables
+if (!supabaseUrl) {
+  throw new Error(
+    'VITE_SUPABASE_URL environment variable is required but not set. ' +
+    'Please create a .env file in your project root with VITE_SUPABASE_URL=your_supabase_url'
+  )
+}
+if (!supabaseAnonKey) {
+  throw new Error(
+    'VITE_SUPABASE_ANON_KEY environment variable is required but not set. ' +
+    'Please create a .env file in your project root with VITE_SUPABASE_ANON_KEY=your_supabase_anon_key'
+  )
+}
 
 // Create Supabase client with error handling
 let supabase: any = null;
@@ -237,23 +251,20 @@ export const db = {
   },
 
   async getMiraMessages(conversationId: string) {
-    const { data, error } = await supabase
-      .from('mira_messages')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-    
-    if (error || !data) {
-      return { data, error }
+    try {
+      const response = await fetch(`/api/mira/message?conversation_id=${encodeURIComponent(conversationId)}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch decrypted messages');
+      }
+      const result = await response.json();
+      return { data: result.data, error: null };
+    } catch (e) {
+      console.error('Failed to fetch Mira messages:', e);
+      return { data: null, error: { message: 'Failed to fetch messages' } };
     }
-
-    // Return messages with plaintext content (encryption handled server-side)
-    const processedMessages = data.map((message) => ({
-      ...message,
-      content_plaintext: message.content_plaintext || '[No content available]'
-    }))
-    
-    return { data: processedMessages, error: null }
   },
 
   async createMiraMessage(conversationId: string, role: 'user' | 'mira', content: string, metadata: any = {}) {

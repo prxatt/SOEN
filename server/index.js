@@ -20,9 +20,9 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Import API routes
-import chatHandler from '../api/ai/chat.js';
-import messageHandler from '../api/mira/message.js';
+// Import API routes (TypeScript handlers executed via tsx)
+import chatHandler from '../api/ai/chat.ts';
+import messageHandler from '../api/mira/message.ts';
 
 // API Routes
 app.post('/api/ai/chat', chatHandler);

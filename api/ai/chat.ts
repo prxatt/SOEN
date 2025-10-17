@@ -1,6 +1,7 @@
 // api/ai/chat.ts
 // Server-side AI chat endpoint
 
+import { Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { OpenAI } from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
@@ -53,6 +54,7 @@ interface CachedProfile {
 }
 
 const userProfileCache = new Map<string, CachedProfile>();
+const userLocks = new Map<string, Promise<void>>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
 
 // Get user profile with caching
@@ -68,13 +70,30 @@ async function getUserProfile(userId: string): Promise<{subscription_tier: strin
     };
   }
   
-  // Fetch from database
-  const supabase = createClient(supabaseUrl, supabaseServiceKey!);
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('subscription_tier, daily_ai_requests')
-    .eq('user_id', userId)
-    .single();
+  // Ensure only one in-flight fetch per user (simple per-user mutex)
+  const prev = userLocks.get(userId) || Promise.resolve();
+  let release: () => void;
+  const next = new Promise<void>(resolve => (release = resolve));
+  userLocks.set(userId, prev.then(() => next));
+  await prev;
+
+  try {
+    // Re-check cache after waiting (another request may have filled it)
+    const cachedAfterWait = userProfileCache.get(userId);
+    if (cachedAfterWait && (Date.now() - cachedAfterWait.cachedAt) < cachedAfterWait.ttl) {
+      return {
+        subscription_tier: cachedAfterWait.subscription_tier,
+        daily_ai_requests: cachedAfterWait.daily_ai_requests
+      };
+    }
+
+    // Fetch from database
+    const supabase = createClient(supabaseUrl, supabaseServiceKey!);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_tier, daily_ai_requests')
+      .eq('user_id', userId)
+      .single();
   
   if (!profile) {
     throw new Error('User profile not found');
@@ -89,6 +108,18 @@ async function getUserProfile(userId: string): Promise<{subscription_tier: strin
   });
   
   return profile;
+  } finally {
+    release!();
+    // Clean up completed lock chains to avoid memory leaks
+    userLocks.delete(userId);
+    // On-demand cache cleanup for expired entries
+    const now2 = Date.now();
+    for (const [uid, cached] of userProfileCache.entries()) {
+      if ((now2 - cached.cachedAt) >= cached.ttl) {
+        userProfileCache.delete(uid);
+      }
+    }
+  }
 }
 
 // Invalidate user profile cache (call this when user profile is updated)
@@ -111,20 +142,12 @@ export function getCacheStats(): { size: number; entries: Array<{userId: string;
   };
 }
 
-// Clean up expired cache entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [userId, cached] of userProfileCache.entries()) {
-    if ((now - cached.cachedAt) >= cached.ttl) {
-      userProfileCache.delete(userId);
-    }
-  }
-}, 60000); // Clean up every minute
+// Removed setInterval to avoid background timers in serverless environments.
 
 // Encryption utilities (server-side only)
 import { encryptText, decryptText, validateEncryptionConfig } from '../lib/encryption';
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

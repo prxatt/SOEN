@@ -186,7 +186,7 @@ class ClientAIService {
           message: this.buildPrompt(request),
           model: 'gemini-1.5-flash',
           userId: request.userId,
-          feature: request.feature
+          featureType: request.featureType
         })
       });
 

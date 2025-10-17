@@ -733,10 +733,10 @@ class AIOrchestrator {
       .sum('cost_cents');
 
     const grokSpent = grokUsage?.cost_cents || 0;
-    const grokCreditsRemaining = Math.max(0, 2500 - grokSpent); // $25 in cents
+    const grokCreditsRemaining = Math.max(0, GROK_FREE_CREDITS_CENTS - grokSpent);
 
     return {
-      remaining: Math.max(0, 1500 - totalSpent), // $15 budget in cents
+      remaining: Math.max(0, MONTHLY_BUDGET_CENTS - totalSpent),
       grokCredits: grokCreditsRemaining
     };
   }

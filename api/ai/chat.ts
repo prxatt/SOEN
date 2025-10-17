@@ -7,20 +7,42 @@ import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Server-side Supabase client with service role key
-const supabaseUrl = process.env.SUPABASE_URL || 'https://afowfefzjonwbqtthacq.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL;
+if (!supabaseUrl) {
+  throw new Error('SUPABASE_URL environment variable is required for database connection');
+}
 
-// AI clients
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseServiceKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required for server-side operations');
+}
+
+// AI clients with environment validation
+const openaiApiKey = process.env.OPENAI_API_KEY;
+if (!openaiApiKey) {
+  throw new Error('OPENAI_API_KEY environment variable is required for AI functionality');
+}
+
+const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+if (!anthropicApiKey) {
+  throw new Error('ANTHROPIC_API_KEY environment variable is required for AI functionality');
+}
+
+const geminiApiKey = process.env.GEMINI_API_KEY;
+if (!geminiApiKey) {
+  throw new Error('GEMINI_API_KEY environment variable is required for AI functionality');
+}
+
 const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: openaiApiKey,
   dangerouslyAllowBrowser: false 
 });
 
 const anthropic = new Anthropic({ 
-  apiKey: process.env.ANTHROPIC_API_KEY 
+  apiKey: anthropicApiKey 
 });
 
-const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const gemini = new GoogleGenerativeAI(geminiApiKey);
 
 // User profile cache to reduce database calls
 interface CachedProfile {

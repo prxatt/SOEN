@@ -7,6 +7,8 @@
 2. The `soen.env.example` file contained real API keys instead of placeholders, creating additional security risks
 3. **CRITICAL:** Client-side API key exposure through Vite configuration and direct API calls
 4. **CRITICAL:** Server-side services being imported into client-side code, exposing API keys in browser
+5. **HIGH:** Hardcoded fallback URLs in production code, creating silent failure risks
+6. **HIGH:** Missing environment variable validation, allowing undefined behavior
 
 ### **Risk Assessment:**
 - **Severity:** CRITICAL
@@ -37,12 +39,22 @@
 - ✅ **CRITICAL:** Ensured all AI API calls go through server-side endpoints
 - ✅ **CRITICAL:** Prevented server-side services from being used client-side
 
-### **4. Git History Cleanup**
+### **4. Environment Variable Validation Fix**
+- ✅ **CRITICAL:** Removed hardcoded fallback URLs from Supabase configuration
+- ✅ **CRITICAL:** Added proper validation for SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
+- ✅ **HIGH:** Added validation for all AI API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY)
+- ✅ **HIGH:** Implemented fail-fast approach for missing environment variables
+- ✅ **HIGH:** Eliminated silent failures and undefined behavior
 - ✅ Used `git filter-branch` to remove `.env` from entire repository history
 - ✅ Force-pushed cleaned history to remote repository
 - ✅ Ensured no traces of sensitive data remain in git history
 
-### **5. Prevention Measures**
+### **5. Git History Cleanup**
+- ✅ Used `git filter-branch` to remove `.env` from entire repository history
+- ✅ Force-pushed cleaned history to remote repository
+- ✅ Ensured no traces of sensitive data remain in git history
+
+### **6. Prevention Measures**
 - ✅ Updated `.gitignore` with comprehensive environment file patterns:
   ```gitignore
   # Environment variables
@@ -130,6 +142,9 @@
 ### **Vulnerabilities Fixed:**
 - ✅ **Environment file exposure** - Completely removed from repository
 - ✅ **Real API keys in examples** - All replaced with safe placeholders
+- ✅ **Client-side API key exposure** - Fixed Vite config and direct API calls
+- ✅ **Hardcoded fallback URLs** - Removed and replaced with proper validation
+- ✅ **Missing environment validation** - Added fail-fast validation for all critical variables
 - ✅ **Hardcoded encryption keys** - Now requires environment variables
 - ✅ **Static salt vulnerability** - Now uses unique salt per installation
 - ✅ **Default key vulnerability** - Now throws error if not configured

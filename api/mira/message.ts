@@ -5,8 +5,15 @@ import { createClient } from '@supabase/supabase-js';
 import { encryptText, decryptText, validateEncryptionConfig } from '../lib/encryption';
 
 // Server-side Supabase client with service role key
-const supabaseUrl = process.env.SUPABASE_URL || 'https://your-project-id.supabase.co';
+const supabaseUrl = process.env.SUPABASE_URL;
+if (!supabaseUrl) {
+  throw new Error('SUPABASE_URL environment variable is required for database connection');
+}
+
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseServiceKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required for server-side operations');
+}
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {

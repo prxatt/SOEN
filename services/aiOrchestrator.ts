@@ -510,7 +510,7 @@ class AIOrchestrator {
       tokensUsed: 0,
       processingTimeMs: Date.now() - startTime,
       confidence: 0.95,
-      costCents: 400, // $4 per image
+      costCents: 4, // $0.04 per image
       cacheHit: false
     };
   }

@@ -9,8 +9,8 @@ echo "=============================================================="
 CURRENT_BRANCH=$(git branch --show-current)
 echo "Current branch: $CURRENT_BRANCH"
 
-if [ "$CURRENT_BRANCH" != "feature/security-fixes-and-ai-enhancements" ]; then
-    echo "❌ Please switch to feature/security-fixes-and-ai-enhancements branch first"
+if [ "$CURRENT_BRANCH" != "feature/security-fixes-v2" ]; then
+    echo "❌ Please switch to feature/security-fixes-v2 branch first"
     exit 1
 fi
 
@@ -22,7 +22,7 @@ fi
 
 # Push the branch to remote
 echo "📤 Pushing branch to remote..."
-git push origin feature/security-fixes-and-ai-enhancements
+git push origin feature/security-fixes-v2
 
 if [ $? -eq 0 ]; then
     echo "✅ Branch pushed successfully!"
@@ -47,7 +47,7 @@ else
 fi
 
 # Create the pull request URL
-PR_URL="https://github.com/$OWNER/$REPO/compare/main...feature/security-fixes-and-ai-enhancements"
+PR_URL="https://github.com/$OWNER/$REPO/compare/main...feature/security-fixes-v2"
 
 echo ""
 echo "🎯 Pull Request Ready!"
@@ -56,7 +56,7 @@ echo ""
 echo "📋 Pull Request Details:"
 echo "   Title: 🚀 Critical Security Fixes & AI Enhancement Updates"
 echo "   Base Branch: main"
-echo "   Head Branch: feature/security-fixes-and-ai-enhancements"
+echo "   Head Branch: feature/security-fixes-v2"
 echo ""
 echo "📝 Description:"
 echo "   Use the content from PULL_REQUEST_DESCRIPTION.md"

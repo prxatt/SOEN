@@ -1,7 +1,8 @@
-// Enhanced SoenAI component using new Supabase features
+// Enhanced SoenAI component using new AI Orchestrator
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db, auth } from '../src/lib/supabase';
+import { db, auth } from '../src/lib/supabase-client';
+import { miraRequestWithRouting, getUserContext } from '../services/miraAIOrchestratorMigration';
 import { UserIcon, PaperAirplaneIcon, PaperClipIcon, XMarkIcon, EllipsisVerticalIcon, TrashIcon, PencilIcon, DocumentPlusIcon, Bars3Icon, DocumentTextIcon, ArrowUpOnSquareIcon, BabyPenguinIcon, ArrowPathIcon, ChatBubbleOvalLeftEllipsisIcon } from './Icons';
 
 interface MiraConversation {
@@ -145,7 +146,7 @@ export const EnhancedSoenAI: React.FC<EnhancedSoenAIProps> = ({
     }
   };
 
-  // Send message
+  // Send message using AI Orchestrator
   const sendMessage = async (messageText: string) => {
     if (!user || !activeConversationId || !messageText.trim()) return;
 
@@ -160,9 +161,10 @@ export const EnhancedSoenAI: React.FC<EnhancedSoenAIProps> = ({
         'user',
         message,
         {
-          model_used: 'gpt-4o-mini',
-          tokens_input: message.length / 4, // Rough estimate
-          cost_cents: 1
+          model_used: 'user',
+          tokens_input: 0,
+          tokens_output: 0,
+          cost_cents: 0
         }
       );
 
@@ -175,65 +177,86 @@ export const EnhancedSoenAI: React.FC<EnhancedSoenAIProps> = ({
       // Add user message to local state
       setMessages(prev => [...prev, userMessage[0]]);
 
-      // Log AI usage
-      await db.logAIUsage(user.id, {
-        model_used: 'gpt-4o-mini',
-        operation_type: 'chat',
-        feature_used: 'mira_chat',
-        tokens_input: Math.floor(message.length / 4),
-        cost_cents: 1
-      });
+      // Get user context for enhanced AI responses
+      const userContext = await getUserContext(user.id);
+      
+      // Get conversation history for context
+      const conversationHistory = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content_plaintext
+      }));
 
-      // Simulate AI response (replace with actual AI service call)
-      setTimeout(async () => {
-        try {
-          const aiResponse = `I understand you said: "${message}". This is a simulated response from Mira AI. In a real implementation, this would call your AI service to generate an actual response.`;
-
-          const { data: miraMessage, error: miraError } = await db.createMiraMessage(
-            activeConversationId,
-            'mira',
-            aiResponse,
-            {
-              model_used: 'gpt-4o-mini',
-              tokens_input: 20,
-              tokens_output: aiResponse.length / 4,
-              cost_cents: 2,
-              confidence_score: 0.95,
-              processing_time_ms: 1200
-            }
-          );
-
-          if (miraError) {
-            console.error('Failed to create Mira message:', miraError);
-            showToast('Failed to get AI response');
-            return;
+      // Use AI Orchestrator for enhanced responses
+      try {
+        const aiResponse = await miraRequestWithRouting(
+          user.id,
+          'mira_chat', // Use mira_chat directly for general conversation
+          { message: message },
+          {
+            conversationHistory,
+            userGoals: goals || [],
+            recentTasks: userContext.recentTasks,
+            recentNotes: userContext.recentNotes
           }
+        );
 
-          // Add Mira message to local state
-          setMessages(prev => [...prev, miraMessage[0]]);
+        // Create Mira message with orchestrator response
+        const { data: miraMessage, error: miraError } = await db.createMiraMessage(
+          activeConversationId,
+          'mira',
+          aiResponse.content || aiResponse,
+          {
+            model_used: 'ai-orchestrator',
+            tokens_input: 0, // Will be logged by orchestrator
+            tokens_output: 0, // Will be logged by orchestrator
+            cost_cents: 0, // Will be logged by orchestrator
+            confidence_score: 0.95,
+            processing_time_ms: 0 // Will be logged by orchestrator
+          }
+        );
 
-          // Log AI usage for response
-          await db.logAIUsage(user.id, {
-            model_used: 'gpt-4o-mini',
-            operation_type: 'chat',
-            feature_used: 'mira_chat',
-            tokens_input: 20,
-            tokens_output: Math.floor(aiResponse.length / 4),
-            cost_cents: 2,
-            latency_ms: 1200
-          });
-
-        } catch (error) {
-          console.error('Error generating AI response:', error);
+        if (miraError) {
+          console.error('Failed to create Mira message:', miraError);
           showToast('Failed to get AI response');
-        } finally {
-          setIsAiReplying(false);
+          return;
         }
-      }, 1000);
+
+        // Add Mira message to local state
+        setMessages(prev => [...prev, miraMessage[0]]);
+
+        showToast('AI response generated successfully!');
+
+      } catch (aiError) {
+        console.error('AI Orchestrator error:', aiError);
+        
+        // Fallback to simple response
+        const fallbackResponse = `I understand you said: "${message}". I'm here to help you with your productivity goals!`;
+        
+        const { data: miraMessage, error: miraError } = await db.createMiraMessage(
+          activeConversationId,
+          'mira',
+          fallbackResponse,
+          {
+            model_used: 'fallback',
+            tokens_input: 0,
+            tokens_output: 0,
+            cost_cents: 0,
+            confidence_score: 0.8,
+            processing_time_ms: 100
+          }
+        );
+
+        if (!miraError) {
+          setMessages(prev => [...prev, miraMessage[0]]);
+        }
+        
+        showToast('AI response generated (fallback mode)');
+      }
 
     } catch (error) {
       console.error('Error sending message:', error);
       showToast('Failed to send message');
+    } finally {
       setIsAiReplying(false);
     }
   };
@@ -241,17 +264,26 @@ export const EnhancedSoenAI: React.FC<EnhancedSoenAIProps> = ({
   // Delete conversation
   const deleteConversation = async (conversationId: string) => {
     try {
-      // TODO: Implement and call a `db.deleteMiraConversation(conversationId)` function.
-      // For now, just remove from local state
+      // Delete from database
+      const { error } = await db.deleteMiraConversation(conversationId);
+      
+      if (error) {
+        console.error('Failed to delete conversation from database:', error);
+        showToast('Failed to delete conversation');
+        return;
+      }
+      
+      // Update local state
       const newConversations = conversations.filter(conv => conv.id !== conversationId);
       setConversations(newConversations);
       
       if (activeConversationId === conversationId) {
         // Set the new active conversation to the first one in the list, or null if empty
         setActiveConversationId(newConversations.length > 0 ? newConversations[0].id : null);
+        setMessages([]);
       }
       
-      showToast('Conversation deleted (locally)');
+      showToast('Conversation deleted');
     } catch (error) {
       console.error('Error deleting conversation:', error);
       showToast('Failed to delete conversation');

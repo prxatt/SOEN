@@ -37,7 +37,7 @@ export async function miraRequestWithRouting(
 // Helper to get user context for better AI responses
 export async function getUserContext(userId: string) {
   try {
-    const { supabase } = await import('../src/lib/supabase');
+    const { supabase } = await import('../src/lib/supabase-client');
     
     // Get user profile
     const { data: profile } = await supabase

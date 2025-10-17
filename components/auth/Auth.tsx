@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Login from './Login';
 import Signup from './Signup';
 import { SoenLogo } from '../Icons';
-import { auth, supabase } from '../../src/lib/supabase';
+import { auth, supabase } from '../../src/lib/supabase-client';
 
 // Error Boundary Component
 class AuthErrorBoundary extends React.Component<

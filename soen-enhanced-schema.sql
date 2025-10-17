@@ -716,6 +716,31 @@ BEGIN
 END;
 $$;
 
+-- Increment AI request counter for a user
+CREATE OR REPLACE FUNCTION increment_ai_requests(p_user_id UUID)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+BEGIN
+    -- First, reset daily counter if needed
+    PERFORM reset_daily_ai_requests();
+    
+    -- Increment the user's daily AI request count
+    UPDATE profiles
+    SET daily_ai_requests = daily_ai_requests + 1,
+        monthly_ai_requests = monthly_ai_requests + 1,
+        last_activity_date = CURRENT_DATE
+    WHERE user_id = p_user_id;
+    
+    -- If no rows were updated, the user doesn't exist
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'User with ID % not found', p_user_id;
+    END IF;
+END;
+$$;
+
 -- Function to calculate streak (from our gamification)
 CREATE OR REPLACE FUNCTION update_user_streak(p_user_id UUID)
 RETURNS void

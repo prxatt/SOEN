@@ -1,14 +1,15 @@
 // services/miraAIOrchestratorIntegration.ts
 // Integration layer between existing Mira AI service and new orchestrator
 
-import { aiOrchestrator } from './aiOrchestrator';
+import { aiService } from './aiService';
 import { MiraTaskType } from './miraAIService';
-import { supabase } from '../src/lib/supabase';
+import { supabase } from '../src/lib/supabase-client';
 
 // Map existing MiraTaskType to new FeatureType
 const MIRA_TO_FEATURE_MAP: Record<MiraTaskType, string> = {
   'parse_command': 'task_parsing',
   'parse_task_update': 'task_parsing',
+  'mira_chat': 'mira_chat',
   'generate_note_text': 'note_generation',
   'generate_completion_summary': 'completion_summary',
   'generate_actionable_insights': 'strategic_briefing',
@@ -62,7 +63,7 @@ export class MiraAIOrchestratorRouter {
       };
 
       // Process through orchestrator
-      const response = await aiOrchestrator.processRequest(request);
+      const response = await aiService.processRequest(request);
 
       // Transform response back to Mira format
       return this.transformResponse(response, taskType);
@@ -81,6 +82,8 @@ export class MiraAIOrchestratorRouter {
         return payload.command || '';
       case 'parse_task_update':
         return payload.update || '';
+      case 'mira_chat':
+        return payload.message || '';
       case 'generate_note_text':
         return payload.text || '';
       case 'generate_completion_summary':
@@ -104,7 +107,7 @@ export class MiraAIOrchestratorRouter {
 
   private determinePriority(taskType: MiraTaskType): 'low' | 'medium' | 'high' {
     const highPriority = ['generate_briefing', 'generate_actionable_insights'];
-    const mediumPriority = ['generate_note_text', 'generate_mindmap', 'research_with_sources'];
+    const mediumPriority = ['generate_note_text', 'generate_mindmap', 'research_with_sources', 'mira_chat'];
     
     if (highPriority.includes(taskType)) return 'high';
     if (mediumPriority.includes(taskType)) return 'medium';
@@ -128,11 +131,10 @@ export class MiraAIOrchestratorRouter {
     switch (taskType) {
       case 'parse_command':
       case 'parse_task_update':
-        return {
-          title: this.extractTitle(response.content),
-          category: this.extractCategory(response.content),
-          plannedDuration: this.extractDuration(response.content)
-        };
+        return this.parseTaskData(response.content);
+      
+      case 'mira_chat':
+        return response.content;
       
       case 'generate_note_text':
         return response.content;
@@ -172,19 +174,55 @@ export class MiraAIOrchestratorRouter {
     }
   }
 
+  private parseTaskData(content: string): { title: string; category: string; plannedDuration: number } {
+    try {
+      const parsedContent = JSON.parse(content);
+      return {
+        title: parsedContent.title || 'New Task',
+        category: parsedContent.category || 'Personal',
+        plannedDuration: parsedContent.duration || parsedContent.plannedDuration || 60
+      };
+    } catch {
+      // Fallback to individual extraction methods if JSON parsing fails
+      return {
+        title: this.extractTitle(content),
+        category: this.extractCategory(content),
+        plannedDuration: this.extractDuration(content)
+      };
+    }
+  }
+
   private extractTitle(content: string): string {
-    const titleMatch = content.match(/title[:\s]+"([^"]+)"/i);
-    return titleMatch ? titleMatch[1] : 'New Task';
+    try {
+      const parsedContent = JSON.parse(content);
+      return parsedContent.title || 'New Task';
+    } catch {
+      // Fallback to regex if JSON parsing fails
+      const titleMatch = content.match(/title[:\s]+"([^"]+)"/i);
+      return titleMatch ? titleMatch[1] : 'New Task';
+    }
   }
 
   private extractCategory(content: string): string {
-    const categoryMatch = content.match(/category[:\s]+"([^"]+)"/i);
-    return categoryMatch ? categoryMatch[1] : 'Personal';
+    try {
+      const parsedContent = JSON.parse(content);
+      return parsedContent.category || 'Personal';
+    } catch {
+      // Fallback to regex if JSON parsing fails
+      const categoryMatch = content.match(/category[:\s]+"([^"]+)"/i);
+      return categoryMatch ? categoryMatch[1] : 'Personal';
+    }
   }
 
   private extractDuration(content: string): number {
-    const durationMatch = content.match(/duration[:\s]+(\d+)/i);
-    return durationMatch ? parseInt(durationMatch[1]) : 60;
+    try {
+      const parsedContent = JSON.parse(content);
+      return parsedContent.duration || parsedContent.plannedDuration || 60;
+    } catch {
+      // Fallback to regex if JSON parsing fails
+      const durationMatch = content.match(/duration[:\s]+(\d+)/i);
+      return durationMatch ? parseInt(durationMatch[1]) : 60;
+    }
   }
 
   private parseInsights(content: string): any[] {

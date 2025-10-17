@@ -134,6 +134,7 @@ export type MiraTaskType =
     | 'generate_note_text'
     | 'generate_note_tags'
     | 'generate_note_title'
+    | 'mira_chat'
     | 'generate_task_insights'
     | 'generate_note_from_template'
     | 'generate_daily_image';

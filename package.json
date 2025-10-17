@@ -8,12 +8,15 @@
   "license": "PROPRIETARY",
   "scripts": {
     "dev": "vite",
+    "dev:server": "node server/index.js",
+    "dev:full": "concurrently \"npm run dev:server\" \"npm run dev\"",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:rpc": "node test-increment-function.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.67.0",
@@ -25,7 +28,11 @@
     "@react-three/fiber": "^9.3.0",
     "@supabase/supabase-js": "^2.75.0",
     "@types/three": "^0.180.0",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
     "deepgram": "^1.0.3",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
     "framer-motion": "^11.18.2",
     "googleapis": "^162.0.0",
     "lucide-react": "^0.544.0",

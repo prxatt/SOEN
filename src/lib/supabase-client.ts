@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 // Supabase configuration - Use safe fallback if not provided
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -7,7 +7,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
 // Create Supabase client with error handling
-let supabase: any = null;
+let supabase: SupabaseClient | null = null;
 
 if (isSupabaseConfigured) {
   try {
@@ -26,8 +26,18 @@ if (isSupabaseConfigured) {
 
 if (!supabase) {
   console.warn('⚠️ Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable backend features. Running in degraded mode.');
-  // Create a mock client to avoid crashing the UI when env vars are missing
-  supabase = {
+
+  const resolve = () => ({ data: null, error: { message: 'Supabase not configured' } });
+
+  const makeChain = () => ({
+    eq: () => makeChain(),
+    gte: () => makeChain(),
+    order: () => makeChain(),
+    select: () => Promise.resolve(resolve()),
+    single: () => Promise.resolve(resolve()),
+  });
+
+  const mock = {
     auth: {
       signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
       signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
@@ -37,11 +47,21 @@ if (!supabase) {
       resetPasswordForEmail: () => Promise.resolve({ error: null })
     },
     from: () => ({
-      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }) }),
-      insert: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }),
-      update: () => ({ eq: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }) })
+      select: () => makeChain(),
+      insert: () => ({ select: () => Promise.resolve(resolve()) }),
+      update: () => ({ eq: () => ({ select: () => Promise.resolve(resolve()) }) }),
+      upsert: () => ({ select: () => Promise.resolve(resolve()) }),
+      delete: () => ({ eq: () => ({ select: () => Promise.resolve(resolve()) }) }),
+    }),
+    channel: () => ({
+      on: () => ({
+        subscribe: () => ({ unsubscribe: () => {} })
+      })
     })
-  };
+  } as unknown as SupabaseClient;
+
+  // Create a mock client to avoid crashing the UI when env vars are missing
+  supabase = mock;
 }
 
 export { supabase }
@@ -49,7 +69,7 @@ export { supabase }
 // Auth helper functions
 export const auth = {
   async signUp(email: string, password: string, fullName: string) {
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await (supabase as SupabaseClient).auth.signUp({
       email,
       password,
       options: {
@@ -62,7 +82,7 @@ export const auth = {
   },
 
   async signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await (supabase as SupabaseClient).auth.signInWithPassword({
       email,
       password,
     })
@@ -70,22 +90,22 @@ export const auth = {
   },
 
   async signOut() {
-    const { error } = await supabase.auth.signOut()
+    const { error } = await (supabase as SupabaseClient).auth.signOut()
     return { error }
   },
 
   async getCurrentUser() {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await (supabase as SupabaseClient).auth.getUser()
     return user
   },
 
   async getSession() {
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { session } } = await (supabase as SupabaseClient).auth.getSession()
     return session
   },
 
   async resetPassword(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    const { error } = await (supabase as SupabaseClient).auth.resetPasswordForEmail(email)
     return { error }
   }
 }
@@ -94,7 +114,7 @@ export const auth = {
 export const db = {
   // Profiles (Enhanced)
   async getProfile(userId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
@@ -103,7 +123,7 @@ export const db = {
   },
 
   async updateProfile(userId: string, updates: any) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('profiles')
       .update(updates)
       .eq('user_id', userId)
@@ -112,7 +132,7 @@ export const db = {
   },
 
   async updateMiraPersonality(userId: string, personality: string, voice: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('profiles')
       .update({
         mira_personality_mode: personality,
@@ -125,7 +145,7 @@ export const db = {
   },
 
   async updateUserPreferences(userId: string, preferences: any) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('profiles')
       .update({
         preferences: preferences,
@@ -138,7 +158,7 @@ export const db = {
 
   // Notebooks
   async getNotebooks(userId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('notebooks')
       .select('*')
       .eq('user_id', userId)
@@ -147,7 +167,7 @@ export const db = {
   },
 
   async createNotebook(userId: string, notebook: any) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('notebooks')
       .insert({ ...notebook, user_id: userId })
       .select()
@@ -156,7 +176,7 @@ export const db = {
 
   // Notes
   async getNotes(notebookId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('notes')
       .select('*')
       .eq('notebook_id', notebookId)
@@ -165,7 +185,7 @@ export const db = {
   },
 
   async createNote(note: any) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('notes')
       .insert(note)
       .select()
@@ -174,7 +194,7 @@ export const db = {
 
   // Tasks
   async getTasks(userId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('tasks')
       .select('*')
       .eq('user_id', userId)
@@ -183,7 +203,7 @@ export const db = {
   },
 
   async createTask(userId: string, task: any) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('tasks')
       .insert({ ...task, user_id: userId })
       .select()
@@ -192,7 +212,7 @@ export const db = {
 
   // Projects
   async getProjects(userId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('projects')
       .select('*')
       .eq('user_id', userId)
@@ -201,7 +221,7 @@ export const db = {
   },
 
   async createProject(userId: string, project: any) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('projects')
       .insert({ ...project, user_id: userId })
       .select()
@@ -210,7 +230,7 @@ export const db = {
 
   // Goals
   async getGoals(userId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('goals')
       .select('*')
       .eq('user_id', userId)
@@ -219,7 +239,7 @@ export const db = {
   },
 
   async createGoal(userId: string, goal: any) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('goals')
       .insert({ ...goal, user_id: userId })
       .select()
@@ -228,7 +248,7 @@ export const db = {
 
   // Mira AI Chat System (Client-side version - no encryption)
   async getMiraConversations(userId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('mira_conversations')
       .select('*')
       .eq('user_id', userId)
@@ -237,7 +257,7 @@ export const db = {
   },
 
   async createMiraConversation(userId: string, title: string = 'New Chat') {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('mira_conversations')
       .insert({ user_id: userId, title })
       .select()
@@ -296,7 +316,7 @@ export const db = {
   },
 
   async deleteMiraConversation(conversationId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('mira_conversations')
       .delete()
       .eq('id', conversationId)
@@ -316,7 +336,7 @@ export const db = {
     cache_hit?: boolean;
     fallback_used?: boolean;
   }) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('ai_usage_logs')
       .insert({
         user_id: userId,
@@ -327,7 +347,7 @@ export const db = {
   },
 
   async getAIUsageStats(userId: string, days: number = 30) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('ai_usage_logs')
       .select('*')
       .eq('user_id', userId)
@@ -337,7 +357,7 @@ export const db = {
   },
 
   async getDailyAIUsageSummary(userId: string, date: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('daily_ai_usage_summary')
       .select('*')
       .eq('user_id', userId)
@@ -348,7 +368,7 @@ export const db = {
 
   // Strategic Briefings
   async getStrategicBriefing(userId: string, date: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('strategic_briefings')
       .select('*')
       .eq('user_id', userId)
@@ -358,7 +378,7 @@ export const db = {
   },
 
   async createStrategicBriefing(userId: string, date: string, content: any, metadata: any = {}) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('strategic_briefings')
       .insert({
         user_id: userId,
@@ -372,7 +392,7 @@ export const db = {
 
   // Health Data
   async getHealthData(userId: string, date: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('health_data')
       .select('*')
       .eq('user_id', userId)
@@ -382,7 +402,7 @@ export const db = {
   },
 
   async updateHealthData(userId: string, date: string, healthData: any) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('health_data')
       .upsert({
         user_id: userId,
@@ -395,13 +415,14 @@ export const db = {
 
   // Notifications
   async getNotifications(userId: string, unreadOnly: boolean = false) {
-    let query = supabase
+    let query = (supabase as SupabaseClient)
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (unreadOnly) {
+      // @ts-expect-error mock supports eq chaining
       query = query.eq('is_read', false)
     }
 
@@ -416,7 +437,7 @@ export const db = {
     action_label?: string;
     action_data?: any;
   }) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('notifications')
       .insert({
         user_id: userId,
@@ -427,7 +448,7 @@ export const db = {
   },
 
   async markNotificationRead(notificationId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as SupabaseClient)
       .from('notifications')
       .update({ is_read: true })
       .eq('id', notificationId)
@@ -439,7 +460,7 @@ export const db = {
 // Real-time subscriptions
 export const realtime = {
   subscribeToNotes(notebookId: string, callback: (payload: any) => void) {
-    return supabase
+    return (supabase as SupabaseClient)
       .channel(`notes:${notebookId}`)
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'notes', filter: `notebook_id=eq.${notebookId}` },
@@ -449,7 +470,7 @@ export const realtime = {
   },
 
   subscribeToTasks(userId: string, callback: (payload: any) => void) {
-    return supabase
+    return (supabase as SupabaseClient)
       .channel(`tasks:${userId}`)
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` },
@@ -478,7 +499,7 @@ export const utils = {
     const { data: existingProfile } = await db.getProfile(userId)
     
     if (!existingProfile) {
-      const { error } = await supabase
+      const { error } = await (supabase as SupabaseClient)
         .from('profiles')
         .insert({
           user_id: userId,

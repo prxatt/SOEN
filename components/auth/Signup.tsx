@@ -30,7 +30,7 @@ function Signup({ onSignup, isLoading = false }: SignupProps) {
                         onChange={(e) => setFullName(e.target.value)}
                         required 
                         disabled={isLoading}
-                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50" 
+                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-50" 
                     />
                 </div>
                 <div>
@@ -43,7 +43,7 @@ function Signup({ onSignup, isLoading = false }: SignupProps) {
                         onChange={(e) => setEmail(e.target.value)}
                         required 
                         disabled={isLoading}
-                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50" 
+                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-50" 
                     />
                 </div>
                 <div>
@@ -56,12 +56,12 @@ function Signup({ onSignup, isLoading = false }: SignupProps) {
                         onChange={(e) => setPassword(e.target.value)}
                         required 
                         disabled={isLoading}
-                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50" 
+                        className="block w-full px-4 py-2 bg-bg border border-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-50" 
                     />
                 </div>
 
                 <div className="flex items-start gap-2 pt-2">
-                    <input type="checkbox" id="terms" required className="h-4 w-4 mt-1 rounded border-border bg-bg text-accent focus:ring-accent"/>
+                    <input type="checkbox" id="terms" required className="h-4 w-4 mt-1 rounded border-border bg-bg text-accent focus:ring-[var(--color-accent)]"/>
                     <label htmlFor="terms" className="text-xs text-text-secondary">
                         I agree to the <a href="#" className="font-medium text-accent hover:underline">Terms of Service</a> and <a href="#" className="font-medium text-accent hover:underline">Privacy Policy</a>.
                     </label>
@@ -70,7 +70,7 @@ function Signup({ onSignup, isLoading = false }: SignupProps) {
                 <button 
                     type="submit" 
                     disabled={isLoading}
-                    className="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-accent)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {isLoading ? 'Creating Account...' : 'Create Account'}
                 </button>

@@ -119,7 +119,7 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                             <button
                                 key={theme.id}
                                 onClick={() => setActiveTheme(theme.value)}
-                                className={`w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center ${activeTheme === theme.value ? 'ring-2 ring-offset-2 ring-offset-card ring-accent' : 'hover:scale-110'}`}
+                                className={`w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center ${activeTheme === theme.value ? 'ring-2 ring-offset-2 ring-offset-[var(--color-card)] ring-[var(--color-accent)]' : 'hover:scale-110'}`}
                                 style={{ background: getThemeGradient(theme.value) }}
                                 aria-label={`Select ${theme.name} theme`}
                             >

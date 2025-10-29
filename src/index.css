@@ -1,6 +1,14 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #000000;
+  --color-accent-hover: #333333;
+  --color-bg: #101010;
+  --color-card: #1C1C1E;
+  --color-border: #404040;
+  --color-text: #F3F4F6;
+  --color-text-secondary: #B0B0B0;
+}
 
 /* Tailwind CSS will be processed by Vite */
 
@@ -55,7 +63,8 @@ html:not(.dark) .card {
 
 /* Consistent focus styles */
 input:focus, select:focus, textarea:focus, button:focus-visible, [contenteditable]:focus {
-    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg rounded-sm;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-accent);
 }
 .break-word {
   overflow-wrap: break-word;

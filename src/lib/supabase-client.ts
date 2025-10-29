@@ -1,51 +1,45 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase configuration - Environment variables are required for security
+// Supabase configuration - Use safe fallback if not provided
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Validate required environment variables
-if (!supabaseUrl) {
-  throw new Error(
-    'VITE_SUPABASE_URL environment variable is required but not set. ' +
-    'Please create a .env file in your project root with VITE_SUPABASE_URL=your_supabase_url'
-  )
-}
-if (!supabaseAnonKey) {
-  throw new Error(
-    'VITE_SUPABASE_ANON_KEY environment variable is required but not set. ' +
-    'Please create a .env file in your project root with VITE_SUPABASE_ANON_KEY=your_supabase_anon_key'
-  )
-}
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
 // Create Supabase client with error handling
 let supabase: any = null;
 
-try {
-  supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  });
-  console.log('✅ Supabase client initialized successfully');
-} catch (error) {
-  console.error('❌ Failed to initialize Supabase client:', error);
-  // Create a mock client for development
+if (isSupabaseConfigured) {
+  try {
+    supabase = createClient(supabaseUrl as string, supabaseAnonKey as string, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    });
+    console.log('✅ Supabase client initialized successfully');
+  } catch (error) {
+    console.error('❌ Failed to initialize Supabase client:', error);
+  }
+}
+
+if (!supabase) {
+  console.warn('⚠️ Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable backend features. Running in degraded mode.');
+  // Create a mock client to avoid crashing the UI when env vars are missing
   supabase = {
     auth: {
-      signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
-      signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
+      signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+      signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
       signOut: () => Promise.resolve({ error: null }),
       getUser: () => Promise.resolve({ data: { user: null } }),
       getSession: () => Promise.resolve({ data: { session: null } }),
       resetPasswordForEmail: () => Promise.resolve({ error: null })
     },
     from: () => ({
-      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }) }) }),
-      insert: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }) }),
-      update: () => ({ eq: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }) }) })
+      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }) }),
+      insert: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }),
+      update: () => ({ eq: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }) })
     })
   };
 }

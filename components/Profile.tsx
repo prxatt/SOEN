@@ -38,7 +38,7 @@ function GoalsHub({ goals, setGoals }: GoalsHubProps) {
             <button onClick={() => toggleGoalStatus(goal.id)} aria-label={`Mark goal as ${goal.status === 'completed' ? 'active' : 'completed'}`} className="flex-shrink-0">
                 {goal.status === 'completed' ? <CheckCircleIcon className="w-6 h-6 text-green-500" /> : <div className="w-6 h-6 rounded-full border-2 border-text-secondary/50 hover:border-accent transition-colors" />}
             </button>
-            <input type="text" value={goal.text} onChange={(e) => updateGoalText(goal.id, e.target.value)} aria-label="Goal text" className={`flex-grow bg-transparent focus:outline-none focus:ring-1 focus:ring-accent rounded-sm px-1 text-sm ${goal.status === 'completed' ? 'line-through text-text-secondary' : ''}`} />
+            <input type="text" value={goal.text} onChange={(e) => updateGoalText(goal.id, e.target.value)} aria-label="Goal text" className={`flex-grow bg-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] rounded-sm px-1 text-sm ${goal.status === 'completed' ? 'line-through text-text-secondary' : ''}`} />
         </div>
     );
 
@@ -141,7 +141,7 @@ function Profile({ soenFlow, setScreen, goals, setGoals, activeFocusBackground, 
                         <button 
                             key={bg.id}
                             onClick={() => setActiveFocusBackground(bg.value)}
-                            className={`aspect-video rounded-lg relative overflow-hidden transition-all duration-200 ${activeFocusBackground === bg.value ? 'ring-2 ring-accent ring-offset-2 ring-offset-card' : 'hover:scale-105'}`}
+                            className={`aspect-video rounded-lg relative overflow-hidden transition-all duration-200 ${activeFocusBackground === bg.value ? 'ring-2 ring-[var(--color-accent)] ring-offset-2 ring-offset-[var(--color-card)]' : 'hover:scale-105'}`}
                             style={{
                                 background: getFocusBgPreview(bg.value),
                                 backgroundSize: 'cover',

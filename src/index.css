@@ -64,7 +64,7 @@ html:not(.dark) .card {
 /* Consistent focus styles */
 input:focus, select:focus, textarea:focus, button:focus-visible, [contenteditable]:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
 }
 .break-word {
   overflow-wrap: break-word;

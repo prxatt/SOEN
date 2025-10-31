@@ -1864,17 +1864,29 @@ const DailyGreeting: React.FC<{
 
                     {/* Mood/Activity Buttons - Only show in evening (9pm+) */}
                     {isEvening && (
-                        <div className="flex gap-3 mb-4 md:mb-6">
-                            {['Great', 'Typical', 'Good'].map((mood, index) => {
+                        <div className="flex flex-wrap gap-2 md:gap-3 mb-4 md:mb-6">
+                            {['Awful', 'Bad', 'Okay', 'Good', 'Great'].map((mood, index) => {
                             const icons = [
-                                <svg key="moon" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                // Awful - Frown/Sad icon
+                                <svg key="awful" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>,
-                                <svg key="heart" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                // Bad - Neutral/Slight frown icon
+                                <svg key="bad" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>,
-                                <svg key="run" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                // Okay - Neutral/Straight line icon
+                                <svg key="okay" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h8" />
+                                </svg>,
+                                // Good - Slight smile icon
+                                <svg key="good" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>,
+                                // Great - Big smile/Star icon
+                                <svg key="great" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                                 </svg>
                             ];
                             
@@ -1882,7 +1894,7 @@ const DailyGreeting: React.FC<{
                                 <motion.button
                                     key={mood}
                                     onClick={() => setSelectedMood(selectedMood === mood ? null : mood)}
-                                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all min-h-[44px] ${
+                                    className={`flex-1 min-w-[80px] flex items-center justify-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3 rounded-xl font-semibold text-xs md:text-sm transition-all min-h-[44px] ${
                                         selectedMood === mood 
                                             ? 'bg-emerald-500 text-white' 
                                             : 'bg-white/5 text-white hover:bg-white/10'
@@ -2797,12 +2809,54 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
 
     const today = new Date();
     const todayTasks = tasks.filter(t => new Date(t.startTime).toDateString() === today.toDateString());
+    const todayMeetings = todayTasks.filter(t => 
+        t.category.toLowerCase().includes('meeting') || 
+        t.title.toLowerCase().includes('meeting') ||
+        t.title.toLowerCase().includes('call') ||
+        t.title.toLowerCase().includes('zoom') ||
+        t.title.toLowerCase().includes('conference')
+    );
+
+    // Find related notes for meetings
+    const getMeetingNotes = (meeting: Task) => {
+        return notes.filter(n => {
+            const title = (n.title || '').toLowerCase();
+            const content = (n.content || '').toLowerCase();
+            const meetingTitle = meeting.title.toLowerCase();
+            return title.includes(meetingTitle) || 
+                   content.includes(meetingTitle) ||
+                   title.includes('meeting') && meetingTitle.includes(title.split(' ')[0]);
+        });
+    };
 
     const openMira = () => {
         const context = {
             date: today.toISOString(),
-            counts: { tasks: todayTasks.length },
-            sampleTitles: todayTasks.slice(0, 5).map(t => t.title)
+            counts: { tasks: todayTasks.length, meetings: todayMeetings.length },
+            sampleTitles: todayTasks.slice(0, 5).map(t => t.title),
+            meetings: todayMeetings.map(m => ({
+                title: m.title,
+                time: new Date(m.startTime).toISOString(),
+                hasNotes: getMeetingNotes(m).length > 0
+            }))
+        };
+        try { localStorage.setItem('soen-mira-transfer-context', JSON.stringify(context)); } catch {}
+        setScreen('Mira');
+    };
+
+    const openMeetingPrep = (meeting: Task) => {
+        const meetingNotes = getMeetingNotes(meeting);
+        const context = {
+            meeting: {
+                title: meeting.title,
+                time: new Date(meeting.startTime).toISOString(),
+                duration: meeting.plannedDuration
+            },
+            notes: meetingNotes.map(n => ({
+                title: n.title,
+                content: n.content?.substring(0, 500)
+            })),
+            hasPrepNotes: meetingNotes.length > 0
         };
         try { localStorage.setItem('soen-mira-transfer-context', JSON.stringify(context)); } catch {}
         setScreen('Mira');
@@ -2851,21 +2905,133 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
                 </div>
             </div>
 
+            {/* Meetings Today - Enhanced with note linking and prep */}
+            {todayMeetings.length > 0 && (
+                <div className="mt-4 mb-4">
+                    <h4 className="text-xs font-semibold text-white/80 mb-2 flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Meetings Today ({todayMeetings.length})
+                    </h4>
+                    <div className="space-y-2">
+                        {todayMeetings.map(meeting => {
+                            const meetingNotes = getMeetingNotes(meeting);
+                            const url = (meeting.linkedUrl || meeting.referenceUrl || '').toString();
+                            let domain = '';
+                            try { domain = url ? new URL(url).hostname : ''; } catch {}
+                            const isUpcoming = new Date(meeting.startTime) > new Date();
+                            const minutesUntil = isUpcoming ? Math.round((new Date(meeting.startTime).getTime() - new Date().getTime()) / 60000) : null;
+                            
+                            return (
+                                <div key={`meet-${meeting.id}`} className="p-3 rounded-xl bg-white/5 border border-white/10">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                                            <div className="w-6 h-6 rounded-md bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 mt-0.5">
+                                                {domain ? (
+                                                    <img alt="logo" src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`} className="w-5 h-5"/>
+                                                ) : (
+                                                    <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                                        <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-semibold text-sm truncate">{meeting.title}</div>
+                                                <div className="text-xs text-white/70 mt-0.5">
+                                                    {new Date(meeting.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {minutesUntil !== null && minutesUntil > 0 && (
+                                                        <span className="ml-2 text-emerald-400">in {minutesUntil}m</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Meeting prep indicators */}
+                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                        {meetingNotes.length > 0 && (
+                                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs">
+                                                <DocumentTextIcon className="w-3 h-3" />
+                                                <span>{meetingNotes.length} prep note{meetingNotes.length > 1 ? 's' : ''}</span>
+                                            </div>
+                                        )}
+                                        {!meetingNotes.length && (
+                                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs">
+                                                <SparklesIcon className="w-3 h-3" />
+                                                <span>Needs prep</span>
+                                            </div>
+                                        )}
+                                        {url && (
+                                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs">
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                                </svg>
+                                                <span>Link</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Quick actions */}
+                                    <div className="flex gap-2 mt-2">
+                                        <button
+                                            onClick={() => {
+                                                navigateToScheduleDate(new Date(meeting.startTime), meeting.id);
+                                                setScreen('Schedule');
+                                            }}
+                                            className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs flex-1"
+                                        >
+                                            Open Meeting
+                                        </button>
+                                        {meetingNotes.length > 0 && (
+                                            <button
+                                                onClick={() => {
+                                                    setScreen('Notes');
+                                                    // Could set selected note here if we had that prop
+                                                }}
+                                                className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs"
+                                            >
+                                                View Notes
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => openMeetingPrep(meeting)}
+                                            className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs"
+                                        >
+                                            Prep with Mira
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Other Tasks - Non-meeting tasks */}
             <div className="mt-4">
-                <h4 className="text-xs font-semibold text-white/80 mb-2">Suggested Actions</h4>
+                <h4 className="text-xs font-semibold text-white/80 mb-2">
+                    {todayMeetings.length > 0 ? 'Other Tasks' : 'Suggested Actions'}
+                </h4>
                 <div className="space-y-2">
-                    {todayTasks.slice(0, 6).map(t => (
+                    {todayTasks
+                        .filter(t => !todayMeetings.includes(t))
+                        .slice(0, todayMeetings.length > 0 ? 3 : 6)
+                        .map(t => (
                         <div key={`sug-${t.id}`} className="p-3 rounded-xl bg-white/5 text-sm flex items-center justify-between">
                             <div className="truncate mr-3">{t.title}</div>
                             <button
                                 onClick={() => {
-                                    navigateToScheduleDate(new Date(t.startTime));
+                                    navigateToScheduleDate(new Date(t.startTime), t.id);
                                     setScreen('Schedule');
                                 }}
                                 className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs"
                             >Open</button>
                         </div>
                     ))}
+                    {todayTasks.filter(t => !todayMeetings.includes(t)).length === 0 && todayMeetings.length > 0 && (
+                        <div className="p-3 rounded-xl bg-white/5 text-white/70 text-xs">No other tasks today.</div>
+                    )}
                     {todayTasks.length === 0 && (
                         <div className="p-3 rounded-xl bg-white/5 text-white/70 text-xs">No tasks today. Ask Mira for a plan.</div>
                     )}

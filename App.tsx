@@ -991,7 +991,7 @@ function App() {
 
     return (
         <ErrorBoundary>
-            <div className={`min-h-screen font-sans bg-bg text-text transition-colors duration-300 flex`}>
+            <div className={`min-h-screen w-full font-sans bg-bg text-text transition-colors duration-300 flex overflow-x-hidden`}>
                 {focusTask ? (
                      <ErrorBoundary>
                          <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />

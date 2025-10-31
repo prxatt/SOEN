@@ -1775,10 +1775,7 @@ export default {
 
     // Additional missing icons
     ArrowTrendingUpIcon,
-    EyeIcon,
-    TravelIcon,
-    SickDayIcon,
-    TemperatureUnitIcon
+    EyeIcon
 };
 
 // Travel Mode Icon (lock/suitcase)

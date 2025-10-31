@@ -30,6 +30,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import MobileDashboardTiles from './MobileDashboardTiles';
 import { Task, Note, HealthData, Goal, Category, MissionBriefing, Screen, TaskStatus } from '../types';
 import { safeGet } from '../utils/validation';
 import { 
@@ -37,7 +38,7 @@ import {
     SunIcon, ChevronLeftIcon, ChevronRightIcon, BrainCircuitIcon, PlusIcon,
     CalendarDaysIcon, DocumentTextIcon, ActivityIcon, ArrowTrendingUpIcon,
     FlagIcon, StarIcon, BoltIcon as ZapIcon, CalendarIcon,
-    ArrowRightIcon, CheckIcon, PencilIcon, TrashIcon
+    ArrowRightIcon, CheckIcon, PencilIcon, TrashIcon, BabyPenguinIcon
 } from './Icons';
 
 interface SoenDashboardProps {
@@ -58,6 +59,7 @@ interface SoenDashboardProps {
     purchasedRewards?: string[];
     activeTheme?: string;
     activeFocusBackground?: string;
+    userName?: string;
 }
 
 // Enhanced color scheme matching EnhancedDashboard
@@ -137,140 +139,119 @@ function FloatingParticles({ count = 50 }) {
 }
 
 // Ultra-Cute Mira Baby Penguin with Engaging Design
+// Cute, Charming Mira (Baby Penguin) Component - Friendly Design
 const GhibliPenguin: React.FC = () => {
     return (
         <motion.div
-            className="relative w-full h-full"
+            className="relative w-full h-full flex items-center justify-center"
             animate={{ 
-                rotate: [0, 3, -3, 0],
-                scale: [1, 1.05, 1],
-                y: [0, -3, 0]
+                scale: [1, 1.02, 1],
+                y: [0, -1, 0]
             }}
             transition={{ 
-                duration: 3, 
+                duration: 2.5, 
                 repeat: Infinity, 
                 ease: 'easeInOut' 
             }}
         >
-            {/* Penguin Body - More rounded and cute */}
-            <div 
-                className="absolute inset-0 rounded-full"
-                style={{ 
-                    background: 'linear-gradient(135deg, #1a202c 0%, #2d3748 30%, #4a5568 70%, #2d3748 100%)',
-                    boxShadow: `
-                        inset 0 3px 6px rgba(255,255,255,0.15),
-                        inset 0 -3px 6px rgba(0,0,0,0.4),
-                        0 6px 16px rgba(0,0,0,0.5),
-                        0 0 0 2px rgba(255,255,255,0.2)
-                    `,
-                    transform: 'perspective(120px) rotateX(10deg) rotateY(-3deg)'
-                }}
+            <svg
+                viewBox="0 0 100 120"
+                className="w-full h-full"
+                xmlns="http://www.w3.org/2000/svg"
             >
-                {/* Penguin Belly - Larger and more prominent */}
-                <div 
-                    className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-7 h-6 rounded-full"
-                    style={{
-                        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
-                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(255,255,255,0.3)'
-                    }}
-                />
+                <defs>
+                    <linearGradient id="miraBodyGradientHeader" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#3b3b3b" />
+                        <stop offset="100%" stopColor="#2a2a2a" />
+                    </linearGradient>
+                </defs>
                 
-                {/* Big Cute Eyes - Much larger and more expressive */}
-                <div 
-                    className="absolute top-1.5 left-1.5 w-3 h-3 rounded-full"
-                    style={{
-                        background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f0f4f8 50%, #e2e8f0 100%)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.8)'
-                    }}
-                />
-                <div 
-                    className="absolute top-1.5 right-1.5 w-3 h-3 rounded-full"
-                    style={{
-                        background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f0f4f8 50%, #e2e8f0 100%)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.8)'
-                    }}
-                />
+                {/* Body - Soft, rounded ellipse */}
+                <ellipse cx="50" cy="70" rx="35" ry="40" fill="url(#miraBodyGradientHeader)" />
                 
-                {/* Eye pupils - Larger and more engaging */}
-                <div className="absolute top-2.5 left-2.5 w-1.5 h-1.5 bg-black rounded-full"></div>
-                <div className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-black rounded-full"></div>
+                {/* Belly - Soft white/cream */}
+                <ellipse cx="50" cy="75" rx="22" ry="28" fill="#fef3c7" />
                 
-                {/* Eye highlights - Sparkle effect */}
-                <div className="absolute top-2 left-2 w-0.5 h-0.5 bg-white rounded-full opacity-90"></div>
-                <div className="absolute top-2 right-2 w-0.5 h-0.5 bg-white rounded-full opacity-90"></div>
+                {/* Head - Soft, rounded circle */}
+                <circle cx="50" cy="35" r="28" fill="url(#miraBodyGradientHeader)" />
                 
-                {/* Cute Smiley Face - Curved smile */}
-                <svg 
-                    className="absolute top-4 left-1/2 transform -translate-x-1/2 w-3 h-2"
-                    viewBox="0 0 12 8"
-                    style={{ fill: 'none', stroke: '#2d3748', strokeWidth: '1.5', strokeLinecap: 'round' }}
-                >
-                    <path d="M2 4 Q6 6 10 4" />
-                </svg>
+                {/* Left Eye - Large, friendly, dark */}
+                <circle cx="42" cy="32" r="7" fill="#1f2937" />
+                <circle cx="43.5" cy="30.5" r="3" fill="#ffffff" />
                 
-                {/* Penguin Beak - Smaller and cuter */}
-                <div 
-                    className="absolute top-3.5 left-1/2 transform -translate-x-1/2 w-1 h-0.8 rounded-full"
-                    style={{
-                        background: 'linear-gradient(135deg, #f6ad55 0%, #ed8936 100%)',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.3)'
-                    }}
-                />
+                {/* Right Eye - Large, friendly, dark */}
+                <circle cx="58" cy="32" r="7" fill="#1f2937" />
+                <circle cx="59.5" cy="30.5" r="3" fill="#ffffff" />
                 
-                {/* Enhanced Cheek blush - More prominent */}
-                <div 
-                    className="absolute top-4 left-0.5 w-1.5 h-1.5 rounded-full opacity-70"
-                    style={{ background: 'radial-gradient(circle, #fbb6ce 0%, #f687b3 100%)' }}
-                />
-                <div 
-                    className="absolute top-4 right-0.5 w-1.5 h-1.5 rounded-full opacity-70"
-                    style={{ background: 'radial-gradient(circle, #fbb6ce 0%, #f687b3 100%)' }}
-                />
-            </div>
-            
-            {/* Floating sparkles - Studio Ghibli magic */}
-            {[...Array(3)].map((_, i) => (
-                <motion.div
-                    key={i}
-                    className="absolute w-1 h-1 bg-yellow-300 rounded-full"
-                    style={{
-                        left: `${20 + i * 30}%`,
-                        top: `${10 + i * 20}%`,
-                    }}
-                    animate={{
-                        opacity: [0, 1, 0],
-                        scale: [0.5, 1, 0.5],
-                        y: [0, -10, 0]
-                    }}
-                    transition={{
-                        duration: 2 + i * 0.5,
-                        repeat: Infinity,
-                        delay: i * 0.7,
-                        ease: "easeInOut"
-                    }}
-                />
-            ))}
+                {/* Beak - Soft orange/yellow */}
+                <polygon points="50,40 46,44 54,44" fill="#fbbf24" />
+                
+                {/* Cheek blush - Soft pink */}
+                <circle cx="35" cy="38" r="4" fill="#fbcfe8" opacity="0.6" />
+                <circle cx="65" cy="38" r="4" fill="#fbcfe8" opacity="0.6" />
+                
+                {/* Left Foot - Soft orange */}
+                <ellipse cx="40" cy="108" rx="8" ry="5" fill="#f59e0b" />
+                
+                {/* Right Foot - Soft orange */}
+                <ellipse cx="60" cy="108" rx="8" ry="5" fill="#f59e0b" />
+            </svg>
         </motion.div>
     );
 };
 
-// Soen Header Component with Studio Ghibli Penguin
+// Scroll-Aware Soen Header Component
 const SoenHeader: React.FC = () => {
+    const [scrolled, setScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 60);
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     return (
-        <motion.div
-            className="fixed top-3 left-3 sm:top-4 sm:left-20 z-50"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+        <motion.header
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+                scrolled 
+                    ? 'bg-black/80 backdrop-blur-md border-b border-white/10 py-2' 
+                    : 'bg-transparent py-3 md:py-4'
+            }`}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            style={{ position: 'fixed' }}
         >
-            <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10">
+            <div className="app-container flex items-center justify-between">
+                <motion.div
+                    className="flex items-center gap-2 sm:gap-3"
+                    animate={{ 
+                        scale: scrolled ? 0.9 : 1,
+                        opacity: scrolled ? 0.95 : 1
+                    }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 transition-all duration-300 ${scrolled ? 'w-6 h-6 sm:w-8 sm:h-8' : ''}`}>
                 <GhibliPenguin />
                 </div>
-                <span className="font-bold text-lg sm:text-2xl text-white">Soen</span>
-            </div>
+                    <AnimatePresence mode="wait">
+                        {!scrolled && (
+                            <motion.span
+                                key="wordmark"
+                                initial={{ opacity: 0, width: 0 }}
+                                animate={{ opacity: 1, width: 'auto' }}
+                                exit={{ opacity: 0, width: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="font-bold text-lg sm:text-2xl text-white whitespace-nowrap"
+                            >
+                                Soen
+                            </motion.span>
+                        )}
+                    </AnimatePresence>
         </motion.div>
+            </div>
+        </motion.header>
     );
 };
 
@@ -438,7 +419,7 @@ const NextUpWidget: React.FC<{
     );
 };
 
-// Today/Tomorrow Pill Toggle
+// Tasks Widget - Redesigned to match "Statements/Direct Debits" card style from reference
 const TaskToggle: React.FC<{
     tasks: Task[];
     categoryColors: Record<Category, string>;
@@ -465,35 +446,30 @@ const TaskToggle: React.FC<{
 
     return (
         <motion.div
-            className="rounded-2xl p-6 relative overflow-hidden min-h-[420px]"
+            className="rounded-3xl p-4 md:p-5 lg:p-6 relative overflow-hidden"
             style={{ 
-                backgroundColor: currentTasks.length > 0 ? (categoryColors[currentTasks[0].category] || '#10b981') : '#10b981',
-                color: 'white'
+                backgroundColor: '#FDE047', // Vibrant yellow matching "Statements" card
+                color: '#0B0B0C' // Black text
             }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            
-            {/* Pill Toggle */}
-            <div className="flex items-center justify-between mb-6 relative z-10">
-                <div className="flex items-center gap-3">
-                    <motion.div
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                    >
-                        <CalendarDaysIcon className="w-6 h-6 text-green-400" />
-                    </motion.div>
-                    <h3 className="text-2xl font-bold font-display text-white">Tasks</h3>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <CalendarDaysIcon className="w-5 h-5 md:w-6 md:h-6 text-black" />
+                    <h3 className="text-base md:text-lg lg:text-xl font-bold text-black">Tasks</h3>
                 </div>
                 
-                <div className="flex rounded-full p-1" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                {/* Pill Toggle */}
+                <div className="flex rounded-full p-1 bg-black/10">
                     <motion.button
                         onClick={() => setActiveView('today')}
-                        className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300"
+                        className="px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold transition-all duration-300 min-h-[44px]"
                         style={{ 
-                            color: activeView === 'today' ? getTextColorForBackground('#10b981') : 'var(--color-text-secondary)',
-                            backgroundColor: activeView === 'today' ? '#10b981' : 'transparent'
+                            color: activeView === 'today' ? '#FDE047' : '#0B0B0C',
+                            backgroundColor: activeView === 'today' ? '#0B0B0C' : 'transparent'
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -502,10 +478,10 @@ const TaskToggle: React.FC<{
                     </motion.button>
                     <motion.button
                         onClick={() => setActiveView('tomorrow')}
-                        className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300"
+                        className="px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold transition-all duration-300 min-h-[44px]"
                         style={{ 
-                            color: activeView === 'tomorrow' ? getTextColorForBackground('#8b5cf6') : 'var(--color-text-secondary)',
-                            backgroundColor: activeView === 'tomorrow' ? '#8b5cf6' : 'transparent'
+                            color: activeView === 'tomorrow' ? '#FDE047' : '#0B0B0C',
+                            backgroundColor: activeView === 'tomorrow' ? '#0B0B0C' : 'transparent'
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -515,8 +491,8 @@ const TaskToggle: React.FC<{
                 </div>
             </div>
 
-            {/* Task List */}
-            <div className="relative z-10">
+            {/* Task List - equal height, scrollable on overflow (desktop) */}
+            <div className="space-y-2 max-h-[360px] overflow-y-auto">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeView}
@@ -524,73 +500,83 @@ const TaskToggle: React.FC<{
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.3 }}
-                        className="space-y-3"
+                        className="space-y-2"
                     >
                         {currentTasks.length > 0 ? (
-                            currentTasks.slice(0, 4).map((task, index) => (
+                            currentTasks.slice(0, 5).map((task, index) => (
                                 <motion.div
                                     key={task.id}
-                                    className="flex items-center justify-between p-4 rounded-xl transition-all duration-300"
-                                    style={{ 
-                                        backgroundColor: categoryColors[task.category] || '#6B7280',
-                                        color: 'white'
-                                    }}
+                                    className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-black/5 hover:bg-black/10 transition-colors min-h-[44px]"
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    whileHover={{ 
-                                        scale: 1.02 
-                                    }}
+                                    transition={{ delay: index * 0.05 }}
                                 >
-                                    <div className="flex items-center gap-3 flex-1">
-                                        <div 
-                                            className="w-3 h-3 rounded-full flex-shrink-0"
-                                            style={{ backgroundColor: categoryColors[task.category] || '#6B7280' }}
-                                        />
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <div className="flex items-center justify-center w-8 h-8 rounded-lg min-w-[32px]"
+                                            style={{ 
+                                                backgroundColor: (() => {
+                                                    const catColor = categoryColors[task.category] || '#6B7280';
+                                                    // Ensure category color doesn't overlap with widget backgrounds
+                                                    // Widget backgrounds: Tasks #FDE047 (yellow), Habits #F59E0B (orange), Flow #10B981 (emerald)
+                                                    const widgetColors = ['#FDE047', '#F59E0B', '#10B981'];
+                                                    if (widgetColors.includes(catColor.toUpperCase())) {
+                                                        // Use a slight variation if there's overlap
+                                                        return catColor === '#FDE047' ? '#FACC15' : 
+                                                               catColor === '#F59E0B' ? '#FB923C' : 
+                                                               catColor === '#10B981' ? '#34D399' : catColor;
+                                                    }
+                                                    return catColor;
+                                                })()
+                                            }}
+                                        >
+                                            {/* simple AI icon mapping */}
+                                            {(() => {
+                                                const t = `${task.title} ${task.category}`.toLowerCase();
+                                                if (t.includes('meet') || t.includes('call')) return (
+                                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2"/></svg>
+                                                );
+                                                if (t.includes('run') || t.includes('gym') || t.includes('workout')) return (
+                                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                                );
+                                                if (t.includes('read') || t.includes('study')) return (
+                                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6l-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h3l2-2h5a2 2 0 002-2V8a2 2 0 00-2-2h-5z"/></svg>
+                                                );
+                                                return (
+                                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                                );
+                                            })()}
+                                        </div>
                                         <div className="flex-1 min-w-0">
-                                            <span className="text-xl font-bold block truncate text-white">{task.title}</span>
-                                            <span className="text-sm text-white/80">
-                                                {new Date(task.startTime).toLocaleTimeString([], { 
-                                                    hour: '2-digit', 
-                                                    minute: '2-digit' 
-                                                })}
-                                            </span>
+                                            <div className="text-base md:text-lg font-bold text-black truncate">{task.title}</div>
+                                            <div className="text-xs text-black/70 flex items-center gap-2">
+                                                <span>{new Date(task.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span className="capitalize">{task.category}</span>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {canCompleteTasks ? (
                                         <motion.button
-                                            onClick={() => canCompleteTasks && onCompleteTask(task.id)}
-                                            className={`p-2 rounded-full transition-colors ${
-                                                canCompleteTasks ? '' : 'opacity-50 cursor-not-allowed'
-                                            }`}
-                                            style={{ 
-                                                backgroundColor: 'rgba(0,0,0,0.2)',
-                                                color: 'white'
-                                            }}
-                                            whileHover={canCompleteTasks ? { 
-                                                scale: 1.1,
-                                                backgroundColor: 'rgba(0,0,0,0.3)'
-                                            } : {}}
-                                            whileTap={canCompleteTasks ? { scale: 0.9 } : {}}
-                                            disabled={!canCompleteTasks}
+                                                onClick={() => onCompleteTask(task.id)}
+                                                className="px-3 py-1.5 rounded-lg font-semibold text-xs bg-black text-white hover:bg-black/90 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
                                         >
                                             <CheckCircleIcon className="w-4 h-4" />
                                         </motion.button>
+                                        ) : (
+                                            <div className="px-3 py-1.5 rounded-lg font-semibold text-xs bg-black/20 text-black/50 cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center">
+                                                <ClockIcon className="w-4 h-4" />
+                                            </div>
+                                        )}
                                         <motion.button
                                             onClick={() => {
                                                 navigateToScheduleDate(currentDate);
                                                 setScreen('Schedule');
                                             }}
-                                            className="p-2 rounded-full transition-colors"
-                                            style={{ 
-                                                backgroundColor: 'rgba(0,0,0,0.2)',
-                                                color: 'white'
-                                            }}
-                                            whileHover={{ 
-                                                scale: 1.1,
-                                                backgroundColor: 'rgba(0,0,0,0.3)'
-                                            }}
-                                            whileTap={{ scale: 0.9 }}
+                                            className="px-3 py-1.5 rounded-lg font-semibold text-xs bg-black/10 text-black hover:bg-black/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
                                         >
                                             <ArrowRightIcon className="w-4 h-4" />
                                         </motion.button>
@@ -599,16 +585,16 @@ const TaskToggle: React.FC<{
                             ))
                         ) : (
                             <div className="text-center py-8">
-                                <CalendarIcon className="w-12 h-12 text-white/60 mx-auto mb-4" />
-                                <p className="text-sm text-white/80">
+                                <CalendarIcon className="w-12 h-12 text-black/40 mx-auto mb-4" />
+                                <p className="text-sm text-black/70">
                                     No tasks scheduled for {activeView === 'today' ? 'today' : 'tomorrow'}
                                 </p>
                             </div>
                         )}
                         
-                        {currentTasks.length > 4 && (
+                        {currentTasks.length > 5 && (
                             <div className="text-center pt-2">
-                                <p className="text-xs text-white/70">+{currentTasks.length - 4} more tasks</p>
+                                <p className="text-xs text-black/60">+{currentTasks.length - 5} more tasks</p>
                             </div>
                         )}
                     </motion.div>
@@ -619,7 +605,7 @@ const TaskToggle: React.FC<{
 };
 
 
-// Revolutionary Habit Widget with Individual Habit Management
+// Habits Widget - Redesigned to match reference style (list-based, similar to Tasks)
 const HabitInsights: React.FC<{
     healthData: HealthData;
 }> = ({ healthData }) => {
@@ -629,64 +615,28 @@ const HabitInsights: React.FC<{
             name: 'Morning Routine', 
             streak: 7, 
             color: '#10b981', 
-            icon: SunIcon, 
-            frequency: 'daily', 
-            selected: false,
-            editing: false,
-            viewMode: '7day' as '7day' | '30day',
-            completionData: Array.from({ length: 30 }, (_, i) => ({
-                day: i + 1,
-                completed: Math.random() > 0.3,
-                intensity: Math.random()
-            }))
+            icon: SunIcon
         },
         { 
             id: 2, 
             name: 'Exercise', 
             streak: 5, 
             color: '#3b82f6', 
-            icon: ActivityIcon, 
-            frequency: 'daily', 
-            selected: false,
-            editing: false,
-            viewMode: '7day' as '7day' | '30day',
-            completionData: Array.from({ length: 30 }, (_, i) => ({
-                day: i + 1,
-                completed: Math.random() > 0.4,
-                intensity: Math.random()
-            }))
+            icon: ActivityIcon
         },
         { 
             id: 3, 
             name: 'Meditation', 
             streak: 3, 
             color: '#f59e0b', 
-            icon: BrainCircuitIcon, 
-            frequency: 'daily', 
-            selected: false,
-            editing: false,
-            viewMode: '7day' as '7day' | '30day',
-            completionData: Array.from({ length: 30 }, (_, i) => ({
-                day: i + 1,
-                completed: Math.random() > 0.5,
-                intensity: Math.random()
-            }))
+            icon: BrainCircuitIcon
         },
         { 
             id: 4, 
             name: 'Reading', 
             streak: 12, 
             color: '#8b5cf6', 
-            icon: DocumentTextIcon, 
-            frequency: 'daily', 
-            selected: false,
-            editing: false,
-            viewMode: '7day' as '7day' | '30day',
-            completionData: Array.from({ length: 30 }, (_, i) => ({
-                day: i + 1,
-                completed: Math.random() > 0.2,
-                intensity: Math.random()
-            }))
+            icon: DocumentTextIcon
         }
     ]);
     
@@ -793,16 +743,7 @@ const HabitInsights: React.FC<{
                 name: newHabitName.trim(),
                 streak: 0,
                 color: selectedColor,
-                icon: selectedIcon,
-                frequency: 'flexible',
-                selected: false,
-                editing: false,
-                viewMode: '7day' as '7day' | '30day',
-                completionData: Array.from({ length: 30 }, (_, i) => ({
-                    day: i + 1,
-                    completed: false,
-                    intensity: 0
-                }))
+                icon: selectedIcon
             };
             setHabits([...habits, newHabit]);
             setNewHabitName('');
@@ -812,201 +753,83 @@ const HabitInsights: React.FC<{
         }
     };
 
-    const handleSelectHabit = (habitId: number) => {
-        setHabits(habits.map(h => {
-            if (h.id !== habitId) return h;
-            // When opening, default to 30-day view and exit editing mode
-            if (!h.selected) {
-                return { ...h, selected: true, viewMode: '30day', editing: false };
-            }
-            // When closing, just toggle selected
-            return { ...h, selected: false };
-        }));
-    };
-
-    const handleEditHabit = (habitId: number, newName: string) => {
-        setHabits(habits.map(h => h.id === habitId ? { ...h, name: newName, editing: false } : h));
-    };
-
-    const handleDeleteHabit = (habitId: number) => {
-        setHabits(habits.filter(h => h.id !== habitId));
-    };
-
-    const handleToggleEdit = (habitId: number) => {
-        setHabits(habits.map(h => h.id === habitId ? { ...h, editing: !h.editing } : h));
-    };
-
-    const handleViewModeChange = (habitId: number, mode: '7day' | '30day') => {
-        setHabits(habits.map(h => h.id === habitId ? { ...h, viewMode: mode } : h));
-    };
-
-    const handleToggleCompletion = (habitId: number, dayIndex: number) => {
-        setHabits(habits.map(h => {
-            if (h.id === habitId) {
-                const newData = [...h.completionData];
-                newData[dayIndex] = {
-                    ...newData[dayIndex],
-                    completed: !newData[dayIndex].completed,
-                    intensity: newData[dayIndex].completed ? 0 : Math.random()
-                };
-                return { ...h, completionData: newData };
-            }
-            return h;
-        }));
-    };
-
-    const getCompletionRate = (habit: any) => {
-        const days = habit.viewMode === '7day' ? 7 : 30;
-        const relevantData = habit.completionData.slice(0, days);
-        const completed = relevantData.filter(d => d.completed).length;
-        return Math.round((completed / days) * 100);
-    };
-
-    const getStreakCount = (habit: any) => {
-        const days = habit.viewMode === '7day' ? 7 : 30;
-        const relevantData = habit.completionData.slice(0, days);
-        let streak = 0;
-        for (let i = relevantData.length - 1; i >= 0; i--) {
-            if (relevantData[i].completed) {
-                streak++;
-            } else {
-                break;
-            }
-        }
-        return streak;
-    };
-
-    const isNegativeHabit = (name: string) => {
-        const n = name.trim().toLowerCase();
-        return n.startsWith('stop ') || n.startsWith("don't ") || n.startsWith('do not ') || n.startsWith('no ');
-    };
-
-    // Enhanced magical color progression based on time (changes every 2 hours)
-    const widgetColors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#a8edea', '#fed6e3'];
-    const currentHour = new Date().getHours();
-    const colorIndex = Math.floor(currentHour / 2) % widgetColors.length;
-    const smartColor = widgetColors[colorIndex];
-
     return (
         <motion.div
-            className="rounded-2xl p-4 relative overflow-hidden h-full min-h-[420px]"
+            className="rounded-3xl p-4 md:p-5 lg:p-6 relative overflow-hidden"
             style={{ 
-                backgroundColor: smartColor,
-                color: 'white'
+                backgroundColor: '#F59E0B', // Vibrant orange - different from Tasks (yellow) and Flow (emerald)
+                color: '#0B0B0C' // Black text
             }}
-            variants={itemVariants}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
         >
-            {/* Animated Background Elements */}
-            <div className="absolute inset-0 pointer-events-none">
-                <motion.div
-                    className="absolute -top-20 -left-20 w-60 h-60 rounded-full"
-                    style={{ background: 'radial-gradient(circle at 30% 30%, #10b98120, transparent 60%)' }}
-                    animate={{ 
-                        x: [0, 20, -15, 0], 
-                        y: [0, -15, 10, 0],
-                        scale: [1, 1.1, 0.9, 1]
-                    }}
-                    transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-                />
-                <motion.div
-                    className="absolute bottom-0 right-0 w-80 h-80 rounded-full"
-                    style={{ background: 'radial-gradient(circle at 70% 70%, #3b82f620, transparent 60%)' }}
-                    animate={{ 
-                        x: [0, -25, 15, 0], 
-                        y: [0, 20, -12, 0],
-                        scale: [1, 0.9, 1.1, 1]
-                    }}
-                    transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-                />
-                <motion.div
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full"
-                    style={{ background: 'radial-gradient(circle, #8b5cf615, transparent 70%)' }}
-                    animate={{ 
-                        scale: [0.8, 1.2, 0.8],
-                        rotate: [0, 180, 360]
-                    }}
-                    transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-                />
-            </div>
-
+            <div className="relative z-10">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6 relative z-10">
-                <div className="flex items-center gap-3">
-                <motion.div
-                        animate={{ 
-                            scale: [1, 1.15, 1],
-                            rotate: [0, 5, -5, 0]
-                        }}
-                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                    >
-                        <FlagIcon className="w-7 h-7 text-emerald-400 drop-shadow-lg" />
-                </motion.div>
-                    <h3 className="text-xl font-bold font-display text-white">
-                        Habits
-                    </h3>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <FlagIcon className="w-5 h-5 md:w-6 md:h-6 text-black" />
+                        <h3 className="text-base md:text-lg lg:text-xl font-bold text-black">Habits</h3>
                 </div>
                 <motion.button
                     onClick={() => setIsAddingHabit(true)}
-                    className="p-2.5 rounded-full bg-gradient-to-r from-emerald-500/20 to-blue-500/20 backdrop-blur-sm border border-white/10"
-                    whileHover={{ scale: 1.1, rotate: 90 }}
+                        className="p-2 rounded-full bg-black/10 hover:bg-black/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                 >
-                    <PlusIcon className="w-5 h-5 text-emerald-400" />
+                        <PlusIcon className="w-5 h-5 text-black" />
                 </motion.button>
             </div>
 
             {/* Add Habit Form */}
             {isAddingHabit && (
                 <motion.div
-                    className="mb-6 p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-blue-500/10 backdrop-blur-sm border border-white/10"
-                    initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                >
-                    <div className="relative">
+                        className="mb-4 p-4 rounded-xl bg-black/5 border border-black/10"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                    >
+                        <div className="relative mb-3">
                     <input
                         type="text"
                         value={newHabitName}
                             onChange={(e) => handleInputChange(e.target.value)}
-                            placeholder="Type a habit or choose from suggestions..."
-                            className="w-full p-3 rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20 outline-none focus:border-emerald-400/50 transition-colors"
+                                placeholder="Type a habit..."
+                                className="w-full p-3 rounded-lg bg-black/5 text-black placeholder-black/40 border border-black/10 outline-none focus:border-black/30 transition-colors min-h-[44px]"
                         onKeyPress={(e) => e.key === 'Enter' && handleAddHabit()}
                         autoFocus
                     />
                         {showSuggestions && suggestions.length > 0 && (
                             <motion.div
-                                className="absolute top-full left-0 right-0 mt-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg overflow-hidden z-50"
+                                    className="absolute top-full left-0 right-0 mt-1 bg-white border border-black/10 rounded-lg overflow-hidden z-50"
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -10 }}
                             >
                                 {suggestions.map((suggestion, index) => (
-                                    <motion.button
+                                        <button
                                         key={suggestion}
                                         onClick={() => handleSuggestionClick(suggestion)}
-                                        className="w-full p-3 text-left text-white hover:bg-white/10 transition-colors"
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.05 }}
+                                            className="w-full p-3 text-left text-black hover:bg-black/5 transition-colors min-h-[44px]"
                                     >
                                         {suggestion}
-                                    </motion.button>
+                                        </button>
                                 ))}
                             </motion.div>
                         )}
                     </div>
-                    <div className="flex gap-3 mt-3">
+                        <div className="flex gap-2">
                         <motion.button
                             onClick={handleAddHabit}
-                            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm rounded-lg font-medium"
+                                className="px-4 py-2 bg-black text-white rounded-lg font-semibold text-sm hover:bg-black/90 transition-colors min-h-[44px]"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            Add Habit
+                                Add
                         </motion.button>
                         <motion.button
                             onClick={() => setIsAddingHabit(false)}
-                            className="px-4 py-2 bg-white/10 text-white text-sm rounded-lg font-medium"
+                                className="px-4 py-2 bg-black/10 text-black rounded-lg font-semibold text-sm hover:bg-black/20 transition-colors min-h-[44px]"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
@@ -1016,303 +839,62 @@ const HabitInsights: React.FC<{
                 </motion.div>
             )}
 
-            {/* Individual Habit Cards */}
-            <div className="space-y-4 relative z-10">
+                {/* Habit List - full width, natural height (no odd negative space) */}
+                <div className="space-y-2">
                 {habits.map((habit, index) => (
                     <motion.div
                         key={habit.id}
-                        className="group rounded-xl p-4 bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm border border-white/10 cursor-pointer"
-                        initial={{ opacity: 0, x: -30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        onClick={() => handleSelectHabit(habit.id)}
-                    >
-                        {/* Habit Header */}
-                        <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                            <motion.div
-                                    className="p-2 rounded-lg"
-                                    style={{ backgroundColor: `${habit.color}20` }}
-                                    whileHover={{ rotate: 15, scale: 1.1 }}
-                            >
-                                    <habit.icon className="w-5 h-5" style={{ color: habit.color }} />
-                            </motion.div>
-                            <div>
-                                    {habit.editing ? (
-                                        <input
-                                            type="text"
-                                            value={habit.name}
-                                            onChange={(e) => setHabits(habits.map(h => h.id === habit.id ? { ...h, name: e.target.value } : h))}
-                                            className="bg-transparent border-none outline-none text-white font-semibold"
-                                            onBlur={() => handleEditHabit(habit.id, habit.name)}
-                                            onKeyPress={(e) => e.key === 'Enter' && handleEditHabit(habit.id, habit.name)}
-                                            autoFocus
-                                        />
-                                    ) : (
-                                        <span 
-                                            className="text-lg font-bold text-white cursor-pointer hover:text-emerald-200 transition-colors"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleToggleEdit(habit.id);
-                                            }}
-                                        >
-                                            {habit.name}
-                                        </span>
-                                    )}
-                                    <div className="text-sm text-white/80">
-                                        {habit.frequency} • {getStreakCount(habit)} day streak
+                            className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-black/5 hover:bg-black/10 transition-colors min-h-[44px]"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                        >
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg min-w-[32px]"
+                                    style={{ 
+                                        backgroundColor: (() => {
+                                            // Ensure habit color doesn't overlap with widget backgrounds
+                                            // Widget backgrounds: Tasks #FDE047 (yellow), Habits #F59E0B (orange), Flow #10B981 (emerald)
+                                            const widgetColors = ['#FDE047', '#F59E0B', '#10B981'];
+                                            if (widgetColors.includes(habit.color.toUpperCase())) {
+                                                // Use a slight variation if there's overlap
+                                                return habit.color === '#FDE047' ? '#FACC15' : 
+                                                       habit.color === '#F59E0B' ? '#FB923C' : 
+                                                       habit.color === '#10B981' ? '#34D399' : habit.color;
+                                            }
+                                            return habit.color;
+                                        })()
+                                    }}
+                                >
+                                    {(() => {
+                                        const n = habit.name.toLowerCase();
+                                        if (n.includes('morning')) return <SunIcon className="w-4 h-4 text-white" />;
+                                        if (n.includes('exercise') || n.includes('run')) return <ActivityIcon className="w-4 h-4 text-white" />;
+                                        if (n.includes('medit') || n.includes('mind')) return <BrainCircuitIcon className="w-4 h-4 text-white" />;
+                                        if (n.includes('read')) return <DocumentTextIcon className="w-4 h-4 text-white" />;
+                                        return <FlagIcon className="w-4 h-4 text-white" />;
+                                    })()}
                                 </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-base md:text-lg font-bold text-black truncate">{habit.name}</div>
+                                    <div className="text-xs text-black/70">{habit.streak} day streak</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {/* View Mode Buttons - Always Visible */}
-                            <div className="flex gap-1">
-                                <motion.button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleViewModeChange(habit.id, '7day');
-                                    }}
-                                    className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
-                                        habit.viewMode === '7day' 
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white' 
-                                            : 'bg-white/10 text-white/70 hover:bg-white/20'
-                                    }`}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    7D
-                                </motion.button>
-                                <motion.button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleViewModeChange(habit.id, '30day');
-                                    }}
-                                    className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
-                                        habit.viewMode === '30day' 
-                                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' 
-                                            : 'bg-white/10 text-white/70 hover:bg-white/20'
-                                    }`}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    30D
-                                </motion.button>
+                                <div className="px-3 py-1.5 rounded-lg bg-black/10 text-black font-semibold text-xs min-h-[44px] min-w-[44px] flex items-center justify-center">
+                                    {habit.streak}
                         </div>
-                            
-                            {habit.selected && (
-                                <motion.button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteHabit(habit.id);
-                                    }}
-                                    className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 transition-colors"
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                >
-                                    <TrashIcon className="w-4 h-4 text-red-400" />
-                                </motion.button>
-                            )}
                         </div>
-            </div>
-
-                        {/* Collapsible Content */}
-                        {habit.selected && (
-                <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.3 }}
-                            >
-                                {/* Repeat Options - only visible in Edit mode */}
-                                {habit.editing && (
-                                    <div className="mb-4">
-                                        <h5 className="text-sm font-semibold text-white/90 mb-2">Repeat Frequency</h5>
-                                        <div className="flex flex-wrap gap-2">
-                                            {['daily', 'weekly', 'monthly', 'flexible'].map((freq) => (
-                        <motion.button
-                                                    key={freq}
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        setHabits(habits.map(h => h.id === habit.id ? { ...h, frequency: freq } : h));
-                                                    }}
-                                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                                                        habit.frequency === freq 
-                                                            ? 'bg-emerald-500 text-white' 
-                                                            : 'bg-white/10 text-white/70 hover:bg-white/20'
-                                                    }`}
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    {freq.charAt(0).toUpperCase() + freq.slice(1)}
-                                                </motion.button>
-                                            ))}
-                                        </div>
-                                        {habit.frequency === 'flexible' && (
-                                            <div className="mt-3">
-                                                <label className="text-xs text-white/80 mb-1 block">Custom Repeat (times per day)</label>
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    max="10"
-                                                    defaultValue="1"
-                                                    className="w-full px-3 py-2 rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20 outline-none focus:border-emerald-400/50 transition-colors text-sm"
-                                                    placeholder="Enter number of repeats"
-                                                    onChange={(e) => {
-                                                        const value = parseInt(e.target.value) || 1;
-                                                        setHabits(habits.map(h => h.id === habit.id ? { ...h, customRepeat: value } : h));
-                                                    }}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* View Toggle Pills - only visible in Edit mode */}
-                                {habit.editing && (
-                                    <div className="flex gap-2 mb-3">
-                                        <motion.button
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                handleViewModeChange(habit.id, '7day');
-                                            }}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                                                habit.viewMode === '7day' 
-                                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white' 
-                                                    : 'bg-white/10 text-white/70 hover:bg-white/20'
-                                            }`}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            7 Days
-                        </motion.button>
-                        <motion.button
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                handleViewModeChange(habit.id, '30day');
-                                            }}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                                                habit.viewMode === '30day' 
-                                                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' 
-                                                    : 'bg-white/10 text-white/70 hover:bg-white/20'
-                                            }`}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            30 Days
-                        </motion.button>
+                        </motion.div>
+                    ))}
+                    
+                    {habits.length === 0 && (
+                        <div className="text-center py-8">
+                            <FlagIcon className="w-12 h-12 text-black/40 mx-auto mb-4" />
+                            <p className="text-sm text-black/70">No habits yet. Add one to get started!</p>
                     </div>
                                 )}
-
-                                {/* Progress Visualization - Premium Design */}
-                                <div className="mb-3">
-                                    <div className="grid gap-2 p-3 rounded-2xl bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm border border-white/10">
-                                        <div className={`grid gap-1.5 ${habit.viewMode === '7day' ? 'grid-cols-7' : 'grid-cols-6'}`}>
-                                            {habit.completionData.slice(0, habit.viewMode === '7day' ? 7 : 30).map((day, dayIndex) => (
-                            <motion.div
-                                                    key={dayIndex}
-                                                    className={`relative rounded-xl cursor-pointer transition-all duration-200 ${
-                                                        day.completed 
-                                                            ? 'shadow-lg ring-2 ring-white/20' 
-                                                            : 'hover:bg-white/5'
-                                                    }`}
-                                                    style={{
-                                                        backgroundColor: day.completed 
-                                                            ? (isNegativeHabit(habit.name) ? '#ef4444' : habit.color)
-                                                            : 'rgba(255,255,255,0.08)',
-                                                        width: habit.viewMode === '7day' ? 32 : 24,
-                                                        height: habit.viewMode === '7day' ? 32 : 24,
-                                                        minWidth: habit.viewMode === '7day' ? 32 : 24,
-                                                        minHeight: habit.viewMode === '7day' ? 32 : 24
-                                                    }}
-                                                    initial={{ scale: 0.8, opacity: 0 }}
-                                                    animate={{ scale: 1, opacity: 1 }}
-                                                    transition={{ delay: dayIndex * 0.02, duration: 0.3 }}
-                                                    whileHover={{ scale: 1.1, y: -2 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        handleToggleCompletion(habit.id, dayIndex);
-                                                    }}
-                                                >
-                                                    {day.completed && (
-                                                        <motion.div
-                                                            className="absolute inset-0 flex items-center justify-center"
-                                                            initial={{ opacity: 0, scale: 0.5 }}
-                                                            animate={{ opacity: 1, scale: 1 }}
-                                                            transition={{ delay: dayIndex * 0.02 + 0.1 }}
-                                                        >
-                                                            <CheckIcon className={`${habit.viewMode === '7day' ? 'w-4 h-4' : 'w-3 h-3'} text-white drop-shadow-lg`} />
-                                                        </motion.div>
-                                                    )}
-                                                    {!day.completed && (
-                                                        <motion.div
-                                                            className="absolute inset-0 flex items-center justify-center"
-                                                            initial={{ opacity: 0 }}
-                                                            animate={{ opacity: 0.3 }}
-                                                        >
-                                                            <div className={`${habit.viewMode === '7day' ? 'w-2 h-2' : 'w-1.5 h-1.5'} rounded-full bg-white/40`} />
-                                                        </motion.div>
-                                                    )}
-                                                </motion.div>
-                                            ))}
                                         </div>
-                                    </div>
-                                </div>
-
-                                {/* Edit Habit Toggle */}
-                                <div className="mt-4 flex justify-end">
-                                    <motion.button
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setHabits(habits.map(h => h.id === habit.id ? { ...h, editing: !h.editing } : h));
-                                        }}
-                                        className="px-3 py-2 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
-                                        whileHover={{ scale: 1.03 }}
-                                        whileTap={{ scale: 0.97 }}
-                                    >
-                                        {habit.editing ? 'Done' : 'Edit Habit'}
-                                    </motion.button>
-                    </div>
-
-                    {/* Habit Stats */}
-                                <div className="flex items-center justify-between text-sm">
-                                    <div className="flex items-center gap-4">
-                    <div className="text-center">
-                                            <div className="font-bold text-emerald-400">{getStreakCount(habit)}</div>
-                                            <div className="text-xs text-white/70">Streak</div>
-                        </div>
-                                        <div className="text-center">
-                                            <div className="font-bold text-blue-400">{getCompletionRate(habit)}%</div>
-                                            <div className="text-xs text-white/70">Complete</div>
-                        </div>
-                                    </div>
-                                    <motion.div
-                                        className="w-8 h-8 rounded-full flex items-center justify-center"
-                                        style={{ backgroundColor: `${habit.color}20` }}
-                                        animate={{ 
-                                            scale: [1, 1.1, 1],
-                                            rotate: [0, 5, -5, 0]
-                                        }}
-                                        transition={{ duration: 2, repeat: Infinity, delay: index * 0.3 }}
-                                    >
-                                        <div 
-                                            className="w-3 h-3 rounded-full"
-                                            style={{ backgroundColor: habit.color }}
-                                        />
-                                    </motion.div>
-            </div>
-                </motion.div>
-            )}
-                    </motion.div>
-                ))}
             </div>
         </motion.div>
     );
@@ -1807,210 +1389,101 @@ const FocusTimerWidget: React.FC<{
 
     return (
         <motion.div
-            className="rounded-2xl p-6 relative overflow-hidden"
+            className="rounded-3xl p-5 md:p-6 lg:p-8 relative overflow-hidden"
             style={{ 
-                background: `linear-gradient(135deg, ${currentSession.colors[0]} 0%, ${currentSession.colors[1]} 25%, ${currentSession.colors[2]} 50%, ${currentSession.colors[3]} 100%)`,
-                color: 'white'
+                backgroundColor: '#3B82F6', // Vibrant blue - different from Habits (orange)
+                color: '#FFFFFF' // White text on blue
             }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            {/* Surface Tension-inspired flowing animations */}
-            <div className="absolute inset-0">
-                {[...Array(25)].map((_, i) => (
-                    <motion.div
-                        key={i}
-                        className="absolute rounded-full opacity-40"
-                        style={{
-                            width: `${15 + Math.random() * 35}px`,
-                            height: `${15 + Math.random() * 35}px`,
-                            background: `radial-gradient(circle, ${currentSession.colors[i % currentSession.colors.length]}80, transparent)`,
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                        }}
-                        animate={{
-                            x: [0, Math.random() * 80 - 40, 0],
-                            y: [0, Math.random() * 80 - 40, 0],
-                            scale: [1, 1.8 + Math.random(), 1],
-                            rotate: [0, 360, 0],
-                        }}
-                        transition={{
-                            duration: 8 + Math.random() * 6,
-                            repeat: Infinity,
-                            delay: Math.random() * 3,
-                            ease: "easeInOut"
-                        }}
-                    />
-                ))}
-                
-                {/* Flowing gradient orbs like paint in water */}
-                {[...Array(12)].map((_, i) => (
-                    <motion.div
-                        key={`orb-${i}`}
-                        className="absolute rounded-full blur-sm"
-                        style={{
-                            width: `${50 + i * 8}px`,
-                            height: `${50 + i * 8}px`,
-                            background: `radial-gradient(circle, ${currentSession.colors[i % currentSession.colors.length]}50, transparent)`,
-                            left: `${8 + i * 8}%`,
-                            top: `${15 + i * 7}%`,
-                        }}
-                        animate={{
-                            x: [0, 25, -15, 0],
-                            y: [0, -15, 25, 0],
-                            scale: [1, 1.3, 0.7, 1],
-                        }}
-                        transition={{
-                            duration: 7 + i * 0.4,
-                            repeat: Infinity,
-                            delay: i * 0.4,
-                            ease: "easeInOut"
-                        }}
-                    />
-                ))}
-            </div>
-
             <div className="relative z-10">
+                {/* Header - Match "Engagement" card style */}
                 <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                    <motion.div
-                            animate={{ 
-                                rotate: [0, 360],
-                                scale: [1, 1.1, 1]
-                            }}
-                            transition={{ 
-                                duration: 8, 
-                                repeat: Infinity, 
-                                ease: 'linear' 
-                            }}
-                        >
-                            <ClockIcon className="w-6 h-6 text-white drop-shadow-lg" />
-                        </motion.div>
-                        <h3 className="text-2xl font-bold font-display text-white drop-shadow-lg">Focus Timer</h3>
+                    <div className="flex items-center gap-2">
+                        <ClockIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                        <h3 className="text-lg md:text-xl font-bold text-white">Focus Timer</h3>
                             </div>
                     <div className="text-right">
-                        <div className="text-sm opacity-80 text-white">Sessions Completed</div>
-                        <div className="text-2xl font-bold text-white drop-shadow-lg">{completedSessions}</div>
+                        <div className="text-xs text-white/80">Sessions</div>
+                        <div className="text-xl md:text-2xl font-bold text-white">{completedSessions}</div>
                         </div>
                 </div>
 
-                {/* Enhanced Timer Display */}
+                {/* Large Timer Display - Match "Engagement" card style with large percentage */}
                 <div className="text-center mb-6">
-                    <div className="relative w-48 h-48 mx-auto mb-4">
-                        {/* Animated background circle */}
+                    <div className="mb-4">
                             <motion.div
-                            className="absolute inset-0 rounded-full"
-                            style={{
-                                background: `conic-gradient(from 0deg, ${currentSession.colors[0]}, ${currentSession.colors[1]}, ${currentSession.colors[2]}, ${currentSession.colors[3]}, ${currentSession.colors[0]})`,
-                                opacity: 0.3
-                            }}
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                        />
-                        
-                        {/* Progress Circle */}
-                        <svg className="w-full h-full transform -rotate-90 relative z-10" viewBox="0 0 100 100">
-                            <circle
-                                cx="50"
-                                cy="50"
-                                r="45"
-                                stroke="rgba(255,255,255,0.3)"
-                                strokeWidth="8"
-                                fill="none"
-                            />
-                            <motion.circle
-                                cx="50"
-                                cy="50"
-                                r="45"
-                                stroke="white"
-                                strokeWidth="8"
-                                fill="none"
-                                strokeLinecap="round"
-                                strokeDasharray={`${2 * Math.PI * 45}`}
-                                strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
-                                initial={{ strokeDashoffset: 2 * Math.PI * 45 }}
-                                animate={{ strokeDashoffset: 2 * Math.PI * 45 * (1 - progress / 100) }}
-                                transition={{ duration: 0.5 }}
-                                style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.5))' }}
-                            />
-                        </svg>
-                        
-                        {/* Timer Text */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-                            <motion.div 
-                                className="text-4xl font-bold font-mono text-white drop-shadow-lg"
-                                animate={{ scale: [1, 1.02, 1] }}
+                            className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-2"
+                            animate={{ scale: [1, 1.01, 1] }}
                                 transition={{ duration: 2, repeat: Infinity }}
                             >
                                 {formatTime(timeLeft)}
                     </motion.div>
-                            <div className="text-sm opacity-90 mt-1 text-white drop-shadow-lg">{currentSession.label}</div>
+                        <div className="text-sm md:text-base text-white/80">{currentSession.label}</div>
+                        </div>
+
+                    {/* Progress Bar - Match "Engagement" card progress bar */}
+                    <div className="mt-6">
+                        <div className="flex justify-between text-xs text-white/80 mb-2">
+                            <span>Progress</span>
+                            <span>{Math.round(progress)}%</span>
+                        </div>
+                        <div className="h-3 bg-white/20 rounded-full overflow-hidden">
+                            <motion.div
+                                className="h-full bg-white rounded-full"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progress}%` }}
+                                transition={{ duration: 0.8, ease: 'easeOut' }}
+                            />
                         </div>
                     </div>
                 </div>
 
-                {/* Pomodoro Stats */}
-                <div className="flex justify-center gap-6 mb-6">
-                    <div className="text-center">
-                        <div className="text-lg font-bold text-yellow-400">{pomodoroStreak}</div>
-                        <div className="text-xs text-white/60">Day Streak</div>
+                {/* Stats - Compact, matching reference style */}
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                    <div className="text-center bg-white/10 rounded-xl p-3">
+                        <div className="text-2xl md:text-3xl font-extrabold text-white mb-1">{pomodoroStreak}</div>
+                        <div className="text-xs text-white/80">Day Streak</div>
                     </div>
-                    <div className="text-center">
-                        <div className="text-lg font-bold text-green-400">{completedSessions}</div>
-                        <div className="text-xs text-white/60">Sessions</div>
+                    <div className="text-center bg-white/10 rounded-xl p-3">
+                        <div className="text-2xl md:text-3xl font-extrabold text-white mb-1">{completedSessions}</div>
+                        <div className="text-xs text-white/80">Sessions</div>
                     </div>
-                    <div className="text-center">
-                        <div className="text-lg font-bold text-blue-400">+{sessionPoints}</div>
-                        <div className="text-xs text-white/60">Points Today</div>
+                    <div className="text-center bg-white/10 rounded-xl p-3">
+                        <div className="text-2xl md:text-3xl font-extrabold text-white mb-1">+{sessionPoints}</div>
+                        <div className="text-xs text-white/80">Points</div>
                     </div>
                 </div>
 
-                {/* Enhanced Controls */}
-                <div className="flex justify-center gap-4 mb-4">
+                {/* Controls */}
+                <div className="flex justify-center gap-3">
                     <motion.button
                         onClick={isRunning ? pauseTimer : startTimer}
-                        className="px-8 py-4 rounded-full font-semibold transition-all duration-300 text-white"
-                        style={{ 
-                            background: 'rgba(255,255,255,0.25)',
-                            backdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(255,255,255,0.3)'
-                        }}
-                        whileHover={{ 
-                            scale: 1.05,
-                            background: 'rgba(255,255,255,0.35)'
-                        }}
+                               className="px-6 py-3 rounded-xl font-bold text-sm bg-white text-blue-600 hover:bg-white/90 transition-colors min-h-[44px]"
+                        whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
                         {isRunning ? (isPaused ? 'Resume' : 'Pause') : 'Start Focus'}
                     </motion.button>
+                    {isRunning && (
                     <motion.button
                         onClick={resetTimer}
-                        className="px-6 py-4 rounded-full font-semibold transition-all duration-300 text-white"
-                        style={{ 
-                            background: 'rgba(255,255,255,0.15)',
-                            backdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(255,255,255,0.2)'
-                        }}
-                        whileHover={{ 
-                            scale: 1.05,
-                            background: 'rgba(255,255,255,0.25)'
-                        }}
+                                   className="px-4 py-3 rounded-xl font-bold text-sm bg-white/10 text-white hover:bg-white/20 transition-colors min-h-[44px]"
+                            whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
                         Reset
                     </motion.button>
+                    )}
                 </div>
 
                 {/* Motivational Message */}
-                <div className="text-center">
-                    <motion.p 
-                        className="text-sm opacity-90 italic text-white drop-shadow-lg"
-                        animate={{ opacity: [0.7, 1, 0.7] }}
-                        transition={{ duration: 3, repeat: Infinity }}
-                    >
+                <div className="text-center mt-4">
+                           <p className="text-xs text-white/80 italic">
                         {getMotivationalMessage()}
-                    </motion.p>
+                           </p>
                 </div>
             </div>
         </motion.div>
@@ -2020,7 +1493,7 @@ const FocusTimerWidget: React.FC<{
 
 
 
-// Hollywood-Level Daily Greeting with Integrated Weather and Health
+// Daily Greeting - Redesigned to match reference image (dark mode with date, weather, summary, mood buttons, task list)
 const DailyGreeting: React.FC<{
     tasks: Task[];
     categoryColors: Record<Category, string>;
@@ -2032,163 +1505,765 @@ const DailyGreeting: React.FC<{
     navigateToScheduleDate: (date: Date) => void;
     setScreen: (screen: Screen) => void;
     canCompleteTasks: boolean;
-}> = ({ tasks, categoryColors, healthData, briefing, isBriefingLoading, notes, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks }) => {
+    insightExpanded?: boolean;
+    setInsightExpanded?: (expanded: boolean) => void;
+    userName?: string;
+}> = ({ tasks, categoryColors, healthData, briefing, isBriefingLoading, notes, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks, insightExpanded: externalInsightExpanded, setInsightExpanded: externalSetInsightExpanded, userName }) => {
+    const [internalInsightExpanded, setInternalInsightExpanded] = useState(false);
+    const [fullScreenInsight, setFullScreenInsight] = useState(false);
+    const [undoTaskId, setUndoTaskId] = useState<number | null>(null);
+    const [recentlyCompleted, setRecentlyCompleted] = useState<Set<number>>(new Set());
+    
+    // Use external state if provided, otherwise use internal
+    const insightExpanded = externalInsightExpanded !== undefined ? externalInsightExpanded : internalInsightExpanded;
+    const setInsightExpanded = externalSetInsightExpanded || setInternalInsightExpanded;
+    const [selectedMood, setSelectedMood] = useState<string | null>(null);
+    const [taskFilter, setTaskFilter] = useState<'all' | 'events' | 'meetings' | 'tasks'>('all');
     const today = new Date();
     const todayTasks = tasks.filter(t => 
         new Date(t.startTime).toDateString() === today.toDateString()
     );
     
     const completedToday = todayTasks.filter(t => t.status === 'Completed').length;
-    const completionRate = todayTasks.length > 0 ? (completedToday / todayTasks.length) * 100 : 0;
+    
+    // Categorize tasks into events, meetings, and regular tasks
+    const todayEvents = todayTasks.filter(t => 
+        t.category.toLowerCase() === 'event' || t.category.toLowerCase().includes('event')
+    );
+    const todayMeetings = todayTasks.filter(t => 
+        t.category.toLowerCase() === 'meeting' || t.category.toLowerCase().includes('meeting')
+    );
+    const todayRegularTasks = todayTasks.filter(t => 
+        !todayEvents.includes(t) && !todayMeetings.includes(t)
+    );
+    
+    const eventsCount = todayEvents.length;
+    const meetingsCount = todayMeetings.length;
+    const tasksCount = todayRegularTasks.length;
+    
+    // Get filtered tasks based on selection
+    const getFilteredTasks = () => {
+        if (taskFilter === 'events') return todayEvents;
+        if (taskFilter === 'meetings') return todayMeetings;
+        if (taskFilter === 'tasks') return todayRegularTasks;
+        return todayTasks;
+    };
+    
+    // Check if it's evening (9pm or later)
+    const isEvening = new Date().getHours() >= 21;
 
     const getGreeting = () => {
         const hour = new Date().getHours();
-        if (hour < 12) return 'Good Morning';
-        if (hour < 17) return 'Good Afternoon';
-        return 'Good Evening';
+        const name = userName || localStorage.getItem('soen-user-name') || '';
+        const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+        return name ? `${greeting}, ${name}.` : `${greeting}.`;
     };
 
-    const getMotivationalMessage = () => {
-        if (completionRate >= 80) return "You're on fire today! Keep up the amazing work!";
-        if (completionRate >= 50) return "Great progress! You're building momentum!";
-        if (completionRate > 0) return "Every step counts. You've got this!";
-        return "Ready to make today count? Let's start strong!";
+    const getDayName = () => {
+        return today.toLocaleDateString('en-US', { weekday: 'long' });
     };
 
-    const dailyQuotes = [
-        "The best way to find yourself is to lose yourself in the service of others.",
-        "No act of kindness, no matter how small, is ever wasted.",
-        "Love and kindness are never wasted. They always make a difference.",
-        "Be yourself; everyone else is already taken. But make sure that self is kind.",
-        "The meaning of life is to find your gift. The purpose of life is to give it away.",
-        "In a world where you can be anything, be kind. It costs nothing but means everything."
-    ];
+    const getShortDate = () => {
+        return today.toLocaleDateString('en-US', { day: 'numeric', weekday: 'short' });
+    };
 
-    const todayQuote = dailyQuotes[new Date().getDate() % dailyQuotes.length];
+    // AI icon mapping for tasks/events/meetings
+    const getAiIconForItem = (title: string, category: string, isCompleted?: boolean) => {
+        if (isCompleted) {
+            return <CheckCircleIcon className="w-5 h-5 text-white" />;
+        }
+        const t = `${title} ${category}`.toLowerCase();
+        if (t.includes('meet') || t.includes('call') || t.includes('zoom') || t.includes('google')) return (
+            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M4 7a3 3 0 013-3h5a3 3 0 013 3v10a3 3 0 01-3 3H7a3 3 0 01-3-3V7z" />
+                <path d="M15.5 9.5l4.5-3v11l-4.5-3v-5z" />
+            </svg>
+        );
+        if (t.includes('run') || t.includes('gym') || t.includes('workout') || t.includes('yoga')) return (
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        );
+        if (t.includes('read') || t.includes('study') || t.includes('learn')) return (
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6l-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h3l2-2h5a2 2 0 002-2V8a2 2 0 00-2-2h-5z"/></svg>
+        );
+        if (t.includes('eat') || t.includes('meal') || t.includes('lunch') || t.includes('dinner')) return (
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 3h16M4 8h16M4 13h16M4 18h16"/></svg>
+        );
+        return (
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7"/></svg>
+        );
+    };
 
-    // Health metrics for condensed display
-    const steps = (healthData as any).steps || 0;
-    const sleep = (healthData as any).sleep || 0;
-    const water = (healthData as any).water || 0;
+    // Get week dates for calendar strip
+    const getWeekDates = () => {
+        const week = [];
+        const startOfWeek = new Date(today);
+        const day = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - day;
+        startOfWeek.setDate(diff);
+        
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(startOfWeek);
+            date.setDate(startOfWeek.getDate() + i);
+            // Count tasks for each day
+            const dayTasks = tasks.filter(t => 
+                new Date(t.startTime).toDateString() === date.toDateString()
+            );
+            week.push({
+                date: date.getDate(),
+                day: date.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0),
+                isToday: date.toDateString() === today.toDateString(),
+                dateObj: date,
+                taskCount: dayTasks.length
+            });
+        }
+        return week;
+    };
+
+    // Find related notes for today's tasks (used in expanded insight)
+    const relatedNotes = notes.filter(note => 
+        todayTasks.some(task => 
+            note.title?.toLowerCase().includes(task.title.toLowerCase()) ||
+            note.content?.toLowerCase().includes(task.title.toLowerCase()) ||
+            note.content?.toLowerCase().includes(task.category.toLowerCase())
+        )
+    );
+    
+    // Enhanced AI insight based on schedule with meeting research
+    const generateDailyInsight = () => {
+        const hasWorkout = todayTasks.some(t => t.category.toLowerCase().includes('workout') || t.category.toLowerCase().includes('exercise') || t.category.toLowerCase().includes('gym'));
+        const hasMeetings = meetingsCount > 0;
+        const hasWork = todayTasks.some(t => t.category.toLowerCase().includes('work'));
+        
+        // Get meeting-related notes for research
+        const meetingNotes = notes.filter(note => 
+            note.title?.toLowerCase().includes('meeting') || 
+            note.content?.toLowerCase().includes('meeting') ||
+            todayMeetings.some(meeting => note.title?.toLowerCase().includes(meeting.title.toLowerCase()) || note.content?.toLowerCase().includes(meeting.title.toLowerCase()))
+        );
+        
+        if (hasWorkout && !hasMeetings) {
+            return {
+                preview: "Focus on hydration today - aim for 2.5L. Best workout time: 5-7pm based on your energy patterns.",
+                expanded: {
+                    hydration: "Your activity level suggests 2.5-3L water today. Track in the app.",
+                    workoutTime: "Your peak performance window is 5-7pm. Schedule workout then for optimal results.",
+                    recovery: "Plan 8+ hours sleep tonight for proper recovery. Your body will thank you tomorrow.",
+                    goals: "You're 2 workouts away from your monthly goal. Keep the momentum!"
+                },
+                links: relatedNotes.slice(0, 2).map(note => ({ label: note.title || 'Note', type: 'note', id: note.id }))
+            };
+        } else if (hasMeetings && hasWorkout) {
+            const meetingInsights = todayMeetings.map((meeting, idx) => {
+                const relatedNote = meetingNotes.find(n => 
+                    n.title?.toLowerCase().includes(meeting.title.toLowerCase()) ||
+                    n.content?.toLowerCase().includes(meeting.title.toLowerCase())
+                );
+                return {
+                    meeting: `${idx + 1}. ${meeting.title}`,
+                    time: new Date(meeting.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    prep: relatedNote ? "Prep notes available" : "No prep notes found",
+                    link: relatedNote ? { label: relatedNote.title || 'Prep Note', type: 'note', id: relatedNote.id } : null
+                };
+            });
+        
+        return {
+                preview: `${meetingsCount} meetings today. Prep notes ready. Best workout time: 6-7pm after meetings end.`,
+                expanded: {
+                    meetings: `Review meeting agendas 15min before each. ${meetingNotes.length > 0 ? `${meetingNotes.length} prep notes available.` : 'No prep notes found.'}`,
+                    meetingDetails: meetingInsights.length > 0 ? meetingInsights.map(m => `${m.meeting} at ${m.time} - ${m.prep}`).join(' | ') : '',
+                    workoutTime: "Schedule workout for 6-7pm - perfect timing after your last meeting ends.",
+                    energy: "Take 5min breaks between meetings. Your energy typically dips around 2-3pm.",
+                    balance: "You're balancing work and fitness well today. Keep this rhythm!"
+                },
+                links: [
+                    ...meetingNotes.slice(0, 2).map(note => ({ label: note.title || 'Meeting Note', type: 'note', id: note.id })),
+                    ...relatedNotes.slice(0, 1).map(note => ({ label: note.title || 'Related Note', type: 'note', id: note.id }))
+                ]
+            };
+        } else if (hasMeetings) {
+            const meetingInsights = todayMeetings.map((meeting, idx) => {
+                const relatedNote = meetingNotes.find(n => 
+                    n.title?.toLowerCase().includes(meeting.title.toLowerCase()) ||
+                    n.content?.toLowerCase().includes(meeting.title.toLowerCase())
+                );
+                return {
+                    meeting: `${idx + 1}. ${meeting.title}`,
+                    time: new Date(meeting.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    agenda: relatedNote ? "Agenda & prep notes available" : "Research agenda and prepare talking points",
+                    participants: "Research participants and topics",
+                    link: relatedNote ? { label: relatedNote.title || 'Meeting Prep', type: 'note', id: relatedNote.id } : null
+                };
+            });
+            
+            return {
+                preview: `${meetingsCount} meetings today. Key prep notes ready. Block 15min between meetings for mental reset.`,
+                expanded: {
+                    meetings: `Your meeting prep notes are ready. ${meetingNotes.length > 0 ? `${meetingNotes.length} prep notes found.` : 'Research meeting topics and prepare agendas.'}`,
+                    meetingBreakdown: meetingInsights.map(m => `${m.meeting} at ${m.time} - ${m.agenda}`).join(' | '),
+                    breaks: "Schedule 5-10min breaks between meetings. Your focus drops after 90min of back-to-backs.",
+                    priority: `${todayMeetings[0]?.title || 'First meeting'} is your highest priority today. Prepare talking points in advance.`,
+                    energy: "Your peak focus time is 9-11am. Schedule critical discussions then.",
+                    communication: "Research participants, prepare agendas, and outline key discussion points for each meeting."
+                },
+                links: [
+                    ...meetingNotes.slice(0, 3).map(note => ({ label: note.title || 'Meeting Prep', type: 'note', id: note.id })),
+                    ...todayMeetings.slice(0, 2).map(meeting => ({ label: meeting.title, type: 'task', id: meeting.id }))
+                ]
+            };
+        }
+        
+        return {
+            preview: "Today looks balanced. Focus on completing your top 3 tasks before noon for maximum productivity.",
+            expanded: {
+                productivity: "Your energy peaks 9-11am. Schedule your most important tasks during this window.",
+                balance: "Today's schedule is well-balanced. Consider adding a short workout if time allows.",
+                momentum: "You're on a 7-day completion streak. Keep it going!",
+                insights: "Based on your habits, you work best with 25min focus blocks. Try Pomodoro today."
+            },
+            links: relatedNotes.slice(0, 2).map(note => ({ label: note.title || 'Note', type: 'note', id: note.id }))
+        };
+    };
+
+    const dailyInsight = generateDailyInsight();
+
+    const weekDates = getWeekDates();
 
     return (
-        <motion.div
-            className="relative overflow-hidden rounded-3xl p-8"
+        <div className="space-y-4 lg:space-y-6">
+            {/* Main Daily Greeting Card - Dark mode style matching reference */}
+                        <motion.div
+                className="relative overflow-hidden rounded-3xl p-5 md:p-8 lg:p-12"
             style={{ 
-                backgroundColor: '#A855F7',
+                    backgroundColor: '#0B0B0C', // Dark background matching reference
                 color: 'white'
             }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8 }}
         >
-            {/* Hollywood-level floating particles */}
-            <div className="absolute inset-0">
-                {[...Array(30)].map((_, i) => (
-                    <motion.div
-                        key={i}
-                        className="absolute w-1 h-1 bg-white/30 rounded-full"
-                        style={{
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                        }}
-                        animate={{
-                            y: [0, -30, 0],
-                            opacity: [0, 1, 0],
-                            scale: [0.5, 1, 0.5],
-                        }}
-                        transition={{
-                            duration: 4 + Math.random() * 3,
-                            repeat: Infinity,
-                            delay: Math.random() * 3,
-                            ease: "easeInOut"
-                        }}
-                    />
-                ))}
+                <div className="relative z-10">
+                    {/* Top Bar - Date and Weather */}
+                    <div className="flex items-center justify-between mb-4 md:mb-6">
+                        {/* Mobile: Day and Date */}
+                        <div className="md:hidden">
+                            <div className="text-2xl font-bold text-white">{getShortDate()}</div>
+                        </div>
+                        
+                        {/* Desktop: Full Day Name and Date */}
+                        <div className="hidden md:block">
+                            <h1 className="text-4xl lg:text-6xl font-bold text-white mb-1">{getDayName()}</h1>
+                            <div className="text-lg lg:text-xl text-white/80">{today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                            </div>
+
+                        {/* Weather */}
+                        <div className="flex items-center gap-2 text-sm md:text-base">
+                            <SunIcon className="w-5 h-5 md:w-6 md:h-6 text-yellow-400" />
+                            <span className="font-semibold text-white">62°</span>
+                            <span className="text-white/70">SF</span>
+                    </div>
+                </div>
+
+                    {/* Calendar Strip - Week dates - Clickable */}
+                    <div className="flex items-center justify-between mb-4 md:mb-6 px-2">
+                        {weekDates.map((day, index) => (
+                            <motion.button
+                                key={index}
+                                onClick={async () => {
+                                    navigateToScheduleDate(day.dateObj);
+                                    const dayTasks = tasks.filter(t => 
+                                        new Date(t.startTime).toDateString() === day.dateObj.toDateString()
+                                    );
+                                    
+                                    // If empty day, trigger AI suggestions
+                                    if (dayTasks.length === 0) {
+                                        // This will be handled by Schedule component
+                                        // For now, just navigate to the date
+                                        setScreen('Schedule');
+                                        // Schedule component will show AI suggestions for empty days
+                                    } else {
+                                        setScreen('Schedule');
+                                    }
+                                }}
+                                className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-colors min-h-[44px] min-w-[44px] justify-center relative ${
+                                    day.isToday ? 'bg-emerald-500' : 'bg-white/5 hover:bg-white/10'
+                                }`}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                <div className={`text-xs font-semibold ${day.isToday ? 'text-white' : 'text-white/70'}`}>{day.day}</div>
+                                <div className={`text-sm font-bold ${day.isToday ? 'text-white' : 'text-white'}`}>{day.date}</div>
+                                {day.taskCount > 0 && (
+                                    <div className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${day.isToday ? 'bg-white' : 'bg-emerald-400'}`} />
+                                )}
+                            </motion.button>
+                        ))}
             </div>
             
-            <div className="relative z-10 p-6 md:p-8 lg:p-12 pt-20 pl-4">
-                {/* Greeting Section with Weather */}
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                    <div className="text-center lg:text-left flex-1">
-                    <motion.h1 
-                            className="text-3xl md:text-5xl lg:text-6xl font-bold mb-2 lg:mb-4 leading-tight text-white"
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
-                    >
-                        {getGreeting()}, <span className="text-emerald-400">Pratt</span>
-                    </motion.h1>
-                    <motion.div
-                            className="text-sm md:text-base lg:text-lg italic max-w-3xl leading-relaxed mb-34 text-center mx-auto text-white/80"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.4 }}
-                    >
-                        "{todayQuote}"
-                    </motion.div>
-                </div>
-
-                    {/* Weather Section */}
-                    <div className="flex-shrink-0">
-                        <motion.div
-                            className="flex items-center gap-3"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.8, delay: 0.6 }}
-                        >
-                            <motion.div
-                                animate={{ 
-                                    rotate: [0, 5, -5, 0],
-                                    scale: [1, 1.1, 1]
-                                }}
-                                transition={{ 
-                                    duration: 3, 
-                                    repeat: Infinity, 
-                                    ease: 'easeInOut' 
-                                }}
-                            >
-                                <SunIcon className="w-8 h-8 text-yellow-400" />
-                            </motion.div>
-                            <div>
-                                <div className="text-2xl font-bold text-white">22°C</div>
-                                <div className="text-sm text-white/80">San Francisco</div>
-                                <div className="text-xs text-white/60">Sunny</div>
-                            </div>
-                        </motion.div>
-                    </div>
-                </div>
-
-                {/* Spacer to move Next Up section down */}
-                <div className="h-12"></div>
-
-                {/* Next Up Section or Mission Briefing - Full Width */}
-                {completedToday === todayTasks.length && todayTasks.length > 0 ? (
-                    <div className="rounded-2xl p-6" style={{ backgroundColor: '#1F2937', color: 'white' }}>
-                        <MissionBriefingWidget
-                            briefing={briefing}
-                            isBriefingLoading={isBriefingLoading}
-                            tasks={tasks}
-                            healthData={healthData}
-                            notes={notes}
-                        />
-                    </div>
-                ) : (
-                        <NextUpWidget
-                            tasks={tasks}
-                            categoryColors={categoryColors}
-                            onCompleteTask={onCompleteTask}
-                            navigateToScheduleDate={navigateToScheduleDate}
-                            setScreen={setScreen}
-                            canCompleteTasks={canCompleteTasks}
-                        />
-                )}
+                    {/* Greeting */}
+                    <div className="mb-4 md:mb-6">
+                        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3">
+                            {getGreeting()}
+                        </h2>
+                        
+                        {/* Daily Summary - "You have 2 events, 2 meetings and 3 tasks today." - Clickable for filtering */}
+                        <div className="flex flex-wrap items-center gap-2 text-sm md:text-base text-white/90">
+                            <span>You have</span>
+                            {eventsCount > 0 && (
+                                <>
+                                    <motion.button
+                                        onClick={() => setTaskFilter(taskFilter === 'events' ? 'all' : 'events')}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                                            taskFilter === 'events' ? 'bg-emerald-500/30' : 'hover:bg-white/5'
+                                        }`}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <CalendarIcon className="w-4 h-4 text-emerald-400" />
+                                        <span className="font-semibold">{eventsCount} events</span>
+                                    </motion.button>
+                                    {meetingsCount > 0 || tasksCount > 0 ? <span>,</span> : <span> today.</span>}
+                                </>
+                            )}
+                            {meetingsCount > 0 && (
+                                <>
+                                    <motion.button
+                                        onClick={() => setTaskFilter(taskFilter === 'meetings' ? 'all' : 'meetings')}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                                            taskFilter === 'meetings' ? 'bg-emerald-500/30' : 'hover:bg-white/5'
+                                        }`}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                        <span className="font-semibold">{meetingsCount} meetings</span>
+                                    </motion.button>
+                                    {tasksCount > 0 ? <span> and</span> : <span> today.</span>}
+                                </>
+                            )}
+                            {tasksCount > 0 && (
+                                <>
+                                    <motion.button
+                                        onClick={() => setTaskFilter(taskFilter === 'tasks' ? 'all' : 'tasks')}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                                            taskFilter === 'tasks' ? 'bg-emerald-500/30' : 'hover:bg-white/5'
+                                        }`}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                        </svg>
+                                        <span className="font-semibold">{tasksCount} tasks today.</span>
+                                    </motion.button>
+                                </>
+                            )}
             </div>
+                    </div>
+
+                    {/* Mood/Activity Buttons - Only show in evening (9pm+) */}
+                    {isEvening && (
+                        <div className="flex gap-3 mb-4 md:mb-6">
+                            {['Great', 'Typical', 'Good'].map((mood, index) => {
+                            const icons = [
+                                <svg key="moon" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                </svg>,
+                                <svg key="heart" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>,
+                                <svg key="run" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            ];
+                            
+                            return (
+                                <motion.button
+                                    key={mood}
+                                    onClick={() => setSelectedMood(selectedMood === mood ? null : mood)}
+                                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all min-h-[44px] ${
+                                        selectedMood === mood 
+                                            ? 'bg-emerald-500 text-white' 
+                                            : 'bg-white/5 text-white hover:bg-white/10'
+                                    }`}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    {icons[index]}
+                                    {mood}
+                                </motion.button>
+                            );
+                        })}
+                    </div>
+                    )}
+
+                    {/* Next Up Insight - Mobile: inline, Desktop: popup on right */}
+                    <div className="mb-4 md:mb-6">
+                        {/* Mobile: Inline expansion */}
+                        <div className="md:hidden">
+                            <motion.button
+                                onClick={() => setInsightExpanded(!insightExpanded)}
+                                className="w-full text-left"
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                            >
+                                <div className={`rounded-2xl p-4 transition-all duration-300 ${
+                                    insightExpanded ? 'bg-white/10' : 'bg-white/5'
+                                }`}>
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <SparklesIcon className="w-5 h-5 text-emerald-400" />
+                                            <h3 className="text-base font-bold text-white">Mira Daily</h3>
+                                        </div>
+                                        <div className="text-xs text-white/70">
+                                            {insightExpanded ? 'Collapse ↑' : 'Tap to expand ↓'}
+                                        </div>
+                                    </div>
+                                    
+                                    <p className="text-sm text-white/90 mb-2">{dailyInsight.preview}</p>
+
+                                    <AnimatePresence>
+                                        {insightExpanded && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                                className="overflow-hidden space-y-3 mt-4 pt-4 border-t border-white/10"
+                                            >
+                                                {Object.entries(dailyInsight.expanded).map(([key, value], i) => (
+                                                    <div key={key}>
+                                                        <h4 className="text-xs font-semibold text-white/80 mb-1 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
+                                                        <p className="text-sm text-white/90">{value}</p>
+                                                    </div>
+                                                ))}
+                                                {dailyInsight.links && dailyInsight.links.length > 0 && (
+                                                    <div className="mt-4 pt-4 border-t border-white/10">
+                                                        <h4 className="text-xs font-semibold text-white/80 mb-2">Related Links</h4>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {dailyInsight.links.map((link, i) => (
+                                                                <motion.button
+                                                                    key={i}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (link.type === 'note') {
+                                                                            setScreen('Notes');
+                                                                        } else if (link.type === 'task') {
+                                                                            navigateToScheduleDate(today);
+                                                                            setScreen('Schedule');
+                                                                            setTimeout(() => {
+                                                                                const eventElement = document.querySelector(`[data-task-id='${link.id}']`);
+                                                                                if (eventElement && eventElement instanceof HTMLElement) {
+                                                                                    eventElement.click();
+                                                                                }
+                                                                            }, 100);
+                                                                        }
+                                                                    }}
+                                                                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 text-white transition-colors min-h-[44px]"
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                >
+                                                                    {link.label}
+                                                                </motion.button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </motion.button>
+                        </div>
+                        
+                        {/* Desktop: Clickable button that triggers popup on right */}
+                        <div className="hidden md:block">
+                            <motion.button
+                                onClick={() => setInsightExpanded(!insightExpanded)}
+                                className="w-full text-left"
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                            >
+                                <div className={`rounded-2xl p-4 transition-all duration-300 ${
+                                    insightExpanded ? 'bg-white/10' : 'bg-white/5'
+                                }`}>
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <SparklesIcon className="w-5 h-5 text-emerald-400" />
+                                            <h3 className="text-lg font-bold text-white">Mira Daily</h3>
+                                        </div>
+                                        <div className="text-xs text-white/70">
+                                            {insightExpanded ? 'Collapse ↑' : 'Tap to expand →'}
+                                        </div>
+                                    </div>
+                                    <p className="text-sm text-white/90 mb-2">{dailyInsight.preview}</p>
+                                </div>
+                            </motion.button>
+                        </div>
+                    </div>
+                    
+                    {/* Desktop Mira Daily Popup removed from DailyGreeting. Overlay is rendered at grid column level. */}
+
+                    {/* Task List - Filtered based on selection */}
+                    {getFilteredTasks().length > 0 && (
+                        <div className="space-y-2">
+                            <h3 className="text-base md:text-lg font-bold text-white mb-3">
+                                {taskFilter === 'events' && `${eventsCount} Events`}
+                                {taskFilter === 'meetings' && `${meetingsCount} Meetings`}
+                                {taskFilter === 'tasks' && `${tasksCount} Tasks`}
+                                {taskFilter === 'all' && `Up Next`}
+                            </h3>
+                            {getFilteredTasks()
+                                .filter(task => {
+                                    // Hide completed tasks that are past undo period (more than 5 seconds ago)
+                                    if (task.status === 'Completed' && !recentlyCompleted.has(task.id) && undoTaskId !== task.id) {
+                                        return false; // Hide completed tasks after 5 seconds
+                                    }
+                                    return true;
+                                })
+                                .slice(0, 5)
+                                .map((task, index) => (
+                                <motion.div
+                                    key={task.id}
+                                    onClick={() => {
+                                        navigateToScheduleDate(new Date(task.startTime));
+                                        setScreen('Schedule');
+                                        setTimeout(() => {
+                                            const eventElement = document.querySelector(`[data-task-id='${task.id}']`);
+                                            if (eventElement && eventElement instanceof HTMLElement) {
+                                                eventElement.click();
+                                            }
+                                        }, 100);
+                                    }}
+                                    className="flex items-start gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors min-h-[44px] cursor-pointer"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    <div 
+                                        className="flex items-center justify-center w-10 h-10 rounded-lg min-w-[40px] mt-0.5"
+                                        style={{
+                                            backgroundColor: (() => {
+                                                const catColor = categoryColors[task.category] || '#10b981';
+                                                // Ensure category color doesn't overlap with widget backgrounds
+                                                // Widget backgrounds: Tasks #FDE047 (yellow), Habits #F59E0B (orange), Flow #10B981 (emerald)
+                                                const widgetColors = ['#FDE047', '#F59E0B', '#10B981'];
+                                                if (widgetColors.includes(catColor.toUpperCase())) {
+                                                    // Use a slight variation if there's overlap
+                                                    return catColor === '#FDE047' ? '#FACC15' : 
+                                                           catColor === '#F59E0B' ? '#FB923C' : 
+                                                           catColor === '#10B981' ? '#34D399' : catColor;
+                                                }
+                                                return catColor;
+                                            })()
+                                        }}
+                                    >
+                                        {getAiIconForItem(task.title, task.category, task.status === 'Completed')}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className={`text-base md:text-lg font-bold text-white mb-1 ${task.status === 'Completed' ? 'line-through opacity-60' : ''}`}>
+                                            {task.title}
+                                            </div>
+                                        {task.status === 'Pending' && new Date(task.startTime) < today && (
+                                            <div className="text-xs text-white/70">was overdue and rescheduled from yesterday</div>
+                                        )}
+                                        {task.status === 'Pending' && (
+                                            <div className="text-xs text-white/70">
+                                                {new Date(task.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                        )}
+                                    </div>
+                                    {(() => {
+                                        // Show completed tasks with undo option for 5 seconds
+                                        if (task.status === 'Completed') {
+                                            // Show undo option for recently completed tasks (within 5 seconds)
+                                            if (undoTaskId === task.id || recentlyCompleted.has(task.id)) {
+                                                return (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, scale: 0.8 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        className="flex flex-col items-center gap-1"
+                                                    >
+                                                        <motion.button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                // Undo completion - would need to call undo handler from parent
+                                                                setUndoTaskId(null);
+                                                                setRecentlyCompleted(prev => {
+                                                                    const next = new Set(prev);
+                                                                    next.delete(task.id);
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                            className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-semibold transition-colors min-h-[44px]"
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                        >
+                                                            Undo
+                                                        </motion.button>
+                                                    </motion.div>
+                                                );
+                                            }
+                                            return null; // Completed tasks without undo show nothing
+                                        }
+                                        
+                                        // Show complete button for pending tasks
+                                        return (
+                                            <motion.button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (canCompleteTasks) {
+                                                        onCompleteTask(task.id);
+                                                        // Start 5-second undo timer
+                                                        setUndoTaskId(task.id);
+                                                        setRecentlyCompleted(prev => new Set(prev).add(task.id));
+                                                        
+                                                        // Auto-hide after 5 seconds
+                                                        setTimeout(() => {
+                                                            setUndoTaskId(null);
+                                                            setRecentlyCompleted(prev => {
+                                                                const next = new Set(prev);
+                                                                next.delete(task.id);
+                                                                return next;
+                                                            });
+                                                        }, 5000);
+                                                    }
+                                                }}
+                                                className={`p-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
+                                                    canCompleteTasks ? 'bg-emerald-500/20 hover:bg-emerald-500/30' : 'bg-white/5 opacity-50 cursor-not-allowed'
+                                                }`}
+                                                whileHover={canCompleteTasks ? { scale: 1.05 } : {}}
+                                                whileTap={canCompleteTasks ? { scale: 0.95 } : {}}
+                                                disabled={!canCompleteTasks}
+                                            >
+                                                <CheckCircleIcon className="w-5 h-5 text-emerald-400" />
+                                            </motion.button>
+                                        );
+                                    })()}
+                                </motion.div>
+                            ))}
+                            
+                            {getFilteredTasks().length > 5 && (
+                                <motion.button
+                                    onClick={() => {
+                                        setScreen('Schedule');
+                                        navigateToScheduleDate(today);
+                                    }}
+                                    className="w-full py-3 rounded-xl bg-white/5 text-white font-semibold hover:bg-white/10 transition-colors min-h-[44px]"
+                                    whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                    >
+                                    View all {getFilteredTasks().length} {taskFilter === 'all' ? 'items' : taskFilter}
+                                </motion.button>
+                            )}
+                                            </div>
+                )}
+                                        </div>
+                                    </motion.div>
+                            </div>
+    );
+};
+
+// Recent Notes Widget - Small widget with looping animation showing recent notes
+const RecentNotesWidget: React.FC<{
+    notes: Note[];
+}> = ({ notes }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    
+    const recentNotes = notes
+        .sort((a, b) => new Date(b.createdAt || b.updatedAt || 0).getTime() - new Date(a.createdAt || a.updatedAt || 0).getTime())
+        .slice(0, 5);
+    
+    useEffect(() => {
+        if (recentNotes.length === 0) return;
+        const interval = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % recentNotes.length);
+        }, 4000); // Change note every 4 seconds
+        return () => clearInterval(interval);
+    }, [recentNotes.length]);
+    
+    if (recentNotes.length === 0) {
+        return (
+        <motion.div
+                className="rounded-3xl p-4 md:p-5 relative overflow-hidden"
+                style={{ 
+                    backgroundColor: '#8B5CF6', // Vibrant purple - different from all other widgets
+                    color: '#FFFFFF'
+                }}
+                initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+            >
+                <div className="flex items-center gap-2 mb-2">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <h3 className="text-base font-bold text-white">Recent Notes</h3>
+                </div>
+                <p className="text-sm text-white/70">No notes yet</p>
+                    </motion.div>
+        );
+    }
+
+    const currentNote = recentNotes[currentIndex];
+    
+    return (
+            <motion.div
+            className="rounded-3xl p-4 md:p-5 relative overflow-hidden"
+            style={{ 
+                backgroundColor: '#8B5CF6', // Vibrant purple - different from all other widgets
+                color: '#FFFFFF'
+            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+        >
+            <div className="flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <h3 className="text-base font-bold text-white">Recent Notes</h3>
+                <div className="ml-auto flex gap-1">
+                    {recentNotes.map((_, i) => (
+                        <div
+                                key={i}
+                            className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                                i === currentIndex ? 'bg-white' : 'bg-white/30'
+                            }`}
+                            />
+                        ))}
+                </div>
+            </div>
+            
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={currentNote.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.5 }}
+                    className="space-y-2"
+                >
+                    <h4 className="text-sm font-bold text-white line-clamp-1">{currentNote.title || 'Untitled Note'}</h4>
+                    <p className="text-xs text-white/80 line-clamp-2">
+                        {currentNote.content?.substring(0, 100) || 'No content'}
+                    </p>
+                    <div className="text-[10px] text-white/60">
+                        {new Date(currentNote.createdAt || currentNote.updatedAt || 0).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric' 
+                        })}
+                    </div>
+                </motion.div>
+            </AnimatePresence>
         </motion.div>
     );
 };
 
-// Enhanced Gamified Soen Rewards Widget with Flow Points Integration
+// Your Flow (Rewards) Widget - Minimal, small, long rectangular on mobile, colorful but cohesive, no Mira, different color from Tasks/Habits
 const SoenRewardsWidget: React.FC<{
     tasks: Task[];
     healthData: HealthData;
@@ -2196,670 +2271,146 @@ const SoenRewardsWidget: React.FC<{
     purchasedRewards?: string[];
     activeTheme?: string;
     activeFocusBackground?: string;
-}> = ({ tasks, healthData, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' }) => {
+    onOpenRewards?: () => void;
+}> = ({ tasks, healthData, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave', onOpenRewards }) => {
     const [currentPoints, setCurrentPoints] = useState(0);
     const [level, setLevel] = useState(1);
-    const [showTooltip, setShowTooltip] = useState<string | null>(null);
-    const [showRewardsDetail, setShowRewardsDetail] = useState(false);
+    const [streakDays, setStreakDays] = useState(14);
 
-    // Import REWARDS_CATALOG for theme and background data
-    const themes = [
-        { id: 'theme-obsidian', name: 'Obsidian Flow', cost: 0, unlocked: true, colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c'] },
-        { id: 'theme-synthwave', name: 'Synthwave Sunset', cost: 150, unlocked: purchasedRewards.includes('theme-synthwave'), colors: ['#EC4899', '#7c3aed', '#f97316', '#ef4444'] },
-        { id: 'theme-solarpunk', name: 'Solarpunk Dawn', cost: 150, unlocked: purchasedRewards.includes('theme-solarpunk'), colors: ['#a3e635', '#16a34a', '#22c55e', '#10b981'] },
-        { id: 'theme-luxe', name: 'Luxe Marble', cost: 250, unlocked: purchasedRewards.includes('theme-luxe'), colors: ['#fde047', '#eab308', '#f59e0b', '#d97706'] },
-        { id: 'theme-aurelian', name: 'Aurelian Gold', cost: 300, unlocked: purchasedRewards.includes('theme-aurelian'), colors: ['#fbbf24', '#f59e0b', '#d97706', '#b45309'] },
-        { id: 'theme-crimson', name: 'Crimson Fury', cost: 200, unlocked: purchasedRewards.includes('theme-crimson'), colors: ['#f87171', '#dc2626', '#b91c1c', '#991b1b'] },
-        { id: 'theme-oceanic', name: 'Oceanic Depth', cost: 200, unlocked: purchasedRewards.includes('theme-oceanic'), colors: ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1'] }
-    ];
-
-    const focusBackgrounds = [
-        { id: 'focus-synthwave', name: 'Synthwave Sunset', cost: 100, unlocked: purchasedRewards.includes('focus-synthwave'), colors: ['#EC4899', '#7c3aed', '#f97316', '#ef4444'] },
-        { id: 'focus-lofi', name: 'Lofi Rain', cost: 100, unlocked: purchasedRewards.includes('focus-lofi'), colors: ['#4f46e5', '#1e293b', '#334155', '#475569'] },
-        { id: 'focus-solarpunk', name: 'Solarpunk Garden', cost: 150, unlocked: purchasedRewards.includes('focus-solarpunk'), colors: ['#a3e635', '#16a34a', '#22c55e', '#10b981'] }
-    ];
-
-    // Calculate comprehensive Flow Points with new system
+    // Simplified point calculation
     useEffect(() => {
-        const calculateFlowPoints = async () => {
-            const completedTasks = tasks.filter(t => t.status === 'Completed');
-            const totalTasks = tasks.length;
-            const completionRate = totalTasks > 0 ? (completedTasks.length / totalTasks) * 100 : 0;
-            
-            // NEW SYSTEM: Base points reduced to 10 per task
-            let totalPoints = 0;
-            let dailyPoints = 0;
-            
-            // Calculate points for each completed task
-            for (const task of completedTasks) {
-                let taskPoints = 10; // Base points per task
-                
-                // Apply AI priority multiplier (imported from aiPriorityService)
-                const priorityMultiplier = getPriorityMultiplier(task);
-                taskPoints *= priorityMultiplier;
-                
-                // Apply health impact (imported from healthDataService)
-                const healthImpact = getHealthImpact(taskPoints);
-                taskPoints = healthImpact;
-                
-                // Check if task was completed with Pomodoro timer
-                const pomodoroBonus = checkPomodoroCompletion(task.id) ? 5 : 0;
-                taskPoints += pomodoroBonus;
-                
-                dailyPoints += taskPoints;
-            }
-            
-            // Apply daily cap of 100 points
-            dailyPoints = Math.min(dailyPoints, 100);
-            
-            // Add Pomodoro streak bonuses
-            const streakBonus = getPomodoroStreakBonus();
-            dailyPoints += streakBonus;
-            
-            // Add completion rate bonus (reduced)
-            const completionBonus = Math.round(completionRate * 0.5); // Reduced from 2 to 0.5
-            dailyPoints += completionBonus;
-            
-            totalPoints = Math.round(dailyPoints);
-            
-            // Calculate level (every 500 points = 1 level)
-            const newLevel = Math.floor(totalPoints / 500) + 1;
+        const today = new Date().toDateString();
+        const todayTasks = tasks.filter(t => new Date(t.startTime).toDateString() === today);
+        const completedTasks = todayTasks.filter(t => t.status === 'Completed');
+        
+        const basePoints = completedTasks.length * 10;
+        const streakBonus = streakDays >= 7 ? 50 : streakDays >= 14 ? 100 : 0;
+        const totalPoints = basePoints + streakBonus;
             
             setCurrentPoints(totalPoints);
-            setLevel(newLevel);
-        };
+        setLevel(Math.floor(totalPoints / 500) + 1);
+    }, [tasks, streakDays]);
 
-        calculateFlowPoints();
-    }, [tasks, healthData]);
+    const today = new Date().toDateString();
+    const todayTasks = tasks.filter(t => new Date(t.startTime).toDateString() === today);
+    const completedToday = todayTasks.filter(t => t.status === 'Completed').length;
 
-    // Helper functions for new point system
-    const getPriorityMultiplier = (task: Task): number => {
-        // AI Priority System Integration
-        const categoryWeights: Record<string, number> = {
-            'Deep Work': 2.0,
-            'Learning': 1.8,
-            'Prototyping': 1.6,
-            'Meeting': 1.2,
-            'Workout': 1.4,
-            'Editing': 1.3,
-            'Personal': 1.1,
-            'Admin': 0.8
-        };
-        
-        return categoryWeights[task.category] || 1.0;
-    };
-
-    const getHealthImpact = (basePoints: number): number => {
-        // Health Data Service Integration
-        const energyLevel = healthData.energyLevel || 'medium';
-        const sleepQuality = healthData.sleepQuality || 'good';
-        
-        let multiplier = 1.0;
-        
-        // Energy level impact
-        if (energyLevel === 'low') multiplier *= 0.7;
-        else if (energyLevel === 'high') multiplier *= 1.1;
-        
-        // Sleep quality impact
-        if (sleepQuality === 'poor') multiplier *= 0.8;
-        else if (sleepQuality === 'good') multiplier *= 1.1;
-        
-        return Math.round(basePoints * multiplier);
-    };
-
-    const checkPomodoroCompletion = (taskId: number): boolean => {
-        // Pomodoro Service Integration - Check if task was completed with timer
-        return Math.random() > 0.3; // Simulated: 70% chance task was completed with Pomodoro
-    };
-
-    const getPomodoroStreakBonus = (): number => {
-        // Pomodoro Streak Bonus
-        const streak = Math.floor(Math.random() * 10) + 1; // Simulated streak
-        
-        if (streak >= 7) return 10; // 1 week streak
-        if (streak >= 14) return 20; // 2 week streak
-        if (streak >= 30) return 30; // 1 month streak
-        
-        return 0;
-    };
-
-    const nextLevelPoints = level * 500;
     const progressToNext = ((currentPoints % 500) / 500) * 100;
 
-    // Smart insights and recommendations
-    const getSmartInsights = () => {
-        const unlockedThemes = themes.filter(t => t.unlocked).length;
-        const unlockedBackgrounds = focusBackgrounds.filter(b => b.unlocked).length;
-        const nextAffordableTheme = themes.find(t => !t.unlocked && soenFlow >= t.cost);
-        const nextAffordableBackground = focusBackgrounds.find(b => !b.unlocked && soenFlow >= b.cost);
-        
-        return {
-            unlockedThemes,
-            unlockedBackgrounds,
-            nextAffordableTheme,
-            nextAffordableBackground,
-            totalUnlocked: unlockedThemes + unlockedBackgrounds,
-            totalAvailable: themes.length + focusBackgrounds.length
-        };
-    };
-
-    const insights = getSmartInsights();
-
-    const getMotivationMessage = () => {
-        if (progressToNext > 80) {
-            return "Almost there! Keep going!";
-        } else if (progressToNext > 50) {
-            return "Great progress! You're on fire!";
-        } else {
-            return "Every point counts! Stay consistent!";
-        }
-    };
-
-    const getNextUnlockRecommendation = () => {
-        if (insights.nextAffordableBackground) {
-            return `Unlock "${insights.nextAffordableBackground.name}" focus background for ${insights.nextAffordableBackground.cost} Flow Points`;
-        }
-        if (insights.nextAffordableTheme) {
-            return `Unlock "${insights.nextAffordableTheme.name}" theme for ${insights.nextAffordableTheme.cost} Flow Points`;
-        }
-        return "Complete more tasks to earn Flow Points for unlocks!";
-    };
-
-    const tooltips = {
-        level: "Your current achievement level. Level up by earning 500 points!",
-        points: "Points earned from completing tasks, maintaining streaks, and staying healthy.",
-        progress: "Progress toward your next level. Complete more tasks to advance!",
-        themes: `You've unlocked ${insights.unlockedThemes}/${themes.length} themes`,
-        backgrounds: `You've unlocked ${insights.unlockedBackgrounds}/${focusBackgrounds.length} focus backgrounds`
-    };
+    // Use different color from Tasks (#FDE047 - yellow) and Habits (#FDE047 - yellow)
+    // Flow uses #10B981 (emerald) to be different and colorful
+    const flowColor = '#10B981'; // Emerald - different from Tasks/Habits yellow
 
     return (
-                        <motion.div
-            className="rounded-3xl p-4 sm:p-6 relative overflow-hidden h-full min-h-[400px] sm:min-h-[500px]"
-            style={{ 
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%)',
-                color: 'white'
+                            <motion.div
+            className="rounded-3xl p-4 md:p-5 lg:p-6 relative overflow-hidden"
+                                style={{
+                backgroundColor: flowColor, // Emerald - different from Tasks/Habits yellow
+                color: '#FFFFFF' // White text on emerald
             }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-                {/* Cohesive Background - Schedule.tsx Inspired */}
-            <div className="absolute inset-0">
-                    {/* Subtle floating elements matching Schedule.tsx style */}
-                    {[...Array(8)].map((_, i) => (
-                <motion.div
-                        key={i}
-                            className="absolute opacity-20"
-                        style={{
-                                width: `${6 + Math.random() * 8}px`,
-                                height: `${6 + Math.random() * 8}px`,
-                                background: `rgba(255,255,255,0.3)`,
-                                borderRadius: '50%',
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                        }}
-                        animate={{
-                                y: [0, Math.random() * 20 - 10, 0],
-                                x: [0, Math.random() * 20 - 10, 0],
-                                scale: [1, 1.2 + Math.random() * 0.3, 1],
-                                opacity: [0.2, 0.4, 0.2],
-                        }}
-                        transition={{
-                                duration: 4 + Math.random() * 2,
-                            repeat: Infinity,
-                            delay: Math.random() * 2,
-                            ease: "easeInOut"
-                        }}
-                    />
-                ))}
-                
-                    {/* Subtle gradient overlay matching Schedule.tsx */}
-                <motion.div
-                        className="absolute inset-0 opacity-10"
-                    style={{
-                            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
-                    }}
-                    animate={{
-                            opacity: [0.05, 0.15, 0.05],
-                    }}
-                    transition={{
-                            duration: 6,
-                        repeat: Infinity,
-                            ease: "easeInOut"
-                    }}
-                />
+            {/* Mobile: Small, long rectangular layout */}
+            <div className="md:hidden" onClick={() => onOpenRewards && onOpenRewards()}>
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <SparklesIcon className="w-5 h-5 text-white flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                                   <h3 className="text-base font-bold text-white truncate">Flow Rewards</h3>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-2xl font-extrabold text-white">{soenFlow}</span>
+                                <span className="text-xs text-white/80">Flow Points</span>
                             </div>
-
-            <div className="relative z-10">
-                {/* Header with Schedule.tsx TodayView inspired design - Mobile optimized */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-                    <div className="flex items-center gap-3 sm:gap-4">
-                        <motion.div
-                            animate={{ scale: [1, 1.1, 1] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                            <SparklesIcon className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-400 drop-shadow-lg" />
-                        </motion.div>
-                        <div>
-                            <h3 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Soen Rewards</h3>
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mt-1">
-                        <div className="flex items-center gap-2">
-                                    <span className="text-white/80 text-sm font-semibold">Level {level}</span>
-                                    <div className="w-1 h-1 bg-white/40 rounded-full"></div>
-                                    <span className="text-white/80 text-sm font-semibold">{currentPoints} pts</span>
                                 </div>
-                                <div className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-full">
-                                    <SparklesIcon className="w-3 h-3 text-yellow-400" />
-                                    <span className="text-yellow-400 font-bold text-sm">{soenFlow}</span>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="text-left sm:text-right">
-                        <div className="text-xs text-white/60 font-semibold">Next Level</div>
-                        <div className="text-white font-bold text-base sm:text-lg">{nextLevelPoints - currentPoints} pts</div>
+                    <div className="flex-shrink-0 text-right">
+                        <div className="text-xs text-white/80">Level</div>
+                        <div className="text-xl font-bold text-white">{level}</div>
                     </div>
                 </div>
 
-                {/* Condensed Health Insights Integration - Mobile optimized */}
-                <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
-                    <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                        <HeartIcon className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
-                        <h4 className="text-white font-semibold text-sm">Health Status</h4>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                        {[
-                            { name: 'Energy', value: healthData.energyLevel?.charAt(0).toUpperCase() + healthData.energyLevel?.slice(1) || 'Medium', icon: ZapIcon, color: healthData.energyLevel === 'high' ? '#10b981' : healthData.energyLevel === 'low' ? '#ef4444' : '#f59e0b' },
-                            { name: 'Sleep', value: `${healthData.avgSleepHours || 0}h`, icon: ClockIcon, color: (healthData.avgSleepHours || 0) >= 8 ? '#10b981' : (healthData.avgSleepHours || 0) >= 6 ? '#f59e0b' : '#ef4444' },
-                            { name: 'Activity', value: 'Good', icon: ActivityIcon, color: '#10b981' },
-                            { name: 'Stress', value: 'Low', icon: HeartIcon, color: '#10b981' }
-                        ].map((metric, index) => (
+                {/* Progress Bar - Thin, horizontal */}
+                       <div className="mt-3">
+                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                         <motion.div
-                                key={metric.name}
-                                className="text-center"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                            >
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg mx-auto mb-1 sm:mb-2 flex items-center justify-center bg-white/15">
-                                    <metric.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: metric.color }} />
+                            className="h-full bg-white rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progressToNext}%` }}
+                            transition={{ duration: 0.8, ease: 'easeOut' }}
+                        />
                                 </div>
-                                <p className="text-xs text-white/80 font-semibold">{metric.name}</p>
-                                <p className="text-xs text-white font-bold">{metric.value}</p>
-                        </motion.div>
-                        ))}
+                    <div className="flex justify-between text-xs text-white/80 mt-1">
+                        <span>Progress</span>
+                        <span>{Math.round(progressToNext)}%</span>
             </div>
+                           {/* Minimized health insights */}
+                           <div className="mt-3 flex items-center gap-2 text-[10px] text-white/80">
+                               <span>Sleep {healthData.avgSleepHours?.toFixed(0) || '7'}h</span>
+                               <span>•</span>
+                               <span>Energy {healthData.energyLevel || 'High'}</span>
+                           </div>
                     </div>
-
-                {/* Expandable Unlock Progress Section - Mobile optimized */}
-                <div className="mb-4 sm:mb-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2 sm:gap-0">
-                        <h4 className="text-white font-semibold text-sm">Unlock Progress</h4>
-                        <button 
-                            onClick={() => setShowRewardsDetail(!showRewardsDetail)}
-                            className="text-white/70 hover:text-white text-xs transition-colors px-2 py-1 rounded-lg hover:bg-white/10 active:scale-95"
-                        >
-                            {showRewardsDetail ? 'Minimize' : 'Preview'} Themes
-                        </button>
                     </div>
                     
-                    {/* Compact Progress Display - Mobile optimized */}
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs mb-3">
-                        <div className="text-center p-2 sm:p-3 bg-white/10 rounded-lg">
-                            <div className="text-white font-bold text-sm">{insights.unlockedThemes}/{themes.length}</div>
-                            <div className="text-white/60 text-xs">Themes</div>
+            {/* Desktop: Compact layout - removed stats to reduce negative space */}
+            <div className="hidden md:block">
+                <div className="relative z-10">
+                    {/* Header with Level */}
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <SparklesIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                            <h3 className="text-lg md:text-xl font-bold text-white">Your Flow</h3>
                         </div>
-                        <div className="text-center p-2 sm:p-3 bg-white/10 rounded-lg">
-                            <div className="text-white font-bold text-sm">{insights.unlockedBackgrounds}/{focusBackgrounds.length}</div>
-                            <div className="text-white/60 text-xs">Focus BGs</div>
+                        <div className="text-right">
+                            <div className="text-xs text-white/80">Level</div>
+                            <div className="text-xl md:text-2xl font-bold text-white">{level}</div>
                         </div>
-                    </div>
-                    
-                    <div className="text-xs text-white/80 text-center">
-                        {getNextUnlockRecommendation()}
-                    </div>
                 </div>
 
-                {/* Animated Theme Preview Section - Mobile optimized */}
-                {showRewardsDetail && (
-                    <motion.div
-                        className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white/5 rounded-xl backdrop-blur-sm border border-white/10"
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <h5 className="text-white font-semibold text-sm mb-4 flex items-center gap-2">
-                            <SparklesIcon className="w-4 h-4 text-yellow-400" />
-                            Theme Previews
-                        </h5>
-                        
-                        {/* Animated Theme Cards - Mobile optimized */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                            {themes.slice(0, 4).map((theme, index) => (
-                                <motion.div
-                                    key={theme.id}
-                                    className="relative overflow-hidden rounded-lg border border-white/20 h-20 sm:h-24"
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                >
-                                    {/* Animated Background Preview */}
-                                    <div 
-                                        className="h-16 relative"
-                                        style={{
-                                            background: theme.unlocked 
-                                                ? `linear-gradient(135deg, ${theme.colors?.join(', ') || '#667eea, #764ba2'})`
-                                                : 'linear-gradient(135deg, #374151, #4b5563)'
-                                        }}
-                                    >
-                                        {/* Animated overlay for locked themes */}
-                                        {!theme.unlocked && (
-                                            <motion.div
-                                                className="absolute inset-0 bg-black/50 flex items-center justify-center"
-                                                animate={{ opacity: [0.3, 0.6, 0.3] }}
-                                                transition={{ duration: 2, repeat: Infinity }}
-                                            >
-                                                <div className="text-white/60 text-xs font-semibold">🔒</div>
-                                            </motion.div>
-                                        )}
-                                        
-                                        {/* Floating particles for unlocked themes */}
-                                        {theme.unlocked && (
-                                            <>
-                                                {[...Array(3)].map((_, i) => (
-                                                    <motion.div
-                                                        key={i}
-                                                        className="absolute w-1 h-1 bg-white/30 rounded-full"
-                                                        style={{
-                                                            left: `${20 + i * 30}%`,
-                                                            top: `${20 + i * 20}%`,
-                                                        }}
-                                                        animate={{
-                                                            y: [0, -10, 0],
-                                                            opacity: [0, 1, 0],
-                                                        }}
-                                                        transition={{
-                                                            duration: 2 + i * 0.5,
-                                                            repeat: Infinity,
-                                                            delay: i * 0.3,
-                                                        }}
-                                                    />
-                                                ))}
-                                            </>
-                                        )}
-                                    </div>
-                                    
-                                    {/* Theme Info - Mobile optimized */}
-                                    <div className="p-2 sm:p-3 bg-white/10">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${theme.unlocked ? 'bg-green-400' : 'bg-gray-400'}`} />
-                                                <span className="text-white text-xs sm:text-sm font-semibold truncate">{theme.name}</span>
-                                            </div>
-                                            <span className="text-yellow-400 text-xs font-bold">{theme.cost}</span>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))}
+                    {/* Compact Value Display */}
+                    <div className="mb-3">
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-3xl md:text-4xl font-extrabold text-white">{soenFlow}</span>
+                            <span className="text-sm md:text-base text-white/80">Flow Points</span>
                         </div>
-                        
-                        {/* Focus Background Previews */}
-                        <div>
-                            <h6 className="text-white font-semibold text-xs mb-3">Focus Backgrounds</h6>
-                            <div className="space-y-2">
-                                {focusBackgrounds.map((bg, index) => (
-                                    <motion.div
-                                        key={bg.id}
-                                        className="flex items-center justify-between p-2 sm:p-3 bg-white/10 rounded-lg"
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.5 + index * 0.1 }}
-                                        whileTap={{ scale: 0.98 }}
-                                    >
-                                        <div className="flex items-center gap-2 sm:gap-3">
-                                            {/* Mini preview circle */}
-                                            <div 
-                                                className="w-6 h-6 rounded-full border border-white/30"
-                                                style={{
-                                                    background: bg.unlocked 
-                                                        ? `linear-gradient(135deg, ${bg.colors?.join(', ') || '#667eea, #764ba2'})`
-                                                        : 'linear-gradient(135deg, #374151, #4b5563)'
-                                                }}
-                                            />
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${bg.unlocked ? 'bg-green-400' : 'bg-gray-400'}`} />
-                                                <span className="text-white text-xs sm:text-sm font-semibold">{bg.name}</span>
-                                            </div>
-                                        </div>
-                                        <span className="text-yellow-400 text-xs font-bold">{bg.cost}</span>
-                                    </motion.div>
-                                ))}
-                            </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mb-2">
+                        <div className="flex justify-between text-xs text-white/80 mb-1.5">
+                            <span>Progress to next level</span>
+                            <span>{Math.round(progressToNext)}%</span>
                         </div>
-                    </motion.div>
-                )}
-
-                
-                {showTooltip === 'rewards' && (
-        <motion.div
-                        className="absolute top-12 left-4 right-4 px-4 py-3 bg-black/90 text-white text-sm rounded-lg z-20"
-                        initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 5 }}
-                    >
-                        <p className="leading-relaxed">
-                            Soen Rewards gamify your productivity journey! Earn points by completing tasks, 
-                            maintaining streaks, and staying healthy. Level up every 500 points to unlock new achievements.
-                        </p>
-                    </motion.div>
-                )}
-
-                {/* Ultra Cute Baby Penguin - Schedule.tsx Inspired Design */}
-                <div className="flex justify-center mb-6">
-            <motion.div
-                        className="relative w-24 h-24"
-                animate={{ 
-                            y: [0, -3, 0],
-                            rotate: [0, 2, -2, 0],
-                            scale: [1, 1.03, 1]
-                }}
-                transition={{ 
-                            duration: 5, 
-                    repeat: Infinity, 
-                    ease: 'easeInOut' 
-                }}
-                    >
-                        {/* Floating Sparkles */}
-                        {[...Array(5)].map((_, i) => (
+                        <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                             <motion.div
-                                key={i}
-                                className="absolute w-1 h-1 bg-yellow-300 rounded-full"
-                                style={{
-                                    left: `${20 + i * 15}%`,
-                                    top: `${10 + i * 20}%`,
-                                }}
-                                animate={{
-                                    y: [0, -10, 0],
-                                    opacity: [0, 1, 0],
-                                    scale: [0, 1, 0],
-                                }}
-                                transition={{
-                                    duration: 2 + i * 0.5,
-                                    repeat: Infinity,
-                                    delay: i * 0.3,
-                                    ease: 'easeInOut'
-                                }}
+                                className="h-full bg-white rounded-full"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progressToNext}%` }}
+                                transition={{ duration: 0.8, ease: 'easeOut' }}
                             />
-                        ))}
+                    </div>
+                </div>
 
-                        {/* Baby Penguin Body - Real Baby Penguin Colors */}
-                        <div 
-                            className="absolute inset-0"
-                            style={{ 
-                                background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%)',
-                                borderRadius: '45% 45% 45% 45% / 70% 70% 30% 30%',
-                                clipPath: 'polygon(20% 0%, 80% 0%, 90% 20%, 95% 50%, 90% 80%, 80% 100%, 20% 100%, 10% 80%, 5% 50%, 10% 20%)',
-                                boxShadow: `
-                                    inset 0 4px 8px rgba(255,255,255,0.1),
-                                    inset 0 -4px 8px rgba(0,0,0,0.5),
-                                    0 8px 20px rgba(0,0,0,0.6),
-                                    0 0 0 2px rgba(255,255,255,0.1)
-                                `,
-                                transform: 'perspective(120px) rotateX(5deg) rotateY(-2deg)'
-                            }}
-                        >
-                            {/* Baby Penguin Belly - Large White Area */}
-                            <div 
-                                className="absolute bottom-2 left-1/2 transform -translate-x-1/2"
-                                style={{
-                                    width: '20px',
-                                    height: '16px',
-                                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%)',
-                                    borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
-                                    clipPath: 'polygon(10% 0%, 90% 0%, 100% 25%, 100% 75%, 90% 100%, 10% 100%, 0% 75%, 0% 25%)',
-                                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(255,255,255,0.5)'
-                                }}
-                            />
-                            
-                            {/* Additional White Face Area */}
-                            <div 
-                                className="absolute top-2 left-1/2 transform -translate-x-1/2"
-                                style={{
-                                    width: '16px',
-                                    height: '12px',
-                                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                                    borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
-                                    clipPath: 'polygon(15% 0%, 85% 0%, 95% 30%, 100% 50%, 95% 70%, 85% 100%, 15% 100%, 5% 70%, 0% 50%, 5% 30%)',
-                                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
-                                }}
-                            />
-                            
-                            {/* Baby Penguin Eyes - Black with White Highlights */}
-                            <motion.div 
-                                className="absolute top-3 left-4 w-4 h-4 rounded-full"
-                                style={{
-                                    background: 'radial-gradient(circle, #000000 30%, #1a1a1a 70%, #2d2d2d 100%)',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.1)'
-                                }}
-                                animate={{
-                                    scaleY: [1, 0.05, 1],
-                                }}
-                                transition={{
-                                    duration: 0.15,
-                                    repeat: Infinity,
-                                    repeatDelay: 3,
-                                    ease: "easeInOut"
-                                }}
-                            />
-                            <motion.div 
-                                className="absolute top-3 right-4 w-4 h-4 rounded-full"
-                                style={{
-                                    background: 'radial-gradient(circle, #000000 30%, #1a1a1a 70%, #2d2d2d 100%)',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.1)'
-                                }}
-                                animate={{
-                                    scaleY: [1, 0.05, 1],
-                                }}
-                                transition={{
-                                    duration: 0.15,
-                                    repeat: Infinity,
-                                    repeatDelay: 3,
-                                    ease: "easeInOut"
-                                }}
-                            />
-                            
-                            {/* Eye Highlights - Bright White */}
-                            <div className="absolute top-3.5 left-4.5 w-0.5 h-0.5 bg-white rounded-full"></div>
-                            <div className="absolute top-3.5 right-4.5 w-0.5 h-0.5 bg-white rounded-full"></div>
-                            
-                            {/* Eye pupils - Pure Black */}
-                            <div className="absolute top-3.5 left-4.5 w-2.5 h-2.5 bg-black rounded-full"></div>
-                            <div className="absolute top-3.5 right-4.5 w-2.5 h-2.5 bg-black rounded-full"></div>
-                            
-                            {/* Baby Penguin Beak - Orange Penguin Beak */}
-                            <div 
-                                className="absolute top-4.5 left-1/2 transform -translate-x-1/2"
-                                style={{
-                                    width: '4px',
-                                    height: '3px',
-                                    background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%)',
-                                    borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
-                                    clipPath: 'polygon(20% 0%, 80% 0%, 100% 50%, 80% 100%, 20% 100%, 0% 50%)',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.3)'
-                                }}
-                            />
-                            
-                            {/* Smiling Face - Cute Smile */}
-                            <div 
-                                className="absolute top-6 left-1/2 transform -translate-x-1/2"
-                                style={{
-                                    width: '8px',
-                                    height: '4px',
-                                    border: '1px solid rgba(255,255,255,0.8)',
-                                    borderTop: 'none',
-                                    borderRadius: '0 0 8px 8px',
-                                    background: 'transparent'
-                                }}
-                            />
-                            
-                            {/* Cheek blush - Subtle Pink */}
-                            <div 
-                                className="absolute top-4.5 left-1 w-2 h-2 rounded-full opacity-60"
-                                style={{ background: '#ffb6c1' }}
-                            />
-                            <div 
-                                className="absolute top-4.5 right-1 w-2 h-2 rounded-full opacity-60"
-                                style={{ background: '#ffb6c1' }}
-                            />
+                    {/* Compact Stats Row */}
+                    <div className="grid grid-cols-4 gap-2 mt-3">
+                        <div className="bg-white/10 rounded-lg p-2 text-center">
+                            <div className="text-lg font-bold text-white">{streakDays}</div>
+                            <div className="text-[10px] text-white/70">Streak</div>
+                    </div>
+                        <div className="bg-white/10 rounded-lg p-2 text-center">
+                            <div className="text-lg font-bold text-white">{completedToday}</div>
+                            <div className="text-[10px] text-white/70">Tasks</div>
+                    </div>
+                        <div className="bg-white/10 rounded-lg p-2 text-center">
+                            <div className="text-lg font-bold text-white">{healthData.avgSleepHours?.toFixed(0) || '7'}</div>
+                            <div className="text-[10px] text-white/70">Sleep</div>
                         </div>
-                        
-                        {/* Gentle floating sparkles */}
-                        {[...Array(2)].map((_, i) => (
-                            <motion.div
-                                key={i}
-                                className="absolute w-1 h-1 bg-yellow-200 rounded-full"
-                                style={{
-                                    left: `${25 + i * 50}%`,
-                                    top: `${15 + i * 25}%`,
-                                }}
-                                animate={{
-                                    opacity: [0, 0.8, 0],
-                                    scale: [0.5, 1, 0.5],
-                                    y: [0, -8, 0]
-                                }}
-                                transition={{
-                                    duration: 3 + i * 0.5,
-                                    repeat: Infinity,
-                                    delay: i * 1.5,
-                                    ease: "easeInOut"
-                                }}
-                            />
-                        ))}
-                        
-            </motion.div>
-                </div>
-
-
-                {/* Motivation Message */}
-                <div className="text-center">
-                    <div className="text-xs text-white/70 mb-2">
-                        {getMotivationMessage()}
-                    </div>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/10">
-                    <div className="text-center">
-                        <div className="text-white font-bold text-sm">{level}</div>
-                        <div className="text-white/60 text-xs">Level</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-white font-bold text-sm">{currentPoints}</div>
-                        <div className="text-white/60 text-xs">Points</div>
+                        <div className="bg-white/10 rounded-lg p-2 text-center">
+                            <div className="text-lg font-bold text-white capitalize">{healthData.energyLevel?.charAt(0) || 'H'}</div>
+                            <div className="text-[10px] text-white/70">Energy</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2870,6 +2421,7 @@ const SoenRewardsWidget: React.FC<{
 
 // Main Dashboard Component
 const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
+    const [insightExpanded, setInsightExpanded] = useState(false);
     const { tasks, notes, healthData, briefing, isBriefingLoading, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' } = props;
     
     // Focus mode state
@@ -3119,26 +2671,29 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
             
         <motion.div
             className="min-h-screen relative overflow-x-hidden"
-            style={{ backgroundColor: 'var(--color-bg)' }}
+            style={{ backgroundColor: '#0A0A0A' }}
             variants={containerVariants}
             initial="hidden"
             animate="visible"
         >
+            {/* Global dark background to eliminate any left gutter near the sidebar */}
+            <div className="fixed inset-0 bg-[#0A0A0A] -z-10" />
             {/* Floating particles background */}
             <FloatingParticles count={50} />
 
             {/* Main Content - Mobile-first responsive design with proper touch targets */}
-            <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 pt-16 sm:pt-20">
+            <div className="app-container py-4 md:py-8 lg:py-10 pt-16 sm:pt-20 px-0 sm:px-0 lg:px-0 mx-0">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
-                    className="space-y-6"
+                    className="space-y-6 lg:space-y-8"
                 >
+                    {/* Mobile tiles removed per user request */}
                     {/* Top Row - Mobile-first responsive layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
                         {/* Daily Greeting - Mobile: full width, Desktop: 2/3 */}
-                        <div className="lg:col-span-2 order-1">
+                        <div className="lg:col-span-8 order-1 relative">
                             <DailyGreeting 
                                 tasks={tasks} 
                                 categoryColors={categoryColors} 
@@ -3150,57 +2705,71 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                                 navigateToScheduleDate={navigateToScheduleDate}
                                 setScreen={setScreen}
                                 canCompleteTasks={canCompleteTasks}
+                                insightExpanded={insightExpanded}
+                                setInsightExpanded={setInsightExpanded}
+                                userName={props.userName}
                             />
                         </div>
                         
-                        {/* Soen Rewards Widget - Mobile: full width, Desktop: 1/3 */}
-                        <div className="lg:col-span-1 order-2">
+                        {/* Right Column: Mira Daily (if expanded) then Flow + Notes */}
+                        <div className="lg:col-span-4 order-2 space-y-4 sm:space-y-6">
+                            {insightExpanded && (
+                                <MiraDailyPanel
+                                    tasks={tasks}
+                                    notes={notes}
+                                    healthData={healthData}
+                                    onClose={() => setInsightExpanded(false)}
+                                    setScreen={setScreen}
+                                    navigateToScheduleDate={navigateToScheduleDate}
+                                />
+                            )}
                                 <SoenRewardsWidget
                                     tasks={tasks}
                                     healthData={healthData}
                                 soenFlow={soenFlow}
                                 purchasedRewards={purchasedRewards}
                                 activeTheme={activeTheme}
-                                activeFocusBackground={activeFocusBackground}
+                                    activeFocusBackground={activeFocusBackground}
+                                    onOpenRewards={() => setScreen('Rewards')}
                             />
+                            
+                            {/* Recent Notes Widget - Small, looping animation */}
+                            <RecentNotesWidget notes={notes} />
                         </div>
+
                     </div>
 
 
 
-                    {/* Main Content Grid - Mobile-first responsive layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                        {/* Task Toggle - Mobile: full width, Desktop: 1/2 */}
-                        <div className="lg:col-span-1 order-1">
-                            <TaskToggle
-                                tasks={tasks}
-                                categoryColors={categoryColors}
-                                onCompleteTask={onCompleteTask}
-                                navigateToScheduleDate={navigateToScheduleDate}
-                                setScreen={setScreen}
-                                canCompleteTasks={canCompleteTasks}
-                            />
-                        </div>
-
-                        {/* Habit Insights - Mobile: full width, Desktop: 1/2 */}
-                        <div className="lg:col-span-1 order-2">
-                            <HabitInsights
-                                healthData={healthData}
-                            />
+                    {/* Main Content Grid - Tasks removed; Habits spans full width */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
+                        <div className="lg:col-span-12 order-1">
+                            <HabitInsights healthData={healthData} />
                         </div>
                     </div>
 
-                    {/* Focus Timer - Full Width with proper mobile spacing */}
-                    <div className="w-full">
-                            <FocusTimerWidget
-                                tasks={tasks}
-                                healthData={healthData}
-                                onStartFocusMode={handleStartFocusMode}
-                                activeTheme={activeTheme}
-                                activeFocusBackground={activeFocusBackground}
-                                purchasedRewards={purchasedRewards}
-                            />
-                    </div>
+                    {/* Focus Timer - Only show during overlapping task time */}
+                    {(() => {
+                        const now = new Date();
+                        const active = tasks.some(t => {
+                            const start = new Date(t.startTime);
+                            const end = new Date(start.getTime() + (t.plannedDuration || 25) * 60000);
+                            return now >= start && now <= end && t.status !== 'Completed';
+                        });
+                        if (!active) return null;
+                        return (
+                            <div className="w-full">
+                                <FocusTimerWidget
+                                    tasks={tasks}
+                                    healthData={healthData}
+                                    onStartFocusMode={handleStartFocusMode}
+                                    activeTheme={activeTheme}
+                                    activeFocusBackground={activeFocusBackground}
+                                    purchasedRewards={purchasedRewards}
+                                />
+                            </div>
+                        );
+                    })()}
 
                 </motion.div>
             </div>
@@ -3210,3 +2779,131 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
 };
 
 export default SoenDashboard;
+
+// Separate right-column widget for Mira Daily with outside-click collapse
+function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigateToScheduleDate }: {
+    tasks: Task[];
+    notes: Note[];
+    healthData: HealthData;
+    onClose: () => void;
+    setScreen: (s: Screen) => void;
+    navigateToScheduleDate: (d: Date) => void;
+}) {
+    const panelRef = useRef<HTMLDivElement | null>(null);
+    const [showDetailed, setShowDetailed] = useState(false);
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+                onClose();
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [onClose]);
+
+    const today = new Date();
+    const todayTasks = tasks.filter(t => new Date(t.startTime).toDateString() === today.toDateString());
+
+    const openMira = () => {
+        const context = {
+            date: today.toISOString(),
+            counts: { tasks: todayTasks.length },
+            sampleTitles: todayTasks.slice(0, 5).map(t => t.title)
+        };
+        try { localStorage.setItem('soen-mira-transfer-context', JSON.stringify(context)); } catch {}
+        setScreen('Mira');
+    };
+
+    return (
+        <div ref={panelRef} className="rounded-3xl p-6" style={{ backgroundColor: '#06B6D4', color: '#fff' }}>
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                    <StarIcon className="w-5 h-5 text-white" />
+                    <h3 className="text-lg font-bold">Mira Daily</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={openMira} className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold">Chat with Mira</button>
+                    {/* Minimal expand/collapse icon button */}
+                    <button onClick={() => setShowDetailed(!showDetailed)} className="p-2 rounded-lg bg-white/10 hover:bg-white/20" aria-label="Toggle details">
+                        {showDetailed ? (
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 14h6v6M20 10h-6V4M4 10h6V4M20 14h-6v6"/></svg>
+                        ) : (
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h6V2M20 16h-6v6M4 16h6v6M20 8h-6V2"/></svg>
+                        )}
+                    </button>
+                    <button onClick={onClose} className="p-2 rounded-lg bg-white/10 hover:bg-white/20" aria-label="Close Mira Daily">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div className="mb-4">
+                <div className="text-sm text-white/80">{today.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs">Energy: {healthData.energyLevel || 'High'}</span>
+                    <span className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs">Sleep: {healthData.avgSleepHours?.toFixed(0) || '7'}h</span>
+                    <span className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs">Tasks: {todayTasks.length}</span>
+                </div>
+            </div>
+
+            <div className="mb-4 space-y-3">
+                <div>
+                    <div className="flex items-center justify-between text-xs text-white/70 mb-1"><span>Focus</span><span>75%</span></div>
+                    <div className="h-2 bg-white/10 rounded-full"><div className="h-full bg-emerald-400 rounded-full" style={{width:'75%'}}/></div>
+                </div>
+                <div>
+                    <div className="flex items-center justify-between text-xs text-white/70 mb-1"><span>Recovery</span><span>60%</span></div>
+                    <div className="h-2 bg-white/10 rounded-full"><div className="h-full bg-blue-400 rounded-full" style={{width:'60%'}}/></div>
+                </div>
+            </div>
+
+            <div className="mt-4">
+                <h4 className="text-xs font-semibold text-white/80 mb-2">Suggested Actions</h4>
+                <div className="space-y-2">
+                    {todayTasks.slice(0, 6).map(t => (
+                        <div key={`sug-${t.id}`} className="p-3 rounded-xl bg-white/5 text-sm flex items-center justify-between">
+                            <div className="truncate mr-3">{t.title}</div>
+                            <button
+                                onClick={() => {
+                                    navigateToScheduleDate(new Date(t.startTime));
+                                    setScreen('Schedule');
+                                }}
+                                className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs"
+                            >Open</button>
+                        </div>
+                    ))}
+                    {todayTasks.length === 0 && (
+                        <div className="p-3 rounded-xl bg-white/5 text-white/70 text-xs">No tasks today. Ask Mira for a plan.</div>
+                    )}
+                </div>
+            </div>
+
+            {showDetailed && (
+                <div className="mt-6 space-y-3 border-t border-white/10 pt-4">
+                    <h4 className="text-xs font-semibold text-white/80">Detailed Insights</h4>
+                    {todayTasks.slice(0, 5).map(t => {
+                        const matchingNote = notes.find(n => (n.title || '').toLowerCase().includes(t.title.toLowerCase()) || (n.content || '').toLowerCase().includes(t.title.toLowerCase()));
+                        return (
+                            <div key={`det-${t.id}`} className="p-3 rounded-xl bg-white/5">
+                                <div className="flex items-center justify-between text-sm">
+                                    <div className="font-semibold truncate mr-2">{t.title}</div>
+                                    <div className="text-white/60 text-xs">{new Date(t.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                </div>
+                                {matchingNote && (
+                                    <div className="mt-1 text-xs text-white/80 line-clamp-2">{matchingNote.content?.substring(0, 140) || ''}</div>
+                                )}
+                                {!matchingNote && (
+                                    <div className="mt-1 text-xs text-white/60">No linked notes found. Ask Mira to prepare notes.</div>
+                                )}
+                                <div className="mt-2 flex gap-2">
+                                    <button onClick={() => { navigateToScheduleDate(new Date(t.startTime)); setScreen('Schedule'); }} className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs">Open task</button>
+                                    <button onClick={openMira} className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs">Refine with Mira</button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}

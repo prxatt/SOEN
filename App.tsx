@@ -63,6 +63,7 @@ import Toast from './components/Toast';
 import IntegratedLoadingScreen from './components/IntegratedLoadingScreen'; // Integrated Loading Screen
 import ErrorBoundary from './components/ErrorBoundary'; // Error boundary for crash prevention
 import { SoenLogo } from './components/Icons';
+import MobileOptimizedStyles from './components/MobileOptimizedStyles';
 
 
 // Import services and utils
@@ -953,6 +954,7 @@ function App() {
 
     return (
         <ErrorBoundary>
+            <MobileOptimizedStyles />
             <div className={`min-h-screen font-sans bg-bg text-text transition-colors duration-300 flex`}>
                 {focusTask ? (
                      <ErrorBoundary>
@@ -963,7 +965,7 @@ function App() {
                         <ErrorBoundary>
                             <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
                         </ErrorBoundary>
-                        <main className="flex-1 ml-16 md:ml-20 min-w-0">
+                        <main className="flex-1 ml-0 md:ml-20 min-w-0 pb-mobile-nav md:pb-0">
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={activeScreen}
@@ -971,7 +973,7 @@ function App() {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
                                     transition={{ duration: 0.2 }}
-                                    className="min-w-0"
+                                    className="min-w-0 app-container"
                                 >
                                     <ErrorBoundary>
                                         {renderScreen()}

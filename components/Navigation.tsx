@@ -109,6 +109,10 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
 
 function Navigation({ activeScreen, setScreen }: NavigationProps) {
   const [collapsed, setCollapsed] = useState(true); // Always start collapsed
+  const [isMobileNavVisible, setIsMobileNavVisible] = useState(false); // hidden on load
+  const hasShownOnceRef = useRef(false);
+  const lastScrollYRef = useRef(0);
+  const hideTimerRef = useRef<number | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
 
   // Click to toggle navigation
@@ -133,6 +137,48 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
     setScreen(screen);
     setCollapsed(true);
   }, [setScreen]);
+
+  // Mobile: scroll-aware bottom navigation behavior
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const threshold = 6; // minimal delta to consider scroll direction
+
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      const delta = currentY - lastScrollYRef.current;
+
+      // If near top, keep hidden to minimize chrome
+      if (currentY < 10) {
+        setIsMobileNavVisible(false);
+      }
+
+      // First downward scroll: briefly reveal, then auto-hide
+      if (!hasShownOnceRef.current && delta > threshold) {
+        hasShownOnceRef.current = true;
+        setIsMobileNavVisible(true);
+        if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = window.setTimeout(() => setIsMobileNavVisible(false), 1200);
+      } else if (hasShownOnceRef.current) {
+        if (delta > threshold) {
+          // scrolling down → hide
+          setIsMobileNavVisible(false);
+        } else if (delta < -threshold) {
+          // scrolling up → show
+          setIsMobileNavVisible(true);
+        }
+      }
+
+      lastScrollYRef.current = currentY;
+    };
+
+    // Initialize lastScrollY
+    lastScrollYRef.current = window.scrollY;
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+    };
+  }, []);
 
 
   return (
@@ -201,7 +247,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
                 w-full flex items-center justify-center transition-all duration-300
                 ${collapsed ? 'h-12 rounded-xl' : 'h-12 px-4 rounded-xl'}
                 ${activeScreen === 'Mira'
-                  ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/25'
+                  ? 'bg-white text-black shadow-lg border border-white/20'
                   : 'bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-white/20'
                 }
               `}
@@ -264,91 +310,93 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
         </motion.div>
       </aside>
 
-      {/* Mobile Navigation - Bottom bar inspired by Pinterest reference */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-t border-white/10">
+      {/* Mobile Navigation - Scroll-aware bottom bar (hidden on load, shows on first downward scroll) */}
+      <motion.nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 safe-area-insets"
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: isMobileNavVisible ? 0 : 80, opacity: isMobileNavVisible ? 1 : 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+      >
         <div className="flex items-center justify-between px-6 py-3 safe-area-pb">
           {/* Dashboard */}
           <motion.button
             onClick={() => setScreen('Dashboard')}
             className={`
-              flex flex-col items-center space-y-1 p-2 rounded-lg transition-all duration-200
-              ${activeScreen === 'Dashboard' ? 'text-white' : 'text-white/60'}
+              flex flex-col items-center space-y-1 p-2 rounded-2xl transition-all duration-200 min-w-[48px] min-h-[48px]
+              ${activeScreen === 'Dashboard' ? 'text-white' : 'text-white/70'}
             `}
             whileTap={{ scale: 0.95 }}
           >
-            <HomeIcon className="w-5 h-5" />
-            <span className="text-xs font-medium">Home</span>
+            <div className={`w-10 h-10 flex items-center justify-center ${activeScreen==='Dashboard' ? 'bg-white text-black' : 'bg-white/10 text-white'} rounded-2xl` }>
+              <HomeIcon className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-medium">Home</span>
           </motion.button>
 
           {/* Schedule */}
           <motion.button
             onClick={() => setScreen('Schedule')}
             className={`
-              flex flex-col items-center space-y-1 p-2 rounded-lg transition-all duration-200
-              ${activeScreen === 'Schedule' ? 'text-white' : 'text-white/60'}
+              flex flex-col items-center space-y-1 p-2 rounded-2xl transition-all duration-200 min-w-[48px] min-h-[48px]
+              ${activeScreen === 'Schedule' ? 'text-white' : 'text-white/70'}
             `}
             whileTap={{ scale: 0.95 }}
           >
-            <CalendarIcon className="w-5 h-5" />
-            <span className="text-xs font-medium">Schedule</span>
+            <div className={`w-10 h-10 flex items-center justify-center ${activeScreen==='Schedule' ? 'bg-white text-black' : 'bg-white/10 text-white'} rounded-2xl` }>
+              <CalendarIcon className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-medium">Schedule</span>
           </motion.button>
 
-          {/* Central Mira button */}
-              <motion.button
-                onClick={() => setScreen('Mira')}
-            className="relative p-4 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-lg shadow-purple-500/25"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-            animate={{ 
-              y: [-1, 1, -1],
-              transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-            }}
+          {/* Central Mira button (no gradients or purple) */}
+          <motion.button
+            onClick={() => setScreen('Mira')}
+            className="relative p-0 rounded-3xl bg-transparent text-black min-w-[64px] min-h-[64px]"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <BabyPenguinIcon className="w-6 h-6 text-white" />
-            {/* Floating sparkles effect */}
-            <motion.div
-              className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-300 rounded-full"
-              animate={{
-                scale: [0, 1, 0],
-                opacity: [0, 1, 0]
-              }}
-              transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
-            />
+            <div className="w-16 h-16 rounded-3xl bg-white border border-white/20 shadow-lg flex items-center justify-center">
+              <BabyPenguinIcon className="w-7 h-7 text-black" />
+            </div>
           </motion.button>
 
           {/* Notes */}
           <motion.button
             onClick={() => setScreen('Notes')}
             className={`
-              flex flex-col items-center space-y-1 p-2 rounded-lg transition-all duration-200
-              ${activeScreen === 'Notes' ? 'text-white' : 'text-white/60'}
+              flex flex-col items-center space-y-1 p-2 rounded-2xl transition-all duration-200 min-w-[48px] min-h-[48px]
+              ${activeScreen === 'Notes' ? 'text-white' : 'text-white/70'}
             `}
             whileTap={{ scale: 0.95 }}
           >
-            <DocumentTextIcon className="w-5 h-5" />
-            <span className="text-xs font-medium">Notes</span>
+            <div className={`w-10 h-10 flex items-center justify-center ${activeScreen==='Notes' ? 'bg-white text-black' : 'bg-white/10 text-white'} rounded-2xl` }>
+              <DocumentTextIcon className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-medium">Notes</span>
           </motion.button>
 
           {/* Profile & Settings combined */}
           <motion.button
             onClick={() => setScreen(activeScreen === 'Profile' ? 'Settings' : 'Profile')}
             className={`
-              flex flex-col items-center space-y-1 p-2 rounded-lg transition-all duration-200
-              ${activeScreen === 'Profile' || activeScreen === 'Settings' ? 'text-white' : 'text-white/60'}
+              flex flex-col items-center space-y-1 p-2 rounded-2xl transition-all duration-200 min-w-[48px] min-h-[48px]
+              ${activeScreen === 'Profile' || activeScreen === 'Settings' ? 'text-white' : 'text-white/70'}
             `}
             whileTap={{ scale: 0.95 }}
           >
-            {activeScreen === 'Settings' ? (
-              <GiftIcon className="w-5 h-5" />
-            ) : (
-              <UserCircleIcon className="w-5 h-5" />
-            )}
-            <span className="text-xs font-medium">
+            <div className={`w-10 h-10 flex items-center justify-center ${(activeScreen==='Profile'||activeScreen==='Settings') ? 'bg-white text-black' : 'bg-white/10 text-white'} rounded-2xl` }>
+              {activeScreen === 'Settings' ? (
+                <GiftIcon className="w-5 h-5" />
+              ) : (
+                <UserCircleIcon className="w-5 h-5" />
+              )}
+            </div>
+            <span className="text-[11px] font-medium">
               {activeScreen === 'Settings' ? 'Settings' : 'Profile'}
             </span>
           </motion.button>
         </div>
-      </nav>
+      </motion.nav>
     </>
   );
 }

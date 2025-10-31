@@ -29,13 +29,17 @@ if (!supabase) {
 
   const resolve = () => ({ data: null, error: { message: 'Supabase not configured' } });
 
-  const makeChain = () => ({
-    eq: () => makeChain(),
-    gte: () => makeChain(),
-    order: () => makeChain(),
-    select: () => Promise.resolve(resolve()),
-    single: () => Promise.resolve(resolve()),
-  });
+  const makeChain = () => {
+    const chain: any = {
+      eq: () => chain,
+      gte: () => chain,
+      order: () => chain,
+      select: () => Promise.resolve(resolve()),
+      single: () => Promise.resolve(resolve()),
+      then: (onfulfilled: any, onrejected?: any) => Promise.resolve(resolve()).then(onfulfilled, onrejected),
+    };
+    return chain;
+  };
 
   const mock = {
     auth: {
@@ -69,7 +73,7 @@ export { supabase }
 // Auth helper functions
 export const auth = {
   async signUp(email: string, password: string, fullName: string) {
-    const { data, error } = await (supabase as SupabaseClient).auth.signUp({
+    const { data, error } = await supabase!.auth.signUp({
       email,
       password,
       options: {
@@ -82,7 +86,7 @@ export const auth = {
   },
 
   async signIn(email: string, password: string) {
-    const { data, error } = await (supabase as SupabaseClient).auth.signInWithPassword({
+    const { data, error } = await supabase!.auth.signInWithPassword({
       email,
       password,
     })
@@ -90,22 +94,22 @@ export const auth = {
   },
 
   async signOut() {
-    const { error } = await (supabase as SupabaseClient).auth.signOut()
+    const { error } = await supabase!.auth.signOut()
     return { error }
   },
 
   async getCurrentUser() {
-    const { data: { user } } = await (supabase as SupabaseClient).auth.getUser()
+    const { data: { user } } = await supabase!.auth.getUser()
     return user
   },
 
   async getSession() {
-    const { data: { session } } = await (supabase as SupabaseClient).auth.getSession()
+    const { data: { session } } = await supabase!.auth.getSession()
     return session
   },
 
   async resetPassword(email: string) {
-    const { error } = await (supabase as SupabaseClient).auth.resetPasswordForEmail(email)
+    const { error } = await supabase!.auth.resetPasswordForEmail(email)
     return { error }
   }
 }

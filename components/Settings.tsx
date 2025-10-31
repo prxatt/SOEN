@@ -58,6 +58,30 @@ function SettingsRow({ icon, title, subtitle, onClick, action }: SettingsRowProp
 
 function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme, setActiveTheme, purchasedRewards, browserPushEnabled, setBrowserPushEnabled }: SettingsProps) {
   const purchasedThemes = REWARDS_CATALOG.filter(r => r.type === 'theme' && purchasedRewards.includes(r.id));
+  
+  // Travel Mode and Sick Mode state
+  const [travelMode, setTravelMode] = React.useState(false);
+  const [sickMode, setSickMode] = React.useState(false);
+
+  React.useEffect(() => {
+    // Load modes from localStorage
+    const savedTravelMode = localStorage.getItem('soen-travel-mode') === 'true';
+    const savedSickMode = localStorage.getItem('soen-sick-mode') === 'true';
+    setTravelMode(savedTravelMode);
+    setSickMode(savedSickMode);
+  }, []);
+
+  const handleTravelModeToggle = () => {
+    const newValue = !travelMode;
+    setTravelMode(newValue);
+    localStorage.setItem('soen-travel-mode', String(newValue));
+  };
+
+  const handleSickModeToggle = () => {
+    const newValue = !sickMode;
+    setSickMode(newValue);
+    localStorage.setItem('soen-sick-mode', String(newValue));
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-h-[calc(100vh-8.5rem)] overflow-y-auto pb-4 pr-2 -mr-2">

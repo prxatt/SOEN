@@ -1640,6 +1640,51 @@ export const EyeIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     </svg>
 );
 
+// Travel Mode Icon (lock/suitcase)
+export const TravelIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path d="M12 2a7 7 0 00-7 7v2H4a2 2 0 00-2 2v7h20v-7a2 2 0 00-2-2h-1V9a7 7 0 00-7-7zm0 2a5 5 0 015 5v2H7V9a5 5 0 015-5z"/>
+    </svg>
+);
+
+// Sick Day Mode Icon (bell/notification)
+export const SickDayIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path d="M12 22a2 2 0 01-2-2h4a2 2 0 01-2 2zM5 17h14a1 1 0 001-1v-4a7 7 0 00-5-6.708V4a2 2 0 10-4 0v1.292A7 7 0 004 12v4a1 1 0 001 1z"/>
+    </svg>
+);
+
+// Temperature Unit Icon (thermometer/sun)
+export const TemperatureUnitIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <circle cx="12" cy="12" r="5"/>
+        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+    </svg>
+);
+
 // Layout Components Export
 export default {
     // Core brand
@@ -1775,50 +1820,8 @@ export default {
 
     // Additional missing icons
     ArrowTrendingUpIcon,
-    EyeIcon
+    EyeIcon,
+    TravelIcon,
+    SickDayIcon,
+    TemperatureUnitIcon
 };
-
-// Travel Mode Icon (lock/suitcase)
-export const TravelIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
-    <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        viewBox="0 0 24 24" 
-        fill="currentColor"
-        width={size}
-        height={size}
-        {...props}
-    >
-        <path d="M12 2a7 7 0 00-7 7v2H4a2 2 0 00-2 2v7h20v-7a2 2 0 00-2-2h-1V9a7 7 0 00-7-7zm0 2a5 5 0 015 5v2H7V9a5 5 0 015-5z"/>
-    </svg>
-);
-
-// Sick Day Mode Icon (bell/notification)
-export const SickDayIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
-    <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        viewBox="0 0 24 24" 
-        fill="currentColor"
-        width={size}
-        height={size}
-        {...props}
-    >
-        <path d="M12 22a2 2 0 01-2-2h4a2 2 0 01-2 2zM5 17h14a1 1 0 001-1v-4a7 7 0 00-5-6.708V4a2 2 0 10-4 0v1.292A7 7 0 004 12v4a1 1 0 001 1z"/>
-    </svg>
-);
-
-// Temperature Unit Icon (thermometer/sun)
-export const TemperatureUnitIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
-    <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth="2"
-        viewBox="0 0 24 24"
-        width={size}
-        height={size}
-        {...props}
-    >
-        <circle cx="12" cy="12" r="5"/>
-        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
-    </svg>
-);

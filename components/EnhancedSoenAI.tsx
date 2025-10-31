@@ -299,7 +299,7 @@ export const EnhancedSoenAI: React.FC<EnhancedSoenAIProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--color-bg)' }}>
+    <div className="h-full flex flex-col bg-bg">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-700">
         <div className="flex items-center space-x-3">

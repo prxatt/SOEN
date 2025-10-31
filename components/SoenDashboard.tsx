@@ -1508,7 +1508,8 @@ const DailyGreeting: React.FC<{
     insightExpanded?: boolean;
     setInsightExpanded?: (expanded: boolean) => void;
     userName?: string;
-}> = ({ tasks, categoryColors, healthData, briefing, isBriefingLoading, notes, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks, insightExpanded: externalInsightExpanded, setInsightExpanded: externalSetInsightExpanded, userName }) => {
+    onMoodSelected?: (mood: string, date: Date) => void; // Callback to save mood data
+}> = ({ tasks, categoryColors, healthData, briefing, isBriefingLoading, notes, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks, insightExpanded: externalInsightExpanded, setInsightExpanded: externalSetInsightExpanded, userName, onMoodSelected }) => {
     const [internalInsightExpanded, setInternalInsightExpanded] = useState(false);
     const [fullScreenInsight, setFullScreenInsight] = useState(false);
     const [undoTaskId, setUndoTaskId] = useState<number | null>(null);
@@ -1517,9 +1518,58 @@ const DailyGreeting: React.FC<{
     // Use external state if provided, otherwise use internal
     const insightExpanded = externalInsightExpanded !== undefined ? externalInsightExpanded : internalInsightExpanded;
     const setInsightExpanded = externalSetInsightExpanded || setInternalInsightExpanded;
-    const [selectedMood, setSelectedMood] = useState<string | null>(null);
+    // Load today's mood from localStorage
+    const loadTodayMood = (): string | null => {
+        try {
+            const moodHistory = localStorage.getItem('soen-mood-history');
+            if (!moodHistory) return null;
+            const history = JSON.parse(moodHistory) as Array<{ date: string; mood: string }>;
+            const todayStr = today.toDateString();
+            const todayEntry = history.find(h => new Date(h.date).toDateString() === todayStr);
+            return todayEntry?.mood || null;
+        } catch {
+            return null;
+        }
+    };
+
+    const [selectedMood, setSelectedMood] = useState<string | null>(() => loadTodayMood());
     const [taskFilter, setTaskFilter] = useState<'all' | 'events' | 'meetings' | 'tasks'>('all');
     const today = new Date();
+    
+    // Save mood to localStorage and notify parent
+    const handleMoodSelect = (mood: string) => {
+        const newMood = selectedMood === mood ? null : mood;
+        setSelectedMood(newMood);
+        
+        if (newMood) {
+            // Save to localStorage
+            try {
+                const moodHistory = localStorage.getItem('soen-mood-history');
+                const history: Array<{ date: string; mood: string }> = moodHistory ? JSON.parse(moodHistory) : [];
+                const todayStr = today.toISOString();
+                
+                // Remove existing entry for today if any
+                const filteredHistory = history.filter(h => new Date(h.date).toDateString() !== today.toDateString());
+                
+                // Add new entry
+                filteredHistory.push({ date: todayStr, mood: newMood });
+                
+                // Keep only last 90 days
+                const ninetyDaysAgo = new Date();
+                ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+                const recentHistory = filteredHistory.filter(h => new Date(h.date) >= ninetyDaysAgo);
+                
+                localStorage.setItem('soen-mood-history', JSON.stringify(recentHistory));
+                
+                // Notify parent component if callback provided
+                if (onMoodSelected) {
+                    onMoodSelected(newMood, today);
+                }
+            } catch (error) {
+                console.error('Failed to save mood:', error);
+            }
+        }
+    };
     const todayTasks = tasks.filter(t => 
         new Date(t.startTime).toDateString() === today.toDateString()
     );
@@ -1588,7 +1638,7 @@ const DailyGreeting: React.FC<{
         if (t.includes('eat') || t.includes('meal') || t.includes('lunch') || t.includes('dinner')) return (
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 3h16M4 8h16M4 13h16M4 18h16"/></svg>
         );
-        return (
+    return (
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7"/></svg>
         );
     };
@@ -1797,8 +1847,8 @@ const DailyGreeting: React.FC<{
                                 )}
                             </motion.button>
                         ))}
-            </div>
-            
+                            </div>
+
                     {/* Greeting */}
                     <div className="mb-4 md:mb-6">
                         <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3">
@@ -1859,41 +1909,55 @@ const DailyGreeting: React.FC<{
                                     </motion.button>
                                 </>
                             )}
-            </div>
-                    </div>
+                                </div>
+                                </div>
 
                     {/* Mood/Activity Buttons - Only show in evening (9pm+) */}
                     {isEvening && (
                         <div className="flex flex-wrap gap-2 md:gap-3 mb-4 md:mb-6">
                             {['Awful', 'Bad', 'Okay', 'Good', 'Great'].map((mood, index) => {
                             const icons = [
-                                // Awful - Frown/Sad icon
+                                // Awful - Sad face (frown)
                                 <svg key="awful" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                                    <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" />
+                                    <circle cx="15.5" cy="9.5" r="1.5" fill="currentColor" />
+                                    <path d="M8 15.5c1 1.5 3 1.5 4 0" strokeWidth="2" strokeLinecap="round" />
                                 </svg>,
-                                // Bad - Neutral/Slight frown icon
+                                // Bad - Neutral face (straight line)
                                 <svg key="bad" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                                    <circle cx="9" cy="9" r="1" fill="currentColor" />
+                                    <circle cx="15" cy="9" r="1" fill="currentColor" />
+                                    <line x1="9" y1="16" x2="15" y2="16" strokeWidth="2" strokeLinecap="round" />
                                 </svg>,
-                                // Okay - Neutral/Straight line icon
+                                // Okay - Slight smile
                                 <svg key="okay" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h8" />
+                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                                    <circle cx="9" cy="9" r="1" fill="currentColor" />
+                                    <circle cx="15" cy="9" r="1" fill="currentColor" />
+                                    <path d="M9 15.5c0.5 0.5 2 1 3 0" strokeWidth="2" strokeLinecap="round" />
                                 </svg>,
-                                // Good - Slight smile icon
+                                // Good - Smile
                                 <svg key="good" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                                    <circle cx="9" cy="9" r="1" fill="currentColor" />
+                                    <circle cx="15" cy="9" r="1" fill="currentColor" />
+                                    <path d="M9 14.5c1 1 3 1 4 0" strokeWidth="2" strokeLinecap="round" />
                                 </svg>,
-                                // Great - Big smile/Star icon
+                                // Great - Big smile with star
                                 <svg key="great" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                                    <circle cx="9" cy="9" r="1" fill="currentColor" />
+                                    <circle cx="15" cy="9" r="1" fill="currentColor" />
+                                    <path d="M8 13.5c1.5 2 4.5 2 6 0" strokeWidth="2" strokeLinecap="round" />
                                 </svg>
                             ];
                             
                             return (
                                 <motion.button
                                     key={mood}
-                                    onClick={() => setSelectedMood(selectedMood === mood ? null : mood)}
+                                    onClick={() => handleMoodSelect(mood)}
                                     className={`flex-1 min-w-[80px] flex items-center justify-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3 rounded-xl font-semibold text-xs md:text-sm transition-all min-h-[44px] ${
                                         selectedMood === mood 
                                             ? 'bg-emerald-500 text-white' 
@@ -1907,7 +1971,7 @@ const DailyGreeting: React.FC<{
                                 </motion.button>
                             );
                         })}
-                    </div>
+                            </div>
                     )}
 
                     {/* Next Up Insight - Mobile: inline, Desktop: popup on right */}
@@ -1927,17 +1991,17 @@ const DailyGreeting: React.FC<{
                                         <div className="flex items-center gap-2">
                                             <SparklesIcon className="w-5 h-5 text-emerald-400" />
                                             <h3 className="text-base font-bold text-white">Mira Daily</h3>
-                                        </div>
+                        </div>
                                         <div className="text-xs text-white/70">
                                             {insightExpanded ? 'Collapse ↑' : 'Tap to expand ↓'}
-                                        </div>
-                                    </div>
-                                    
+                    </div>
+                </div>
+
                                     <p className="text-sm text-white/90 mb-2">{dailyInsight.preview}</p>
 
                                     <AnimatePresence>
                                         {insightExpanded && (
-                                            <motion.div
+                        <motion.div
                                                 initial={{ height: 0, opacity: 0 }}
                                                 animate={{ height: 'auto', opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }}
@@ -1948,7 +2012,7 @@ const DailyGreeting: React.FC<{
                                                     <div key={key}>
                                                         <h4 className="text-xs font-semibold text-white/80 mb-1 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
                                                         <p className="text-sm text-white/90">{value}</p>
-                                                    </div>
+                                </div>
                                                 ))}
                                                 {dailyInsight.links && dailyInsight.links.length > 0 && (
                                                     <div className="mt-4 pt-4 border-t border-white/10">
@@ -1978,8 +2042,8 @@ const DailyGreeting: React.FC<{
                                                                 >
                                                                     {link.label}
                                                                 </motion.button>
-                                                            ))}
-                                                        </div>
+                        ))}
+            </div>
                                                     </div>
                                                 )}
                                             </motion.div>
@@ -1987,8 +2051,8 @@ const DailyGreeting: React.FC<{
                                     </AnimatePresence>
                                 </div>
                             </motion.button>
-                        </div>
-                        
+                    </div>
+
                         {/* Desktop: Clickable button that triggers popup on right */}
                         <div className="hidden md:block">
                             <motion.button
@@ -2004,17 +2068,17 @@ const DailyGreeting: React.FC<{
                                         <div className="flex items-center gap-2">
                                             <SparklesIcon className="w-5 h-5 text-emerald-400" />
                                             <h3 className="text-lg font-bold text-white">Mira Daily</h3>
-                                        </div>
+                    </div>
                                         <div className="text-xs text-white/70">
                                             {insightExpanded ? 'Collapse ↑' : 'Tap to expand →'}
-                                        </div>
-                                    </div>
-                                    <p className="text-sm text-white/90 mb-2">{dailyInsight.preview}</p>
-                                </div>
-                            </motion.button>
                         </div>
+                        </div>
+                                    <p className="text-sm text-white/90 mb-2">{dailyInsight.preview}</p>
                     </div>
-                    
+                            </motion.button>
+                    </div>
+                </div>
+
                     {/* Desktop Mira Daily Popup removed from DailyGreeting. Overlay is rendered at grid column level. */}
 
                     {/* Task List - Filtered based on selection */}
@@ -2088,7 +2152,7 @@ const DailyGreeting: React.FC<{
                                             // Show undo option for recently completed tasks (within 5 seconds)
                                             if (undoTaskId === task.id || recentlyCompleted.has(task.id)) {
                                                 return (
-                                                    <motion.div
+                                            <motion.div
                                                         initial={{ opacity: 0, scale: 0.8 }}
                                                         animate={{ opacity: 1, scale: 1 }}
                                                         className="flex flex-col items-center gap-1"
@@ -2110,7 +2174,7 @@ const DailyGreeting: React.FC<{
                                                         >
                                                             Undo
                                                         </motion.button>
-                                                    </motion.div>
+                                            </motion.div>
                                                 );
                                             }
                                             return null; // Completed tasks without undo show nothing
@@ -2735,7 +2799,7 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                                 soenFlow={soenFlow}
                                 purchasedRewards={purchasedRewards}
                                 activeTheme={activeTheme}
-                                    activeFocusBackground={activeFocusBackground}
+                                activeFocusBackground={activeFocusBackground}
                                     onOpenRewards={() => setScreen('Rewards')}
                             />
                             
@@ -2764,16 +2828,16 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                         });
                         if (!active) return null;
                         return (
-                            <div className="w-full">
-                                <FocusTimerWidget
-                                    tasks={tasks}
-                                    healthData={healthData}
-                                    onStartFocusMode={handleStartFocusMode}
-                                    activeTheme={activeTheme}
-                                    activeFocusBackground={activeFocusBackground}
-                                    purchasedRewards={purchasedRewards}
-                                />
-                            </div>
+                    <div className="w-full">
+                            <FocusTimerWidget
+                                tasks={tasks}
+                                healthData={healthData}
+                                onStartFocusMode={handleStartFocusMode}
+                                activeTheme={activeTheme}
+                                activeFocusBackground={activeFocusBackground}
+                                purchasedRewards={purchasedRewards}
+                            />
+                    </div>
                         );
                     })()}
 
@@ -2793,7 +2857,7 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
     healthData: HealthData;
     onClose: () => void;
     setScreen: (s: Screen) => void;
-    navigateToScheduleDate: (d: Date) => void;
+    navigateToScheduleDate: (d: Date, taskId?: number) => void;
 }) {
     const panelRef = useRef<HTMLDivElement | null>(null);
     const [showDetailed, setShowDetailed] = useState(false);

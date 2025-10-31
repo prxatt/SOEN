@@ -101,15 +101,21 @@ function TaskCard({ task, categoryColors, onSelect }: TaskCardProps) {
 
 interface TodayViewProps {
   selectedDate: Date;
-  tasks: Task[];
+  tasks: Task[]; // tasks for selected date (for display)
   categoryColors: Record<Category, string>;
   onSelectTask: (task: Task) => void;
   changeDate: (amount: number) => void;
   onReorderTasks: (orderedTaskIds: number[]) => void;
+  // Additional props needed for EmptyDaySuggestions when there are no tasks
+  onAddTask: (date: Date, hour?: number) => void;
+  redirectToMiraAIWithChat: (history: ChatMessage[]) => void;
+  goals: Goal[];
+  allTasks: Task[];
+  notes: Note[];
 }
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDate, onReorderTasks }: TodayViewProps) {
+function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDate, onReorderTasks, onAddTask, redirectToMiraAIWithChat, goals, allTasks, notes }: TodayViewProps) {
     const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
     const day = String(selectedDate.getDate()).padStart(2, '0');
     const monthNum = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -188,14 +194,14 @@ function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDa
                         </div>
                     </div>
                 ) : (
-                     <EmptyDaySuggestions 
+                    <EmptyDaySuggestions 
                         selectedDate={selectedDate}
-                        onAddTask={handleOpenNewTaskModal}
-                        redirectToMiraAIWithChat={props.redirectToMiraAIWithChat}
-                        goals={props.goals}
-                        tasks={props.tasks}
-                        notes={props.notes}
-                     />
+                        onAddTask={onAddTask}
+                        redirectToMiraAIWithChat={redirectToMiraAIWithChat}
+                        goals={goals}
+                        tasks={allTasks}
+                        notes={notes}
+                    />
                 )}
             </div>
         </div>
@@ -851,6 +857,11 @@ function Schedule(props: ScheduleProps) {
                         }}
                         changeDate={changeDate}
                         onReorderTasks={reorderTodayTasks}
+                        onAddTask={handleOpenNewTaskModal}
+                        redirectToMiraAIWithChat={redirectToMiraAIWithChat}
+                        goals={goals}
+                        allTasks={tasks}
+                        notes={notes}
                     />
                 </div>
                 <div className={`${view === 'month' ? 'block' : 'hidden'} h-full min-h-0 min-w-0`}>

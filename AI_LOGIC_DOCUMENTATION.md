@@ -56,7 +56,7 @@ When user clicks on summary counts (e.g., "2 events", "2 meetings", "4 tasks"):
 
 #### Mood Assessment
 - **Timing**: Only appears at 9pm or later (configurable per user)
-- **Options**: "Great", "Typical", "Good"
+- **Options**: Five-point scale for clarity: "Awful", "Bad", "Okay", "Good", "Great"
 - **Purpose**: 
   - Daily reflection and mood tracking
   - Pattern recognition for future insights
@@ -146,7 +146,7 @@ When schedule contains only workouts:
 - **Visual Indicators**: Dots showing current note position
 - **Compact Design**: Small, efficient use of space
 
-#### Notes-M task Linking
+#### Notes-Task Linking
 - **Smart Linking**: AI connects:
   - Tasks with related notes
   - Meetings with prep notes

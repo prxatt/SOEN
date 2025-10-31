@@ -58,21 +58,21 @@ export default function MobileDashboardTiles({ healthData, tasks, weightChangeKg
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-3xl p-5" style={{ backgroundColor: '#0C3732', color: TILE_COLORS.white }}>
           <p className="text-sm/5 opacity-90">Current Weight</p>
-          <div className="mt-2 text-3xl font-extrabold">{healthData?.weightKg ?? 70.5}<span className="text-base font-semibold ml-1">Kg</span></div>
-          <div className="mt-1 text-xs opacity-80">{weightChangeKg ?? 0} Kg ({weightChangePercent ?? 0}%)</div>
+          <div className="mt-1 text-xs opacity-80">{typeof weightChangeKg === 'number' && typeof weightChangePercent === 'number' ? `${weightChangeKg > 0 ? '+' : ''}${weightChangeKg} Kg (${weightChangePercent > 0 ? '+' : ''}${weightChangePercent}%)` : '—'}</div>
         </div>
         <div className="rounded-3xl p-5" style={{ backgroundColor: TILE_COLORS.yellow, color: TILE_COLORS.black }}>
           <p className="text-sm/5">Today's Calories</p>
           <div className="mt-2 text-3xl font-extrabold">{todaysCalories}<span className="text-base font-semibold ml-1">Kcal</span></div>
-          <div className="mt-1 text-xs opacity-90">{calorieTrendPct ?? 0}% trend</div>
+          <div className="mt-1 text-xs opacity-90">{typeof calorieTrendPct === 'number' ? `${calorieTrendPct > 0 ? '+' : ''}${calorieTrendPct}% trend` : '—'}</div>
+        </div>
       </div>
 
       {/* Macros card */}
       <div className="rounded-3xl p-5" style={{ backgroundColor: '#CBD5FF', color: TILE_COLORS.black }}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-base font-semibold">Breakfast</p>
-            <p className="text-sm opacity-80">260 Kcal</p>
+            <p className="text-base font-semibold">{computedMeal.title}</p>
+            <p className="text-sm opacity-80">{computedMeal.kcal} Kcal</p>
           </div>
           <button className="w-9 h-9 rounded-full border border-black/10 flex items-center justify-center" aria-label="Add item">
             <span className="text-xl leading-none">+</span>
@@ -81,19 +81,19 @@ export default function MobileDashboardTiles({ healthData, tasks, weightChangeKg
         <div className="mt-4 grid grid-cols-4 gap-3 text-center">
           <div>
             <div className="text-[11px] opacity-80">Proteins</div>
-            <div className="text-base font-semibold">58.6</div>
+            <div className="text-base font-semibold">{computedMacros.proteins}</div>
           </div>
           <div>
             <div className="text-[11px] opacity-80">Carbs</div>
-            <div className="text-base font-semibold">48.8</div>
+            <div className="text-base font-semibold">{computedMacros.carbs}</div>
           </div>
           <div>
             <div className="text-[11px] opacity-80">Fats</div>
-            <div className="text-base font-semibold">20.3</div>
+            <div className="text-base font-semibold">{computedMacros.fats}</div>
           </div>
           <div>
             <div className="text-[11px] opacity-80">RDC</div>
-            <div className="text-base font-semibold">16%</div>
+            <div className="text-base font-semibold">{computedMacros.rdcPercent}%</div>
           </div>
         </div>
         <div className="mt-4 flex items-center justify-between">

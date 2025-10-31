@@ -179,6 +179,29 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                         </button>
                     }
                 />
+                <div className="border-t border-border/50 my-1 mx-2"></div>
+                <SettingsRow 
+                    icon={<svg className="w-6 h-6 text-teal-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 00-7 7v2H4a2 2 0 00-2 2v7h20v-7a2 2 0 00-2-2h-1V9a7 7 0 00-7-7zm0 2a5 5 0 015 5v2H7V9a5 5 0 015-5z"/></svg>}
+                    title="Travel Mode"
+                    subtitle="Adjust notifications and insights for travel"
+                    action={
+                        <button onClick={handleTravelModeToggle} role="switch" aria-checked={travelMode}
+                            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${travelMode ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${travelMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    }
+                />
+                <SettingsRow 
+                    icon={<svg className="w-6 h-6 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2 2 0 01-2-2h4a2 2 0 01-2 2zM5 17h14a1 1 0 001-1v-4a7 7 0 00-5-6.708V4a2 2 0 10-4 0v1.292A7 7 0 004 12v4a1 1 0 001 1z"/></svg>}
+                    title="Sick Day Mode"
+                    subtitle="Reduce workload and adjust insights for recovery"
+                    action={
+                        <button onClick={handleSickModeToggle} role="switch" aria-checked={sickMode}
+                            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${sickMode ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${sickMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    }
+                />
             </div>
         </div>
 

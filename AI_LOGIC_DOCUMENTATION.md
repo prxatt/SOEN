@@ -146,7 +146,7 @@ When schedule contains only workouts:
 - **Visual Indicators**: Dots showing current note position
 - **Compact Design**: Small, efficient use of space
 
-#### Notes-M task Linking
+#### Notes-Task Linking
 - **Smart Linking**: AI connects:
   - Tasks with related notes
   - Meetings with prep notes

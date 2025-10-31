@@ -166,7 +166,7 @@ When schedule contains only workouts:
 #### Category Color Overlap Prevention
 - AI checks if category colors match widget backgrounds
 - Automatically adjusts category colors if overlap detected:
-  - Yellow (#FDE047) → Lighter yellow (#FACC15)
+  - Yellow (#FDE047) → Darker yellow (#FACC15)
   - Orange (#F59E0B) → Lighter orange (#FB923C)
   - Emerald (#10B981) → Lighter emerald (#34D399)
 

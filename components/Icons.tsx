@@ -346,7 +346,7 @@ export const MiraIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
 
 export const BabyPenguinIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     <svg 
-        viewBox="0 0 100 120" 
+		viewBox="0 0 24 24" 
         fill="none" 
         xmlns="http://www.w3.org/2000/svg"
         width={size}
@@ -359,7 +359,7 @@ export const BabyPenguinIcon: React.FC<IconProps> = ({ size = 24, ...props }) =>
                 <stop offset="100%" stopColor="#2a2a2a" />
             </linearGradient>
         </defs>
-        
+		<g transform="scale(0.24, 0.2)">
         {/* Body - Soft, rounded ellipse */}
         <ellipse cx="50" cy="70" rx="35" ry="40" fill="url(#miraBodyGradient)" />
         
@@ -389,6 +389,7 @@ export const BabyPenguinIcon: React.FC<IconProps> = ({ size = 24, ...props }) =>
         
         {/* Right Foot - Soft orange */}
         <ellipse cx="60" cy="108" rx="8" ry="5" fill="#f59e0b" />
+		</g>
     </svg>
 );
 

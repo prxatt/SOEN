@@ -742,7 +742,7 @@ function Schedule(props: ScheduleProps) {
         }
     }, [initialDate]);
 
-    // Open task detail modal if initialTaskId is provided
+    // Open task detail modal if initialTaskId is provided (only once on mount)
     useEffect(() => {
         if (initialTaskId) {
             const taskToOpen = tasks.find(t => t.id === initialTaskId);
@@ -753,8 +753,9 @@ function Schedule(props: ScheduleProps) {
                 setSelectedDate(new Date(taskToOpen.startTime));
                 setView('today');
             }
+            // Note: initialTaskId is cleared by parent after navigation completes
         }
-    }, [initialTaskId, tasks]);
+    }, [initialTaskId]); // Only depend on initialTaskId, not tasks, to avoid re-opening on task updates
 
     const tasksForSelectedDate = useMemo(() => {
         return tasks

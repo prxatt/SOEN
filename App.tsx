@@ -913,6 +913,10 @@ function App() {
         setScheduleInitialDate(date);
         setScheduleInitialTaskId(taskId);
         navigateTo('Schedule');
+        // Clear taskId after a delay to allow Schedule to process it
+        if (taskId) {
+            setTimeout(() => setScheduleInitialTaskId(undefined), 500);
+        }
     };
 
     // --- RENDER LOGIC ---

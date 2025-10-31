@@ -26,6 +26,7 @@ interface ScheduleProps {
     onAddNewCategory: (name: string) => boolean;
     initialDate?: Date;
     initialTaskId?: number; // Open specific task detail modal on load
+    onTaskConsumed?: () => void; // Callback to signal that initialTaskId has been consumed
 }
 
 const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
@@ -728,7 +729,7 @@ function CalendarView({ tasks, categoryColors, onAddTask, onMoveTask, selectedDa
 };
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
-function Schedule(props: ScheduleProps) {
+function Schedule({ onTaskConsumed, ...props }: ScheduleProps) {
     const { tasks, setTasks, showToast, onCompleteTask, onUndoCompleteTask, categoryColors, initialDate, initialTaskId, goals, notes, redirectToMiraAIWithChat } = props;
     const [view, setView] = useState<ScheduleView>('today');
     const [selectedDate, setSelectedDate] = useState(initialDate || new Date());
@@ -754,10 +755,14 @@ function Schedule(props: ScheduleProps) {
                 // Update selected date to match task date
                 setSelectedDate(new Date(taskToOpen.startTime));
                 setView('today');
+                // Signal to parent that task has been consumed
+                onTaskConsumed?.();
+            } else if (tasks.length > 0) {
+                // Tasks loaded but task not found - signal consumed anyway
+                onTaskConsumed?.();
             }
-            // Note: initialTaskId is cleared by parent after navigation completes
         }
-    }, [initialTaskId, tasks]); // Add `tasks` to the dependency array
+    }, [initialTaskId, tasks, onTaskConsumed]); // Include tasks to handle async loading
 
     const tasksForSelectedDate = useMemo(() => {
         return tasks

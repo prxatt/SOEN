@@ -36,7 +36,7 @@
  * NEVER REMOVE THESE SAFETY MEASURES - THEY PREVENT APP CRASHES!
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Import types
@@ -909,22 +909,52 @@ function App() {
     }, [tasks, notes, goals, healthData]);
 
     const [scheduleInitialTaskId, setScheduleInitialTaskId] = useState<number | undefined>(undefined);
+    const clearTaskIdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     
-    const navigateToScheduleDate = (date: Date, taskId?: number) => {
+    const handleTaskConsumed = useCallback(() => {
+        // Clear any pending timeout
+        if (clearTaskIdTimeoutRef.current) {
+            clearTimeout(clearTaskIdTimeoutRef.current);
+            clearTaskIdTimeoutRef.current = null;
+        }
+        // Clear the taskId now that Schedule has consumed it
+        setScheduleInitialTaskId(undefined);
+    }, []);
+    
+    const navigateToScheduleDate = useCallback((date: Date, taskId?: number) => {
+        // Clear any pending timeout from previous navigation
+        if (clearTaskIdTimeoutRef.current) {
+            clearTimeout(clearTaskIdTimeoutRef.current);
+            clearTaskIdTimeoutRef.current = null;
+        }
+        
         setScheduleInitialDate(date);
         setScheduleInitialTaskId(taskId);
         navigateTo('Schedule');
-        // Clear taskId after a delay to allow Schedule to process it
+        
+        // Fallback timeout as safety net (shouldn't be needed if callback works)
         if (taskId) {
-            setTimeout(() => setScheduleInitialTaskId(undefined), 500);
+            clearTaskIdTimeoutRef.current = setTimeout(() => {
+                setScheduleInitialTaskId(undefined);
+                clearTaskIdTimeoutRef.current = null;
+            }, 2000); // Longer timeout as fallback only
         }
-    };
+    }, [navigateTo]);
+    
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (clearTaskIdTimeoutRef.current) {
+                clearTimeout(clearTaskIdTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // --- RENDER LOGIC ---
     const renderScreen = () => {
         switch (activeScreen) {
             case 'Dashboard': return <SoenDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} userName={userName} addTask={addTask} projects={projects} categories={categories} onAddNewCategory={handleAddNewCategory} showToast={showToast} />;
-            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToMiraAIWithChat={redirectToMiraAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} initialTaskId={scheduleInitialTaskId} />;
+            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToMiraAIWithChat={redirectToMiraAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} initialTaskId={scheduleInitialTaskId} onTaskConsumed={handleTaskConsumed} />;
             case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
             case 'Profile': return <Profile soenFlow={soenFlow} setScreen={navigateTo} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;

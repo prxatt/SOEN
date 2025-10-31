@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Cog6ToothIcon, GoogleCalendarIcon, ChevronRightIcon, SparklesIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleLeftEllipsisIcon, CheckIcon } from './Icons';
+import { Cog6ToothIcon, GoogleCalendarIcon, ChevronRightIcon, SparklesIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleLeftEllipsisIcon, CheckIcon, TravelIcon, SickDayIcon, TemperatureUnitIcon } from './Icons';
 import { REWARDS_CATALOG } from '../constants';
 
 interface SettingsProps {
@@ -190,7 +190,7 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                 />
                 <div className="border-t border-border/50 my-1 mx-2"></div>
                 <SettingsRow 
-                    icon={<svg className="w-6 h-6 text-teal-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 00-7 7v2H4a2 2 0 00-2 2v7h20v-7a2 2 0 00-2-2h-1V9a7 7 0 00-7-7zm0 2a5 5 0 015 5v2H7V9a5 5 0 015-5z"/></svg>}
+                    icon={<TravelIcon className="w-6 h-6 text-teal-400" />}
                     title="Travel Mode"
                     subtitle="Adjust notifications and insights for travel"
                     action={
@@ -201,7 +201,7 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                     }
                 />
                 <SettingsRow 
-                    icon={<svg className="w-6 h-6 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2 2 0 01-2-2h4a2 2 0 01-2 2zM5 17h14a1 1 0 001-1v-4a7 7 0 00-5-6.708V4a2 2 0 10-4 0v1.292A7 7 0 004 12v4a1 1 0 001 1z"/></svg>}
+                    icon={<SickDayIcon className="w-6 h-6 text-red-400" />}
                     title="Sick Day Mode"
                     subtitle="Reduce workload and adjust insights for recovery"
                     action={
@@ -213,7 +213,7 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                 />
                 <div className="border-t border-border/50 my-1 mx-2"></div>
                 <SettingsRow 
-                    icon={<svg className="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/></svg>}
+                    icon={<TemperatureUnitIcon className="w-6 h-6 text-blue-400" />}
                     title="Temperature Unit"
                     subtitle={`Display temperature in ${temperatureUnit.toUpperCase() === 'C' ? 'Fahrenheit' : 'Celsius'}`}
                     action={

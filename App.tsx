@@ -907,8 +907,11 @@ function App() {
         }
     }, [tasks, notes, goals, healthData]);
 
-    const navigateToScheduleDate = (date: Date) => {
+    const [scheduleInitialTaskId, setScheduleInitialTaskId] = useState<number | undefined>(undefined);
+    
+    const navigateToScheduleDate = (date: Date, taskId?: number) => {
         setScheduleInitialDate(date);
+        setScheduleInitialTaskId(taskId);
         navigateTo('Schedule');
     };
 
@@ -916,7 +919,7 @@ function App() {
     const renderScreen = () => {
         switch (activeScreen) {
             case 'Dashboard': return <SoenDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} />;
-            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToMiraAIWithChat={redirectToMiraAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
+            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToMiraAIWithChat={redirectToMiraAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} initialTaskId={scheduleInitialTaskId} />;
             case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
             case 'Profile': return <Profile soenFlow={soenFlow} setScreen={navigateTo} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;

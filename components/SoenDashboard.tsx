@@ -51,7 +51,7 @@ interface SoenDashboardProps {
     dailyCompletionImage: string | null;
     categoryColors: Record<Category, string>;
     isBriefingLoading: boolean;
-    navigateToScheduleDate: (date: Date) => void;
+    navigateToScheduleDate: (date: Date, taskId?: number) => void;
     inferredLocation: string | null;
     setScreen: (screen: Screen) => void;
     onCompleteTask: (taskId: number) => void;
@@ -263,7 +263,7 @@ const NextUpWidget: React.FC<{
     tasks: Task[];
     categoryColors: Record<Category, string>;
     onCompleteTask: (taskId: number) => void;
-    navigateToScheduleDate: (date: Date) => void;
+    navigateToScheduleDate: (date: Date, taskId?: number) => void;
     setScreen: (screen: Screen) => void;
     canCompleteTasks: boolean;
 }> = ({ tasks, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks }) => {
@@ -424,7 +424,7 @@ const TaskToggle: React.FC<{
     tasks: Task[];
     categoryColors: Record<Category, string>;
     onCompleteTask: (taskId: number) => void;
-    navigateToScheduleDate: (date: Date) => void;
+    navigateToScheduleDate: (date: Date, taskId?: number) => void;
     setScreen: (screen: Screen) => void;
     canCompleteTasks: boolean;
 }> = ({ tasks, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks }) => {
@@ -1502,7 +1502,7 @@ const DailyGreeting: React.FC<{
     isBriefingLoading: boolean;
     notes: Note[];
     onCompleteTask: (taskId: number) => void;
-    navigateToScheduleDate: (date: Date) => void;
+    navigateToScheduleDate: (date: Date, taskId?: number) => void;
     setScreen: (screen: Screen) => void;
     canCompleteTasks: boolean;
     insightExpanded?: boolean;
@@ -2027,14 +2027,8 @@ const DailyGreeting: React.FC<{
                                 <motion.div
                                     key={task.id}
                                     onClick={() => {
-                                        navigateToScheduleDate(new Date(task.startTime));
-                                        setScreen('Schedule');
-                                        setTimeout(() => {
-                                            const eventElement = document.querySelector(`[data-task-id='${task.id}']`);
-                                            if (eventElement && eventElement instanceof HTMLElement) {
-                                                eventElement.click();
-                                            }
-                                        }, 100);
+                                    navigateToScheduleDate(new Date(task.startTime), task.id);
+                                    setScreen('Schedule');
                                     }}
                                     className="flex items-start gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors min-h-[44px] cursor-pointer"
                                     initial={{ opacity: 0, y: 10 }}

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Project, Note, Notebook, Goal, Category, TaskStatus, ScheduleView, ChatMessage } from '../types';
-import { PlusCircleIcon, ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, CalendarIcon, CheckCircleIcon, ArrowUturnLeftIcon, PlusIcon } from './Icons';
+import { PlusCircleIcon, ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, CalendarIcon, CheckCircleIcon, ArrowUturnLeftIcon, PlusIcon, SparklesIcon, BrainCircuitIcon } from './Icons';
 import EventDetail from './EventDetail';
 import NewTaskModal from './NewTaskModal';
 
@@ -25,6 +25,7 @@ interface ScheduleProps {
     onTaskSwap: (draggedId: number, targetId: number) => void;
     onAddNewCategory: (name: string) => boolean;
     initialDate?: Date;
+    initialTaskId?: number; // Open specific task detail modal on load
 }
 
 const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
@@ -187,14 +188,182 @@ function TodayView({ selectedDate, tasks, categoryColors, onSelectTask, changeDa
                         </div>
                     </div>
                 ) : (
-                     <div className="h-full flex items-center justify-center text-center rounded-2xl" style={{backgroundColor: 'rgba(0,0,0,0.1)'}}>
-                        <p className="opacity-80">Nothing scheduled for today.</p>
-                     </div>
+                     <EmptyDaySuggestions 
+                        selectedDate={selectedDate}
+                        onAddTask={handleOpenNewTaskModal}
+                        redirectToMiraAIWithChat={props.redirectToMiraAIWithChat}
+                        goals={props.goals}
+                        tasks={props.tasks}
+                        notes={props.notes}
+                     />
                 )}
             </div>
         </div>
     );
 };
+
+// Empty Day AI Suggestions Component
+interface EmptyDaySuggestionsProps {
+    selectedDate: Date;
+    onAddTask: (date: Date, hour?: number) => void;
+    redirectToMiraAIWithChat: (history: ChatMessage[]) => void;
+    goals: Goal[];
+    tasks: Task[];
+    notes: Note[];
+}
+
+function EmptyDaySuggestions({ selectedDate, onAddTask, redirectToMiraAIWithChat, goals, tasks, notes }: EmptyDaySuggestionsProps) {
+    const isToday = new Date().toDateString() === selectedDate.toDateString();
+    const isPast = selectedDate < new Date() && !isToday;
+    const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
+    
+    // Generate AI suggestions based on context
+    const suggestions = useMemo(() => {
+        const suggestions: Array<{ title: string; category: string; time?: string; description: string }> = [];
+        
+        // Analyze goals for suggestions
+        const activeGoals = goals.filter(g => g.status === 'active');
+        if (activeGoals.length > 0) {
+            activeGoals.slice(0, 2).forEach(goal => {
+                suggestions.push({
+                    title: `Work on ${goal.name}`,
+                    category: 'Goal',
+                    time: isWeekend ? '10:00' : '18:00',
+                    description: `Make progress toward your "${goal.name}" goal`
+                });
+            });
+        }
+        
+        // Analyze recent task patterns
+        const recentTasks = tasks
+            .filter(t => new Date(t.startTime) < new Date() && new Date(t.startTime) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+            .slice(0, 5);
+        
+        const commonCategories = recentTasks.reduce((acc, t) => {
+            acc[t.category] = (acc[t.category] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+        
+        const topCategory = Object.entries(commonCategories).sort((a, b) => b[1] - a[1])[0];
+        if (topCategory) {
+            suggestions.push({
+                title: `Continue ${topCategory[0]} work`,
+                category: topCategory[0] as Category,
+                time: '09:00',
+                description: `Based on your recent schedule, this seems important`
+            });
+        }
+        
+        // Default suggestions if not enough context
+        if (suggestions.length < 3) {
+            if (isWeekend) {
+                suggestions.push(
+                    { title: 'Plan next week', category: 'Planning', time: '10:00', description: 'Review and prepare for the week ahead' },
+                    { title: 'Personal project time', category: 'Personal', time: '14:00', description: 'Dedicate time to personal interests' },
+                    { title: 'Relaxation activity', category: 'Wellness', time: '16:00', description: 'Rest and recharge for the week ahead' }
+                );
+            } else {
+                suggestions.push(
+                    { title: 'Morning routine', category: 'Wellness', time: '08:00', description: 'Start your day with intention' },
+                    { title: 'Deep work session', category: 'Work', time: '10:00', description: 'Focus on your most important task' },
+                    { title: 'Reflection and planning', category: 'Planning', time: '17:00', description: 'Review the day and plan tomorrow' }
+                );
+            }
+        }
+        
+        return suggestions.slice(0, 4);
+    }, [goals, tasks, isWeekend]);
+    
+    const handleQuickAdd = (suggestion: typeof suggestions[0]) => {
+        const [hour, minute] = suggestion.time?.split(':').map(Number) || [9, 0];
+        const dateWithTime = new Date(selectedDate);
+        dateWithTime.setHours(hour, minute, 0, 0);
+        onAddTask(dateWithTime, hour);
+    };
+    
+    const handleAskMira = () => {
+        const context = {
+            date: selectedDate.toISOString(),
+            isWeekend,
+            goals: goals.filter(g => g.status === 'active').map(g => g.name),
+            recentTasksCount: tasks.filter(t => new Date(t.startTime) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length
+        };
+        const chatHistory: ChatMessage[] = [
+            {
+                role: 'system',
+                content: `The user is viewing an empty day (${selectedDate.toLocaleDateString()}). Generate personalized task suggestions based on their goals and schedule patterns.`
+            },
+            {
+                role: 'user',
+                content: `What should I do on ${selectedDate.toLocaleDateString()}? ${isWeekend ? 'It\'s the weekend.' : 'It\'s a weekday.'} I have ${goals.filter(g => g.status === 'active').length} active goals.`
+            }
+        ];
+        try {
+            localStorage.setItem('soen-mira-transfer-context', JSON.stringify(context));
+        } catch {}
+        redirectToMiraAIWithChat(chatHistory);
+    };
+    
+    if (isPast) {
+        return (
+            <div className="h-full flex items-center justify-center text-center rounded-2xl" style={{backgroundColor: 'rgba(0,0,0,0.1)'}}>
+                <div>
+                    <p className="opacity-80 mb-2">This day has passed.</p>
+                    <p className="text-sm opacity-60">View your completed tasks or plan for today.</p>
+                </div>
+            </div>
+        );
+    }
+    
+    return (
+        <div className="h-full flex flex-col items-center justify-center text-center rounded-2xl p-6" style={{backgroundColor: 'rgba(0,0,0,0.1)'}}>
+            <div className="max-w-md w-full space-y-4">
+                <div className="flex items-center justify-center gap-2 mb-4">
+                    <SparklesIcon className="w-6 h-6 opacity-60" />
+                    <h3 className="text-xl font-bold">Nothing scheduled yet</h3>
+                </div>
+                <p className="opacity-70 mb-6">Mira has some suggestions for you:</p>
+                
+                <div className="space-y-3 mb-6">
+                    {suggestions.map((suggestion, index) => (
+                        <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="p-4 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-colors text-left"
+                            onClick={() => handleQuickAdd(suggestion)}
+                        >
+                            <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-xs opacity-60">{suggestion.time}</span>
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/10">{suggestion.category}</span>
+                                    </div>
+                                    <h4 className="font-semibold mb-1">{suggestion.title}</h4>
+                                    <p className="text-sm opacity-70">{suggestion.description}</p>
+                                </div>
+                                <button className="ml-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                                    <PlusIcon className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+                
+                <motion.button
+                    onClick={handleAskMira}
+                    className="w-full p-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold flex items-center justify-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                >
+                    <BrainCircuitIcon className="w-5 h-5" />
+                    <span>Ask Mira for a personalized plan</span>
+                </motion.button>
+            </div>
+        </div>
+    );
+}
 
 interface MiniTimelineProps {
   tasks: Task[];
@@ -558,7 +727,7 @@ function CalendarView({ tasks, categoryColors, onAddTask, onMoveTask, selectedDa
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function Schedule(props: ScheduleProps) {
-    const { tasks, setTasks, showToast, onCompleteTask, onUndoCompleteTask, categoryColors, initialDate } = props;
+    const { tasks, setTasks, showToast, onCompleteTask, onUndoCompleteTask, categoryColors, initialDate, initialTaskId } = props;
     const [view, setView] = useState<ScheduleView>('today');
     const [selectedDate, setSelectedDate] = useState(initialDate || new Date());
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -572,6 +741,20 @@ function Schedule(props: ScheduleProps) {
             setView('today');
         }
     }, [initialDate]);
+
+    // Open task detail modal if initialTaskId is provided
+    useEffect(() => {
+        if (initialTaskId) {
+            const taskToOpen = tasks.find(t => t.id === initialTaskId);
+            if (taskToOpen) {
+                setSelectedTask(taskToOpen);
+                setIsEventDetailOpen(true);
+                // Update selected date to match task date
+                setSelectedDate(new Date(taskToOpen.startTime));
+                setView('today');
+            }
+        }
+    }, [initialTaskId, tasks]);
 
     const tasksForSelectedDate = useMemo(() => {
         return tasks

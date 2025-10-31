@@ -59,13 +59,12 @@ export default function MobileDashboardTiles({ healthData, tasks, weightChangeKg
         <div className="rounded-3xl p-5" style={{ backgroundColor: '#0C3732', color: TILE_COLORS.white }}>
           <p className="text-sm/5 opacity-90">Current Weight</p>
           <div className="mt-2 text-3xl font-extrabold">{healthData?.weightKg ?? 70.5}<span className="text-base font-semibold ml-1">Kg</span></div>
-          <div className="mt-1 text-xs opacity-80">3 Kg (-3.8%)</div>
+          <div className="mt-1 text-xs opacity-80">{weightChangeKg ?? 0} Kg ({weightChangePercent ?? 0}%)</div>
         </div>
         <div className="rounded-3xl p-5" style={{ backgroundColor: TILE_COLORS.yellow, color: TILE_COLORS.black }}>
           <p className="text-sm/5">Today's Calories</p>
           <div className="mt-2 text-3xl font-extrabold">{todaysCalories}<span className="text-base font-semibold ml-1">Kcal</span></div>
-          <div className="mt-1 text-xs opacity-90">4.6% trend</div>
-        </div>
+          <div className="mt-1 text-xs opacity-90">{calorieTrendPct ?? 0}% trend</div>
       </div>
 
       {/* Macros card */}

@@ -757,7 +757,7 @@ function Schedule(props: ScheduleProps) {
             }
             // Note: initialTaskId is cleared by parent after navigation completes
         }
-    }, [initialTaskId]); // Only depend on initialTaskId, not tasks, to avoid re-opening on task updates
+    }, [initialTaskId, tasks]); // Add `tasks` to the dependency array
 
     const tasksForSelectedDate = useMemo(() => {
         return tasks

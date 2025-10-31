@@ -35,11 +35,13 @@ import { Task, Note, HealthData, Goal, Category, MissionBriefing, Screen, TaskSt
 import { safeGet } from '../utils/validation';
 import { 
     CheckCircleIcon, SparklesIcon, HeartIcon, BoltIcon, ClockIcon, 
-    SunIcon, ChevronLeftIcon, ChevronRightIcon, BrainCircuitIcon, PlusIcon,
+    SunIcon, CloudIcon, RainIcon, SnowIcon, ChevronLeftIcon, ChevronRightIcon, BrainCircuitIcon, PlusIcon,
     CalendarDaysIcon, DocumentTextIcon, ActivityIcon, ArrowTrendingUpIcon,
     FlagIcon, StarIcon, BoltIcon as ZapIcon, CalendarIcon,
     ArrowRightIcon, CheckIcon, PencilIcon, TrashIcon, BabyPenguinIcon
 } from './Icons';
+import NewTaskModal from './NewTaskModal';
+import { Project } from '../types';
 
 interface SoenDashboardProps {
     tasks: Task[];
@@ -60,6 +62,11 @@ interface SoenDashboardProps {
     activeTheme?: string;
     activeFocusBackground?: string;
     userName?: string;
+    addTask?: (task: Partial<Task> & { title: string }) => void;
+    projects?: Project[];
+    categories?: Category[];
+    onAddNewCategory?: (name: string) => boolean;
+    showToast?: (message: string) => void;
 }
 
 // Enhanced color scheme matching EnhancedDashboard
@@ -202,52 +209,22 @@ const GhibliPenguin: React.FC = () => {
 
 // Scroll-Aware Soen Header Component
 const SoenHeader: React.FC = () => {
-    const [scrolled, setScrolled] = useState(false);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 60);
-        };
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-
     return (
         <motion.header
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent ${
-                scrolled ? 'py-2' : 'py-3 md:py-4'
-            }`}
+            className="fixed top-0 left-16 md:left-16 right-0 z-40 transition-all duration-500 bg-transparent py-3 md:py-4"
+            style={{ 
+                // Account for sidebar: 64px (w-16) when collapsed, transitions to 256px (w-64) when expanded
+                // Use CSS transition to match sidebar animation
+                zIndex: 40 // Lower than sidebar (z-50)
+            }}
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
             <div className="app-container-with-padding flex items-center justify-between">
-                <motion.div
-                    className="flex items-center gap-2 sm:gap-3"
-                    animate={{ 
-                        scale: scrolled ? 0.9 : 1,
-                        opacity: scrolled ? 0.95 : 1
-                    }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 transition-all duration-300 ${scrolled ? 'w-6 h-6 sm:w-8 sm:h-8' : ''}`}>
-                <GhibliPenguin />
-                </div>
-                    <AnimatePresence mode="wait">
-                        {!scrolled && (
-                            <motion.span
-                                key="wordmark"
-                                initial={{ opacity: 0, width: 0 }}
-                                animate={{ opacity: 1, width: 'auto' }}
-                                exit={{ opacity: 0, width: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="font-extrabold tracking-tight text-lg sm:text-2xl text-white whitespace-nowrap"
-                            >
-                                SOEN
-                            </motion.span>
-                        )}
-                    </AnimatePresence>
-        </motion.div>
+                <span className="font-extrabold tracking-tight text-lg sm:text-2xl text-white whitespace-nowrap">
+                    SOEN
+                </span>
             </div>
         </motion.header>
     );
@@ -603,45 +580,184 @@ const TaskToggle: React.FC<{
 };
 
 
-// Habits Widget - Redesigned to match reference style (list-based, similar to Tasks)
+// Habit Data Interface
+interface Habit {
+    id: number;
+    name: string;
+    streak: number;
+    color: string;
+    icon: React.FC<React.SVGProps<SVGSVGElement>>;
+    completedDates: string[]; // ISO date strings
+    createdAt: string; // ISO date string
+}
+
+interface HabitCompletion {
+    habitId: number;
+    date: string; // ISO date string
+}
+
+// Habits Widget - Enhanced with 7/30 day views, editing, and visual calendar
 const HabitInsights: React.FC<{
     healthData: HealthData;
 }> = ({ healthData }) => {
-    const [habits, setHabits] = useState([
-        { 
-            id: 1, 
-            name: 'Morning Routine', 
-            streak: 7, 
-            color: '#10b981', 
-            icon: SunIcon
-        },
-        { 
-            id: 2, 
-            name: 'Exercise', 
-            streak: 5, 
-            color: '#3b82f6', 
-            icon: ActivityIcon
-        },
-        { 
-            id: 3, 
-            name: 'Meditation', 
-            streak: 3, 
-            color: '#f59e0b', 
-            icon: BrainCircuitIcon
-        },
-        { 
-            id: 4, 
-            name: 'Reading', 
-            streak: 12, 
-            color: '#8b5cf6', 
-            icon: DocumentTextIcon
+    // Helper function to calculate streak (defined before loadHabitsFromStorage)
+    const calculateStreakHelper = (habit: Habit): number => {
+        if (!habit.completedDates || habit.completedDates.length === 0) return 0;
+        
+        const sortedDates = [...habit.completedDates]
+            .map(d => {
+                const date = new Date(d);
+                date.setHours(0, 0, 0, 0);
+                return date;
+            })
+            .sort((a, b) => b.getTime() - a.getTime());
+        
+        let streak = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let currentDate = new Date(today);
+        
+        for (const date of sortedDates) {
+            const dateStr = date.toDateString();
+            const currentDateStr = currentDate.toDateString();
+            
+            if (dateStr === currentDateStr) {
+                streak++;
+                currentDate.setDate(currentDate.getDate() - 1);
+            } else if (date < currentDate) {
+                break;
+            }
         }
-    ]);
-    
+        
+        return streak;
+    };
+
+    // Helper function to get icon for habit (defined before loadHabitsFromStorage)
+    const getIconForHabitHelper = (habitName: string) => {
+        const name = habitName.toLowerCase();
+        if (name.includes('meditation') || name.includes('mindfulness') || name.includes('breathing')) return BrainCircuitIcon;
+        if (name.includes('water') || name.includes('drink') || name.includes('hydration')) return HeartIcon;
+        if (name.includes('exercise') || name.includes('workout') || name.includes('push') || name.includes('walk') || name.includes('run')) return ActivityIcon;
+        if (name.includes('read') || name.includes('book') || name.includes('study') || name.includes('learn')) return DocumentTextIcon;
+        if (name.includes('morning') || name.includes('wake') || name.includes('sunrise')) return SunIcon;
+        if (name.includes('journal') || name.includes('write') || name.includes('note')) return DocumentTextIcon;
+        if (name.includes('call') || name.includes('phone') || name.includes('family') || name.includes('friend')) return HeartIcon;
+        if (name.includes('vitamin') || name.includes('medicine') || name.includes('health')) return HeartIcon;
+        if (name.includes('screen') || name.includes('phone') || name.includes('digital')) return ActivityIcon;
+        if (name.includes('vegetable') || name.includes('eat') || name.includes('food') || name.includes('meal')) return HeartIcon;
+        if (name.includes('yoga') || name.includes('stretch') || name.includes('flexibility')) return ActivityIcon;
+        if (name.includes('podcast') || name.includes('listen') || name.includes('audio')) return DocumentTextIcon;
+        if (name.includes('instrument') || name.includes('music') || name.includes('play')) return ActivityIcon;
+        if (name.includes('break') || name.includes('rest') || name.includes('pause')) return ClockIcon;
+        if (name.includes('declutter') || name.includes('clean') || name.includes('organize')) return ActivityIcon;
+        if (name.includes('affirmation') || name.includes('positive') || name.includes('gratitude')) return BrainCircuitIcon;
+        if (name.includes('bed') || name.includes('sleep') || name.includes('night')) return ClockIcon;
+        if (name.includes('stairs') || name.includes('elevator') || name.includes('walk')) return ActivityIcon;
+        if (name.includes('listening') || name.includes('patience') || name.includes('empathy')) return BrainCircuitIcon;
+        if (name.includes('chore') || name.includes('household') || name.includes('clean')) return ActivityIcon;
+        if (name.includes('caffeine') || name.includes('coffee') || name.includes('limit')) return HeartIcon;
+        if (name.includes('time') || name.includes('management') || name.includes('schedule')) return ClockIcon;
+        if (name.includes('creative') || name.includes('art') || name.includes('draw') || name.includes('paint')) return DocumentTextIcon;
+        if (name.includes('photo') || name.includes('nature') || name.includes('outdoor')) return SunIcon;
+        return FlagIcon;
+    };
+
+    // Load habits from localStorage or use defaults
+    const loadHabitsFromStorage = (): Habit[] => {
+        try {
+            const stored = localStorage.getItem('soen-habits');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                // Convert icon strings back to icon components and recalculate streaks
+                return parsed.map((h: any) => {
+                    const habit: Habit = {
+                        ...h,
+                        icon: getIconForHabitHelper(h.name),
+                        completedDates: h.completedDates || [],
+                        streak: 0 // Will be recalculated
+                    };
+                    // Recalculate streak
+                    habit.streak = calculateStreakHelper(habit);
+                    return habit;
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load habits from storage:', error);
+        }
+        // Default habits
+        return [
+            { 
+                id: 1, 
+                name: 'Morning Routine', 
+                streak: 7, 
+                color: '#10b981', 
+                icon: SunIcon,
+                completedDates: [],
+                createdAt: new Date().toISOString()
+            },
+            { 
+                id: 2, 
+                name: 'Exercise', 
+                streak: 5, 
+                color: '#3b82f6', 
+                icon: ActivityIcon,
+                completedDates: [],
+                createdAt: new Date().toISOString()
+            },
+            { 
+                id: 3, 
+                name: 'Meditation', 
+                streak: 3, 
+                color: '#f59e0b', 
+                icon: BrainCircuitIcon,
+                completedDates: [],
+                createdAt: new Date().toISOString()
+            },
+            { 
+                id: 4, 
+                name: 'Reading', 
+                streak: 12, 
+                color: '#8b5cf6', 
+                icon: DocumentTextIcon,
+                completedDates: [],
+                createdAt: new Date().toISOString()
+            }
+        ];
+    };
+
+    const saveHabitsToStorage = (habitsToSave: Habit[]) => {
+        try {
+            localStorage.setItem('soen-habits', JSON.stringify(habitsToSave));
+        } catch (error) {
+            console.error('Failed to save habits to storage:', error);
+        }
+    };
+
+    const [habits, setHabits] = useState<Habit[]>(loadHabitsFromStorage);
+    const [viewMode, setViewMode] = useState<'list' | '7day' | '30day'>('list');
+    const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
     const [isAddingHabit, setIsAddingHabit] = useState(false);
+    const [isEditingHabit, setIsEditingHabit] = useState(false);
+    const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
     const [newHabitName, setNewHabitName] = useState('');
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    
+    // Recalculate streaks on mount and when habits change
+    useEffect(() => {
+        setHabits(prevHabits =>
+            prevHabits.map(habit => ({
+                ...habit,
+                streak: calculateStreakHelper(habit)
+            }))
+        );
+    }, []);
+
+    // Save habits to localStorage whenever they change
+    useEffect(() => {
+        saveHabitsToStorage(habits);
+    }, [habits]);
 
     const habitSuggestions = [
         'Morning meditation', 'Drink 8 glasses of water', 'Read for 30 minutes', 'Take a 10-minute walk',
@@ -731,17 +847,91 @@ const HabitInsights: React.FC<{
         return '#8b5cf6'; // Default color
     };
 
+
+    // Toggle habit completion for today
+    const toggleHabitCompletion = (habitId: number, date: Date) => {
+        const dateStr = date.toISOString().split('T')[0];
+        setHabits(prevHabits => {
+            return prevHabits.map(habit => {
+                if (habit.id === habitId) {
+                    const completedDates = [...(habit.completedDates || [])];
+                    const dateIndex = completedDates.indexOf(dateStr);
+                    
+                    if (dateIndex > -1) {
+                        completedDates.splice(dateIndex, 1);
+                    } else {
+                        completedDates.push(dateStr);
+                    }
+                    
+                    const updatedHabit = {
+                        ...habit,
+                        completedDates,
+                        streak: calculateStreakHelper({ ...habit, completedDates })
+                    };
+                    
+                    return updatedHabit;
+                }
+                return habit;
+            });
+        });
+    };
+
+    // Delete habit
+    const handleDeleteHabit = (habitId: number) => {
+        setHabits(prevHabits => prevHabits.filter(h => h.id !== habitId));
+        if (selectedHabit?.id === habitId) {
+            setSelectedHabit(null);
+        }
+    };
+
+    // Edit habit
+    const handleEditHabit = (habit: Habit) => {
+        setEditingHabit(habit);
+        setNewHabitName(habit.name);
+        setIsEditingHabit(true);
+        setIsAddingHabit(false);
+    };
+
+    // Save edited habit
+    const handleSaveEdit = () => {
+        if (editingHabit && newHabitName.trim()) {
+            const selectedIcon = getIconForHabit(newHabitName.trim());
+            const selectedColor = getColorForHabit(newHabitName.trim());
+            
+            setHabits(prevHabits =>
+                prevHabits.map(h =>
+                    h.id === editingHabit.id
+                        ? {
+                              ...h,
+                              name: newHabitName.trim(),
+                              icon: selectedIcon,
+                              color: selectedColor
+                          }
+                        : h
+                )
+            );
+            
+            setEditingHabit(null);
+            setNewHabitName('');
+            setIsEditingHabit(false);
+            setSuggestions([]);
+            setShowSuggestions(false);
+        }
+    };
+
     const handleAddHabit = () => {
         if (newHabitName.trim()) {
             const selectedIcon = getIconForHabit(newHabitName.trim());
             const selectedColor = getColorForHabit(newHabitName.trim());
             
-            const newHabit = {
+            const newHabit: Habit = {
                 id: Date.now(),
                 name: newHabitName.trim(),
                 streak: 0,
                 color: selectedColor,
-                icon: selectedIcon
+                icon: selectedIcon,
+                completedDates: [],
+                createdAt: new Date().toISOString()
             };
             setHabits([...habits, newHabit]);
             setNewHabitName('');
@@ -749,6 +939,43 @@ const HabitInsights: React.FC<{
             setSuggestions([]);
             setShowSuggestions(false);
         }
+    };
+
+    // Generate dates for 7-day view
+    const get7DayDates = () => {
+        const dates = [];
+        const today = new Date();
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            dates.push(date);
+        }
+        return dates;
+    };
+
+    // Generate dates for 30-day view
+    const get30DayDates = () => {
+        const dates = [];
+        const today = new Date();
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            dates.push(date);
+        }
+        return dates;
+    };
+
+    // Check if date is completed for a habit
+    const isDateCompleted = (habit: Habit, date: Date): boolean => {
+        const dateStr = date.toISOString().split('T')[0];
+        return habit.completedDates?.includes(dateStr) || false;
+    };
+
+    // Get completion percentage for a period
+    const getCompletionPercentage = (habit: Habit, dates: Date[]): number => {
+        if (dates.length === 0) return 0;
+        const completed = dates.filter(d => isDateCompleted(habit, d)).length;
+        return Math.round((completed / dates.length) * 100);
     };
 
     return (
@@ -763,24 +990,62 @@ const HabitInsights: React.FC<{
             transition={{ duration: 0.5 }}
         >
             <div className="relative z-10">
-            {/* Header */}
-                <div className="flex items-center justify-between mb-4">
+            {/* Header with View Mode Toggle */}
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                     <div className="flex items-center gap-2">
                         <FlagIcon className="w-5 h-5 md:w-6 md:h-6 text-black" />
                         <h3 className="text-base md:text-lg lg:text-xl font-bold text-black">Habits</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {/* View Mode Toggle */}
+                        <div className="flex items-center gap-1 bg-black/10 rounded-lg p-1">
+                            <motion.button
+                                onClick={() => setViewMode('list')}
+                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors min-h-[32px] ${
+                                    viewMode === 'list' 
+                                        ? 'bg-black text-white' 
+                                        : 'bg-transparent text-black/70 hover:bg-black/5'
+                                }`}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                List
+                            </motion.button>
+                            <motion.button
+                                onClick={() => setViewMode('7day')}
+                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors min-h-[32px] ${
+                                    viewMode === '7day' 
+                                        ? 'bg-black text-white' 
+                                        : 'bg-transparent text-black/70 hover:bg-black/5'
+                                }`}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                7 Day
+                            </motion.button>
+                            <motion.button
+                                onClick={() => setViewMode('30day')}
+                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors min-h-[32px] ${
+                                    viewMode === '30day' 
+                                        ? 'bg-black text-white' 
+                                        : 'bg-transparent text-black/70 hover:bg-black/5'
+                                }`}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                30 Day
+                            </motion.button>
+                        </div>
+                        <motion.button
+                            onClick={() => setIsAddingHabit(true)}
+                            className="p-2 rounded-full bg-black/10 hover:bg-black/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                        >
+                            <PlusIcon className="w-5 h-5 text-black" />
+                        </motion.button>
+                    </div>
                 </div>
-                <motion.button
-                    onClick={() => setIsAddingHabit(true)}
-                        className="p-2 rounded-full bg-black/10 hover:bg-black/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                        whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                >
-                        <PlusIcon className="w-5 h-5 text-black" />
-                </motion.button>
-            </div>
 
-            {/* Add Habit Form */}
-            {isAddingHabit && (
+            {/* Add/Edit Habit Form */}
+            {(isAddingHabit || isEditingHabit) && (
                 <motion.div
                         className="mb-4 p-4 rounded-xl bg-black/5 border border-black/10"
                         initial={{ opacity: 0, y: -10 }}
@@ -818,16 +1083,21 @@ const HabitInsights: React.FC<{
                     </div>
                         <div className="flex gap-2">
                         <motion.button
-                            onClick={handleAddHabit}
-                                className="px-4 py-2 bg-black text-white rounded-lg font-semibold text-sm hover:bg-black/90 transition-colors min-h-[44px]"
+                            onClick={isEditingHabit ? handleSaveEdit : handleAddHabit}
+                            className="px-4 py-2 bg-black text-white rounded-lg font-semibold text-sm hover:bg-black/90 transition-colors min-h-[44px]"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                                Add
+                            {isEditingHabit ? 'Save' : 'Add'}
                         </motion.button>
                         <motion.button
-                            onClick={() => setIsAddingHabit(false)}
-                                className="px-4 py-2 bg-black/10 text-black rounded-lg font-semibold text-sm hover:bg-black/20 transition-colors min-h-[44px]"
+                            onClick={() => {
+                                setIsAddingHabit(false);
+                                setIsEditingHabit(false);
+                                setEditingHabit(null);
+                                setNewHabitName('');
+                            }}
+                            className="px-4 py-2 bg-black/10 text-black rounded-lg font-semibold text-sm hover:bg-black/20 transition-colors min-h-[44px]"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
@@ -837,62 +1107,383 @@ const HabitInsights: React.FC<{
                 </motion.div>
             )}
 
-                {/* Habit List - full width, natural height (no odd negative space) */}
-                <div className="space-y-2">
-                {habits.map((habit, index) => (
-                    <motion.div
-                        key={habit.id}
-                            className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-black/5 hover:bg-black/10 transition-colors min-h-[44px]"
+                {/* Content based on view mode */}
+                <AnimatePresence mode="wait">
+                    {viewMode === 'list' && (
+                        <motion.div
+                            key="list-view"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
                         >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="flex items-center justify-center w-8 h-8 rounded-lg min-w-[32px]"
-                                    style={{ 
-                                        backgroundColor: (() => {
-                                            // Ensure habit color doesn't overlap with widget backgrounds
-                                            // Widget backgrounds: Tasks #FDE047 (yellow), Habits #F59E0B (orange), Flow #10B981 (emerald)
-                                            const widgetColors = ['#FDE047', '#F59E0B', '#10B981'];
-                                            if (widgetColors.includes(habit.color.toUpperCase())) {
-                                                // Use a slight variation if there's overlap
-                                                return habit.color === '#FDE047' ? '#FACC15' : 
-                                                       habit.color === '#F59E0B' ? '#FB923C' : 
-                                                       habit.color === '#10B981' ? '#34D399' : habit.color;
-                                            }
-                                            return habit.color;
-                                        })()
-                                    }}
-                                >
-                                    {(() => {
-                                        const n = habit.name.toLowerCase();
-                                        if (n.includes('morning')) return <SunIcon className="w-4 h-4 text-white" />;
-                                        if (n.includes('exercise') || n.includes('run')) return <ActivityIcon className="w-4 h-4 text-white" />;
-                                        if (n.includes('medit') || n.includes('mind')) return <BrainCircuitIcon className="w-4 h-4 text-white" />;
-                                        if (n.includes('read')) return <DocumentTextIcon className="w-4 h-4 text-white" />;
-                                        return <FlagIcon className="w-4 h-4 text-white" />;
-                                    })()}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-base md:text-lg font-bold text-black truncate">{habit.name}</div>
-                                    <div className="text-xs text-black/70">{habit.streak} day streak</div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                                <div className="px-3 py-1.5 rounded-lg bg-black/10 text-black font-semibold text-xs min-h-[44px] min-w-[44px] flex items-center justify-center">
-                                    {habit.streak}
-                        </div>
-                        </div>
-                        </motion.div>
-                    ))}
-                    
-                    {habits.length === 0 && (
-                        <div className="text-center py-8">
-                            <FlagIcon className="w-12 h-12 text-black/40 mx-auto mb-4" />
-                            <p className="text-sm text-black/70">No habits yet. Add one to get started!</p>
-                    </div>
+                            {/* Habit List View */}
+                            <div className="space-y-2">
+                                {habits.map((habit, index) => {
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const isTodayCompleted = isDateCompleted(habit, today);
+                                    const IconComponent = habit.icon;
+                                    
+                                    return (
+                                        <motion.div
+                                            key={habit.id}
+                                            className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-black/5 hover:bg-black/10 transition-colors min-h-[44px]"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.05 }}
+                                        >
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <motion.button
+                                                    onClick={() => toggleHabitCompletion(habit.id, today)}
+                                                    className={`flex items-center justify-center w-8 h-8 rounded-lg min-w-[32px] transition-all ${
+                                                        isTodayCompleted ? 'scale-110' : ''
+                                                    }`}
+                                                    style={{ 
+                                                        backgroundColor: (() => {
+                                                            const widgetColors = ['#FDE047', '#F59E0B', '#10B981'];
+                                                            if (widgetColors.includes(habit.color.toUpperCase())) {
+                                                                return habit.color === '#FDE047' ? '#FACC15' : 
+                                                                       habit.color === '#F59E0B' ? '#FB923C' : 
+                                                                       habit.color === '#10B981' ? '#34D399' : habit.color;
+                                                            }
+                                                            return habit.color;
+                                                        })()
+                                                    }}
+                                                    whileHover={{ scale: 1.1 }}
+                                                    whileTap={{ scale: 0.9 }}
+                                                >
+                                                    {isTodayCompleted ? (
+                                                        <CheckCircleIcon className="w-5 h-5 text-white" />
+                                                    ) : (
+                                                        <IconComponent className="w-4 h-4 text-white" />
+                                                    )}
+                                                </motion.button>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-base md:text-lg font-bold text-black truncate">{habit.name}</div>
+                                                    <div className="text-xs text-black/70">{habit.streak} day streak</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <motion.button
+                                                    onClick={() => setSelectedHabit(habit)}
+                                                    className="px-3 py-1.5 rounded-lg bg-black/10 text-black font-semibold text-xs hover:bg-black/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    View
+                                                </motion.button>
+                                                <motion.button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditHabit(habit);
+                                                    }}
+                                                    className="p-2 rounded-lg bg-black/10 text-black hover:bg-black/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    <PencilIcon className="w-4 h-4" />
+                                                </motion.button>
+                                                <motion.button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm(`Delete "${habit.name}"?`)) {
+                                                            handleDeleteHabit(habit.id);
+                                                        }
+                                                    }}
+                                                    className="p-2 rounded-lg bg-black/10 text-black hover:bg-red-500/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    <TrashIcon className="w-4 h-4" />
+                                                </motion.button>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                                
+                                {habits.length === 0 && (
+                                    <div className="text-center py-8">
+                                        <FlagIcon className="w-12 h-12 text-black/40 mx-auto mb-4" />
+                                        <p className="text-sm text-black/70">No habits yet. Add one to get started!</p>
+                                    </div>
                                 )}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {viewMode === '7day' && (
+                        <motion.div
+                            key="7day-view"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {/* 7-Day Calendar View */}
+                            <div className="space-y-3">
+                                <div className="text-sm font-semibold text-black/70 mb-3">Last 7 Days</div>
+                                <div className="grid grid-cols-7 gap-1 mb-2">
+                                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
+                                        <div key={idx} className="text-center text-xs font-semibold text-black/60 py-2">
+                                            {day}
                                         </div>
+                                    ))}
+                                </div>
+                                {habits.map((habit) => {
+                                    const dates = get7DayDates();
+                                    const IconComponent = habit.icon;
+                                    
+                                    return (
+                                        <motion.div
+                                            key={habit.id}
+                                            className="bg-black/5 rounded-xl p-3 mb-3"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                        >
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <IconComponent className="w-4 h-4" style={{ color: habit.color }} />
+                                                <div className="flex-1">
+                                                    <div className="text-sm font-bold text-black">{habit.name}</div>
+                                                    <div className="text-xs text-black/70">
+                                                        {getCompletionPercentage(habit, dates)}% complete
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-7 gap-1">
+                                                {dates.map((date, idx) => {
+                                                    const completed = isDateCompleted(habit, date);
+                                                    const isToday = date.toDateString() === new Date().toDateString();
+                                                    
+                                                    return (
+                                                        <motion.button
+                                                            key={idx}
+                                                            onClick={() => toggleHabitCompletion(habit.id, date)}
+                                                            className={`aspect-square rounded-lg text-xs font-semibold transition-all min-h-[32px] ${
+                                                                completed
+                                                                    ? 'bg-black text-white'
+                                                                    : 'bg-black/10 text-black/50 hover:bg-black/20'
+                                                            } ${isToday ? 'ring-2 ring-black/30' : ''}`}
+                                                            style={completed ? { backgroundColor: habit.color } : {}}
+                                                            whileHover={{ scale: 1.1 }}
+                                                            whileTap={{ scale: 0.9 }}
+                                                            title={date.toLocaleDateString()}
+                                                        >
+                                                            {date.getDate()}
+                                                        </motion.button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                                {habits.length === 0 && (
+                                    <div className="text-center py-8">
+                                        <FlagIcon className="w-12 h-12 text-black/40 mx-auto mb-4" />
+                                        <p className="text-sm text-black/70">No habits yet. Add one to get started!</p>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {viewMode === '30day' && (
+                        <motion.div
+                            key="30day-view"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {/* 30-Day Calendar View */}
+                            <div className="space-y-3">
+                                <div className="text-sm font-semibold text-black/70 mb-3">Last 30 Days</div>
+                                {habits.map((habit) => {
+                                    const dates = get30DayDates();
+                                    const IconComponent = habit.icon;
+                                    const completion = getCompletionPercentage(habit, dates);
+                                    
+                                    return (
+                                        <motion.div
+                                            key={habit.id}
+                                            className="bg-black/5 rounded-xl p-4 mb-3"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                        >
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <IconComponent className="w-4 h-4" style={{ color: habit.color }} />
+                                                    <div>
+                                                        <div className="text-sm font-bold text-black">{habit.name}</div>
+                                                        <div className="text-xs text-black/70">
+                                                            {completion}% complete • {habit.streak} day streak
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <motion.button
+                                                    onClick={() => setSelectedHabit(habit)}
+                                                    className="px-3 py-1.5 rounded-lg bg-black/10 text-black font-semibold text-xs hover:bg-black/20 transition-colors"
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    Details
+                                                </motion.button>
+                                            </div>
+                                            <div className="grid grid-cols-10 gap-1">
+                                                {dates.map((date, idx) => {
+                                                    const completed = isDateCompleted(habit, date);
+                                                    const isToday = date.toDateString() === new Date().toDateString();
+                                                    
+                                                    return (
+                                                        <motion.button
+                                                            key={idx}
+                                                            onClick={() => toggleHabitCompletion(habit.id, date)}
+                                                            className={`aspect-square rounded text-[10px] font-semibold transition-all min-h-[24px] ${
+                                                                completed
+                                                                    ? 'bg-black text-white'
+                                                                    : 'bg-black/10 text-black/50 hover:bg-black/20'
+                                                            } ${isToday ? 'ring-2 ring-black/30' : ''}`}
+                                                            style={completed ? { backgroundColor: habit.color } : {}}
+                                                            whileHover={{ scale: 1.15 }}
+                                                            whileTap={{ scale: 0.9 }}
+                                                            title={date.toLocaleDateString()}
+                                                        >
+                                                            {date.getDate()}
+                                                        </motion.button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                                {habits.length === 0 && (
+                                    <div className="text-center py-8">
+                                        <FlagIcon className="w-12 h-12 text-black/40 mx-auto mb-4" />
+                                        <p className="text-sm text-black/70">No habits yet. Add one to get started!</p>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Habit Detail Modal */}
+                <AnimatePresence>
+                    {selectedHabit && (
+                        <motion.div
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedHabit(null)}
+                        >
+                            <motion.div
+                                className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto"
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className="w-10 h-10 rounded-lg flex items-center justify-center"
+                                            style={{ backgroundColor: selectedHabit.color }}
+                                        >
+                                            {(() => {
+                                                const IconComp = selectedHabit.icon;
+                                                return <IconComp className="w-5 h-5 text-white" />;
+                                            })()}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-black">{selectedHabit.name}</h3>
+                                            <p className="text-sm text-black/70">{selectedHabit.streak} day streak</p>
+                                        </div>
+                                    </div>
+                                    <motion.button
+                                        onClick={() => setSelectedHabit(null)}
+                                        className="p-2 rounded-lg bg-black/10 hover:bg-black/20 transition-colors"
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                    >
+                                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </motion.button>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-black/70 mb-2">7-Day View</h4>
+                                        <div className="grid grid-cols-7 gap-1">
+                                            {get7DayDates().map((date, idx) => {
+                                                const completed = isDateCompleted(selectedHabit, date);
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        className={`aspect-square rounded-lg text-xs font-semibold flex items-center justify-center ${
+                                                            completed ? 'bg-black text-white' : 'bg-black/10 text-black/50'
+                                                        }`}
+                                                        style={completed ? { backgroundColor: selectedHabit.color } : {}}
+                                                    >
+                                                        {date.getDate()}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-black/70 mb-2">30-Day View</h4>
+                                        <div className="grid grid-cols-10 gap-1">
+                                            {get30DayDates().map((date, idx) => {
+                                                const completed = isDateCompleted(selectedHabit, date);
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        className={`aspect-square rounded text-[10px] font-semibold flex items-center justify-center ${
+                                                            completed ? 'bg-black text-white' : 'bg-black/10 text-black/50'
+                                                        }`}
+                                                        style={completed ? { backgroundColor: selectedHabit.color } : {}}
+                                                    >
+                                                        {date.getDate()}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex gap-2 pt-4 border-t border-black/10">
+                                        <motion.button
+                                            onClick={() => {
+                                                handleEditHabit(selectedHabit);
+                                                setSelectedHabit(null);
+                                            }}
+                                            className="flex-1 px-4 py-2 bg-black text-white rounded-lg font-semibold text-sm hover:bg-black/90 transition-colors"
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            Edit
+                                        </motion.button>
+                                        <motion.button
+                                            onClick={() => {
+                                                if (confirm(`Delete "${selectedHabit.name}"?`)) {
+                                                    handleDeleteHabit(selectedHabit.id);
+                                                    setSelectedHabit(null);
+                                                }
+                                            }}
+                                            className="px-4 py-2 bg-red-500/10 text-red-600 rounded-lg font-semibold text-sm hover:bg-red-500/20 transition-colors"
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            Delete
+                                        </motion.button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </motion.div>
     );
@@ -1499,6 +2090,8 @@ const DailyGreeting: React.FC<{
     briefing: MissionBriefing;
     isBriefingLoading: boolean;
     notes: Note[];
+    goals: Goal[];
+    allTasks: Task[];
     onCompleteTask: (taskId: number) => void;
     navigateToScheduleDate: (date: Date, taskId?: number) => void;
     setScreen: (screen: Screen) => void;
@@ -1507,11 +2100,27 @@ const DailyGreeting: React.FC<{
     setInsightExpanded?: (expanded: boolean) => void;
     userName?: string;
     onMoodSelected?: (mood: string, date: Date) => void; // Callback to save mood data
-}> = ({ tasks, categoryColors, healthData, briefing, isBriefingLoading, notes, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks, insightExpanded: externalInsightExpanded, setInsightExpanded: externalSetInsightExpanded, userName, onMoodSelected }) => {
+    addTask?: (task: Partial<Task> & { title: string }) => void;
+    projects?: Project[];
+    categories?: Category[];
+    onAddNewCategory?: (name: string) => boolean;
+    showToast?: (message: string) => void;
+}> = ({ tasks, categoryColors, healthData, briefing, isBriefingLoading, notes, goals, allTasks, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks, insightExpanded: externalInsightExpanded, setInsightExpanded: externalSetInsightExpanded, userName, onMoodSelected, addTask, projects = [], categories = [], onAddNewCategory, showToast }) => {
     const [internalInsightExpanded, setInternalInsightExpanded] = useState(false);
     const [fullScreenInsight, setFullScreenInsight] = useState(false);
     const [undoTaskId, setUndoTaskId] = useState<number | null>(null);
     const [recentlyCompleted, setRecentlyCompleted] = useState<Set<number>>(new Set());
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null); // Track clicked date
+    // Weather state
+    const [weatherData, setWeatherData] = useState<{ temperature: number; condition: string; location: string; loading: boolean }>({
+        temperature: 0,
+        condition: 'sunny',
+        location: '',
+        loading: true
+    });
+    // Task modal state
+    const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+    const [prefillDateForModal, setPrefillDateForModal] = useState<Date>(new Date());
     
     // Use external state if provided, otherwise use internal
     const insightExpanded = externalInsightExpanded !== undefined ? externalInsightExpanded : internalInsightExpanded;
@@ -1533,6 +2142,208 @@ const DailyGreeting: React.FC<{
     const [selectedMood, setSelectedMood] = useState<string | null>(() => loadTodayMood());
     const [taskFilter, setTaskFilter] = useState<'all' | 'events' | 'meetings' | 'tasks'>('all');
     const today = new Date();
+
+    // Fetch weather data (real-time, updating every 10 minutes)
+    useEffect(() => {
+        // Check if geolocation is available
+        if (!navigator.geolocation) {
+            console.warn('Geolocation not available in this browser');
+            setWeatherData(prev => ({
+                ...prev,
+                loading: false,
+                temperature: 0,
+                condition: 'sunny',
+                location: 'Location unavailable'
+            }));
+            return;
+        }
+
+        const fetchWeather = async () => {
+            try {
+                setWeatherData(prev => ({ ...prev, loading: true }));
+                
+                // Helper function to fetch weather by coordinates
+                const fetchWeatherByCoords = async (lat: number, lon: number, locationName: string = '') => {
+                    try {
+                        const weatherResponse = await fetch(
+                            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`
+                        );
+
+                        if (!weatherResponse.ok) {
+                            throw new Error('Weather API request failed');
+                        }
+
+                        const weatherResult = await weatherResponse.json();
+                        const weatherCode = weatherResult.current?.weather_code || 0;
+                        const temperature = Math.round(weatherResult.current?.temperature_2m || 0);
+
+                        const getWeatherCondition = (code: number): string => {
+                            if (code === 0) return 'sunny';
+                            if (code <= 3) return 'partly-cloudy';
+                            if (code <= 48) return 'cloudy';
+                            if (code <= 67) return 'rainy';
+                            if (code <= 77) return 'snowy';
+                            if (code <= 82) return 'rainy';
+                            if (code <= 86) return 'snowy';
+                            return 'sunny';
+                        };
+
+                        // If location name not provided, try to get it via reverse geocoding
+                        let finalLocationName = locationName;
+                        if (!finalLocationName) {
+                            try {
+                                const geoResponse = await fetch(
+                                    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+                                );
+                                if (geoResponse.ok) {
+                                    const geoResult = await geoResponse.json();
+                                    finalLocationName = geoResult.city || geoResult.locality || 'Unknown Location';
+                                }
+                            } catch (geoError) {
+                                console.warn('Geocoding failed:', geoError);
+                            }
+                        }
+
+                        setWeatherData({
+                            temperature,
+                            condition: getWeatherCondition(weatherCode),
+                            location: finalLocationName || 'Unknown Location',
+                            loading: false
+                        });
+                        return true;
+                    } catch (error) {
+                        console.error('Failed to fetch weather:', error);
+                        return false;
+                    }
+                };
+
+                // Try geolocation first (with timeout)
+                let position: GeolocationPosition | null = null;
+                try {
+                    position = await Promise.race([
+                        new Promise<GeolocationPosition>((resolve, reject) => {
+                            navigator.geolocation.getCurrentPosition(
+                                (pos) => {
+                                    console.log('Geolocation successful:', pos.coords.latitude, pos.coords.longitude);
+                                    resolve(pos);
+                                }, 
+                                (error) => {
+                                    console.error('Geolocation error:', error.code, error.message);
+                                    reject(error);
+                                }, 
+                                {
+                                    maximumAge: 600000, // 10 minutes
+                                    timeout: 10000,
+                                    enableHighAccuracy: false
+                                }
+                            );
+                        }),
+                        new Promise<null>((resolve) => {
+                            setTimeout(() => {
+                                console.log('Geolocation timeout - using fallback');
+                                resolve(null);
+                            }, 10000);
+                        })
+                    ]) as GeolocationPosition | null;
+                } catch (error) {
+                    console.error('Geolocation failed:', error);
+                    position = null;
+                }
+
+                // If geolocation succeeded, use it
+                if (position && position.coords) {
+                    const { latitude, longitude } = position.coords;
+                    const success = await fetchWeatherByCoords(latitude, longitude);
+                    if (success) return;
+                }
+
+                // Fallback: Try IP-based location
+                console.log('Trying IP-based location fallback...');
+                try {
+                    // Try multiple IP geolocation APIs for better reliability
+                    const ipApis: Array<{ url: string; parser: (data: any) => { lat: number | null; lon: number | null; city: string } | null }> = [
+                        {
+                            url: 'https://ipapi.co/json/',
+                            parser: (data) => {
+                                if (data.latitude && data.longitude) {
+                                    return {
+                                        lat: data.latitude,
+                                        lon: data.longitude,
+                                        city: data.city || data.region || ''
+                                    };
+                                }
+                                return null;
+                            }
+                        },
+                        {
+                            url: 'https://ip-api.com/json/',
+                            parser: (data) => {
+                                if (data.lat && data.lon) {
+                                    return {
+                                        lat: data.lat,
+                                        lon: data.lon,
+                                        city: data.city || data.regionName || ''
+                                    };
+                                }
+                                return null;
+                            }
+                        }
+                    ];
+
+                    for (const api of ipApis) {
+                        try {
+                            console.log(`Trying ${api.url}...`);
+                            const ipResponse = await fetch(api.url);
+                            if (!ipResponse.ok) {
+                                console.warn(`${api.url} returned status ${ipResponse.status}`);
+                                continue;
+                            }
+                            
+                            const ipData = await ipResponse.json();
+                            const location = api.parser(ipData);
+
+                            if (location && location.lat !== null && location.lon !== null) {
+                                console.log('Using IP-based location:', location.lat, location.lon, location.city);
+                                const success = await fetchWeatherByCoords(location.lat, location.lon, location.city);
+                                if (success) return;
+                            } else {
+                                console.warn(`${api.url} returned invalid data:`, ipData);
+                            }
+                        } catch (apiError) {
+                            console.warn(`IP API ${api.url} failed:`, apiError);
+                            continue;
+                        }
+                    }
+                } catch (ipError) {
+                    console.error('All IP geolocation fallbacks failed:', ipError);
+                }
+                
+                // If all else fails, use default
+                setWeatherData(prev => ({
+                    ...prev,
+                    loading: false,
+                    temperature: 0,
+                    condition: 'sunny',
+                    location: 'Location unavailable'
+                }));
+
+            } catch (error) {
+                console.error('Weather fetch error:', error);
+                setWeatherData(prev => ({
+                    ...prev,
+                    loading: false,
+                    temperature: prev.temperature || 0,
+                    condition: prev.condition || 'sunny',
+                    location: prev.location || 'Location unavailable'
+                }));
+            }
+        };
+
+        fetchWeather();
+        // Update weather every 10 minutes
+        const interval = setInterval(fetchWeather, 600000);
+        return () => clearInterval(interval);
+    }, []);
     
     // Save mood to localStorage and notify parent
     const handleMoodSelect = (mood: string) => {
@@ -1585,26 +2396,108 @@ const DailyGreeting: React.FC<{
         !todayEvents.includes(t) && !todayMeetings.includes(t)
     );
     
-    const eventsCount = todayEvents.length;
-    const meetingsCount = todayMeetings.length;
-    const tasksCount = todayRegularTasks.length;
+    // Get tasks for selected date or today
+    const displayDate = selectedDate || today;
+    const displayDateTasks = tasks.filter(t => 
+        new Date(t.startTime).toDateString() === displayDate.toDateString()
+    );
+    
+    const displayEvents = displayDateTasks.filter(t => t.category.toLowerCase() === 'event' || t.category.toLowerCase().includes('event'));
+    const displayMeetings = displayDateTasks.filter(t => t.category.toLowerCase() === 'meeting' || t.category.toLowerCase().includes('meeting'));
+    const displayRegularTasks = displayDateTasks.filter(t => 
+        !displayEvents.includes(t) && !displayMeetings.includes(t)
+    );
+    
+    const eventsCount = displayEvents.length;
+    const meetingsCount = displayMeetings.length;
+    const tasksCount = displayRegularTasks.length;
+    
+    // Generate suggested schedule for empty days (similar to EmptyDaySuggestions)
+    const generateSuggestedSchedule = useMemo(() => {
+        if (displayDateTasks.length > 0 || !selectedDate) return [];
+        
+        const isWeekend = displayDate.getDay() === 0 || displayDate.getDay() === 6;
+        const suggestions: Array<{ title: string; category: string; time?: string; description: string }> = [];
+        
+        // Analyze goals for suggestions
+        const activeGoals = goals.filter(g => g.status === 'active');
+        if (activeGoals.length > 0) {
+            activeGoals.slice(0, 2).forEach(goal => {
+                suggestions.push({
+                    title: `Work on ${goal.text}`,
+                    category: 'Goal',
+                    time: isWeekend ? '10:00' : '18:00',
+                    description: `Make progress toward your "${goal.text}" goal`
+                });
+            });
+        }
+        
+        // Analyze recent task patterns
+        const recentTasks = allTasks
+            .filter(t => new Date(t.startTime) < new Date() && new Date(t.startTime) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+            .slice(0, 5);
+        
+        const commonCategories = recentTasks.reduce((acc, t) => {
+            acc[t.category] = (acc[t.category] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+        
+        const topCategory = Object.entries(commonCategories).sort((a, b) => b[1] - a[1])[0];
+        if (topCategory) {
+            suggestions.push({
+                title: `Continue ${topCategory[0]} work`,
+                category: topCategory[0] as Category,
+                time: '09:00',
+                description: `Based on your recent schedule, this seems important`
+            });
+        }
+        
+        // Default suggestions if not enough context
+        if (suggestions.length < 3) {
+            if (isWeekend) {
+                suggestions.push(
+                    { title: 'Plan next week', category: 'Planning', time: '10:00', description: 'Review and prepare for the week ahead' },
+                    { title: 'Personal project time', category: 'Personal', time: '14:00', description: 'Dedicate time to personal interests' },
+                    { title: 'Relaxation activity', category: 'Wellness', time: '16:00', description: 'Rest and recharge for the week ahead' }
+                );
+            } else {
+                suggestions.push(
+                    { title: 'Morning routine', category: 'Wellness', time: '08:00', description: 'Start your day with intention' },
+                    { title: 'Deep work session', category: 'Work', time: '10:00', description: 'Focus on your most important task' },
+                    { title: 'Reflection and planning', category: 'Planning', time: '17:00', description: 'Review the day and plan tomorrow' }
+                );
+            }
+        }
+        
+        return suggestions.slice(0, 4);
+    }, [selectedDate, displayDateTasks.length, goals, allTasks, displayDate]);
     
     // Get filtered tasks based on selection
     const getFilteredTasks = () => {
-        if (taskFilter === 'events') return todayEvents;
-        if (taskFilter === 'meetings') return todayMeetings;
-        if (taskFilter === 'tasks') return todayRegularTasks;
-        return todayTasks;
+        if (taskFilter === 'events') return displayEvents;
+        if (taskFilter === 'meetings') return displayMeetings;
+        if (taskFilter === 'tasks') return displayRegularTasks;
+        return displayDateTasks;
     };
     
     // Check if it's evening (9pm or later)
     const isEvening = new Date().getHours() >= 21;
 
+    // Extract first name and capitalize properly (first letter uppercase, rest lowercase)
+    const getFirstName = (): string => {
+        const fullName = userName || localStorage.getItem('soen-user-name') || '';
+        if (!fullName) return '';
+        // Split by space and take first part, then capitalize first letter only
+        const firstName = fullName.trim().split(' ')[0];
+        if (!firstName) return '';
+        return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+    };
+
     const getGreeting = () => {
         const hour = new Date().getHours();
-        const name = userName || localStorage.getItem('soen-user-name') || '';
-        const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-        return name ? `${greeting}, ${name}.` : `${greeting}.`;
+        const firstName = getFirstName();
+        const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+        return firstName ? `${greeting}, ${firstName}` : greeting;
     };
 
     const getDayName = () => {
@@ -1636,18 +2529,21 @@ const DailyGreeting: React.FC<{
         if (t.includes('eat') || t.includes('meal') || t.includes('lunch') || t.includes('dinner')) return (
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 3h16M4 8h16M4 13h16M4 18h16"/></svg>
         );
-    return (
+        return (
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7"/></svg>
         );
     };
 
-    // Get week dates for calendar strip
+    // Get week dates for calendar strip - supports week start day (default Sunday)
     const getWeekDates = () => {
         const week = [];
+        // Get week start day from settings (0 = Sunday, 1 = Monday, etc.)
+        const weekStartDay = parseInt(localStorage.getItem('soen-week-start-day') || '0', 10);
         const startOfWeek = new Date(today);
         const day = startOfWeek.getDay();
-        const diff = startOfWeek.getDate() - day;
-        startOfWeek.setDate(diff);
+        // Calculate offset to get to the start of the week (based on user's preference)
+        const diff = (day - weekStartDay + 7) % 7;
+        startOfWeek.setDate(startOfWeek.getDate() - diff);
         
         for (let i = 0; i < 7; i++) {
             const date = new Date(startOfWeek);
@@ -1938,6 +2834,7 @@ const DailyGreeting: React.FC<{
     const weekDates = getWeekDates();
 
     return (
+        <>
         <div className="space-y-4 lg:space-y-6">
             {/* Main Daily Greeting Card - Dark mode style matching reference */}
                         <motion.div
@@ -1951,71 +2848,113 @@ const DailyGreeting: React.FC<{
             transition={{ duration: 0.8 }}
         >
                 <div className="relative z-10">
-                    {/* Top Bar - Date and Weather */}
-                    <div className="flex items-center justify-between mb-4 md:mb-6">
-                        {/* Mobile: Day and Date */}
-                        <div className="md:hidden">
-                            <div className="text-2xl font-bold text-white">{getShortDate()}</div>
+                    {/* 1. Greeting */}
+                    <div className="mb-4 md:mb-5">
+                        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white">
+                            {getGreeting()}
+                        </h2>
                         </div>
                         
-                        {/* Desktop: Full Day Name and Date */}
-                        <div className="hidden md:block">
-                            <h1 className="text-4xl lg:text-6xl font-bold text-white mb-1">{getDayName()}</h1>
-                            <div className="text-lg lg:text-xl text-white/80">{today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                    {/* 2. Day and Date on Same Line with Temperature and Location */}
+                    <div className="flex items-center justify-between mb-4 md:mb-6 flex-wrap gap-2">
+                        <div className="text-lg md:text-xl lg:text-2xl font-bold text-white">
+                            {today.toLocaleDateString('en-US', { weekday: 'long' })}, {(() => {
+                                const date = today.getDate();
+                                const suffix = date === 1 || date === 21 || date === 31 ? 'st' : 
+                                              date === 2 || date === 22 ? 'nd' : 
+                                              date === 3 || date === 23 ? 'rd' : 'th';
+                                return `${today.toLocaleDateString('en-US', { month: 'long' })} ${date}${suffix}, ${today.getFullYear()}`;
+                            })()}
                             </div>
-
-                        {/* Weather */}
-                        <div className="flex items-center gap-2 text-sm md:text-base">
-                            <SunIcon className="w-5 h-5 md:w-6 md:h-6 text-yellow-400" />
-                            <span className="font-semibold text-white">62°</span>
-                            <span className="text-white/70">SF</span>
-                    </div>
+                        {/* Real-time Weather with Location - Animated */}
+                        <motion.div 
+                            className="flex items-center gap-2 text-base md:text-lg"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            {weatherData.loading ? (
+                                <motion.div
+                                    className="w-5 h-5 md:w-6 md:h-6 border-2 border-white/30 border-t-white rounded-full"
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                />
+                            ) : (
+                                <motion.div
+                                    animate={{ 
+                                        rotate: weatherData.condition === 'sunny' ? [0, 5, -5, 0] : 0,
+                                        scale: [1, 1.05, 1]
+                                    }}
+                                    transition={{ 
+                                        duration: 2, 
+                                        repeat: Infinity, 
+                                        ease: 'easeInOut' 
+                                    }}
+                                >
+                                    {weatherData.condition === 'sunny' && <SunIcon className="w-5 h-5 md:w-6 md:h-6 text-yellow-400" />}
+                                    {weatherData.condition === 'partly-cloudy' && (
+                                        <>
+                                            <SunIcon className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 absolute" />
+                                            <CloudIcon className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
+                                        </>
+                                    )}
+                                    {weatherData.condition === 'cloudy' && <CloudIcon className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />}
+                                    {weatherData.condition === 'rainy' && <RainIcon className="w-5 h-5 md:w-6 md:h-6 text-blue-400" />}
+                                    {weatherData.condition === 'snowy' && <SnowIcon className="w-5 h-5 md:w-6 md:h-6 text-blue-200" />}
+                                </motion.div>
+                            )}
+                            <span className="font-semibold text-white">
+                                {weatherData.loading ? '--' : (() => {
+                                    const tempUnit = localStorage.getItem('soen-temperature-unit') || 'c';
+                                    const displayTemp = tempUnit === 'f' 
+                                        ? Math.round((weatherData.temperature * 9/5) + 32) 
+                                        : weatherData.temperature;
+                                    return `${displayTemp}°${tempUnit.toUpperCase()}`;
+                                })()}
+                            </span>
+                            {weatherData.location && !weatherData.loading && (
+                                <span className="text-sm md:text-base text-white/70">
+                                    {weatherData.location}
+                                </span>
+                            )}
+                        </motion.div>
                 </div>
 
-                    {/* Calendar Strip - Week dates - Clickable */}
+                    {/* 4. Calendar Strip - Week dates - Clickable */}
                     <div className="flex items-center justify-between mb-4 md:mb-6 px-2">
-                        {weekDates.map((day, index) => (
+                        {weekDates.map((day, index) => {
+                            const isSelected = selectedDate && new Date(selectedDate).toDateString() === day.dateObj.toDateString();
+                            return (
                             <motion.button
                                 key={index}
-                                onClick={async () => {
-                                    navigateToScheduleDate(day.dateObj);
-                                    const dayTasks = tasks.filter(t => 
-                                        new Date(t.startTime).toDateString() === day.dateObj.toDateString()
-                                    );
-                                    
-                                    // If empty day, trigger AI suggestions
-                                    if (dayTasks.length === 0) {
-                                        // This will be handled by Schedule component
-                                        // For now, just navigate to the date
-                                        setScreen('Schedule');
-                                        // Schedule component will show AI suggestions for empty days
+                                    onClick={() => {
+                                        // Set selected date instead of navigating
+                                        if (isSelected) {
+                                            setSelectedDate(null); // Toggle off if clicking same date
                                     } else {
-                                        setScreen('Schedule');
+                                            setSelectedDate(day.dateObj);
                                     }
                                 }}
                                 className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-colors min-h-[44px] min-w-[44px] justify-center relative ${
-                                    day.isToday ? 'bg-emerald-500' : 'bg-white/5 hover:bg-white/10'
+                                        day.isToday && !isSelected ? 'bg-emerald-500' : 
+                                        isSelected ? 'bg-emerald-400' : 'bg-white/5 hover:bg-white/10'
                                 }`}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                             >
-                                <div className={`text-xs font-semibold ${day.isToday ? 'text-white' : 'text-white/70'}`}>{day.day}</div>
-                                <div className={`text-sm font-bold ${day.isToday ? 'text-white' : 'text-white'}`}>{day.date}</div>
+                                    <div className={`text-xs font-semibold ${day.isToday || isSelected ? 'text-white' : 'text-white/70'}`}>{day.day}</div>
+                                    <div className={`text-sm font-bold ${day.isToday || isSelected ? 'text-white' : 'text-white'}`}>{day.date}</div>
                                 {day.taskCount > 0 && (
-                                    <div className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${day.isToday ? 'bg-white' : 'bg-emerald-400'}`} />
+                                        <div className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${day.isToday || isSelected ? 'bg-white' : 'bg-emerald-400'}`} />
                                 )}
                             </motion.button>
-                        ))}
-                            </div>
-
-                    {/* Greeting */}
+                            );
+                            })}
+            </div>
+            
+                    {/* 5. Daily Summary - "You have 2 tasks today and 2 meetings" - Large text */}
                     <div className="mb-4 md:mb-6">
-                        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3">
-                            {getGreeting()}
-                        </h2>
-                        
-                        {/* Daily Summary - "You have 2 events, 2 meetings and 3 tasks today." - Clickable for filtering */}
-                        <div className="flex flex-wrap items-center gap-2 text-sm md:text-base text-white/90">
+                        <div className="flex flex-wrap items-center gap-2 text-lg md:text-xl lg:text-2xl font-semibold text-white">
                             <span>You have</span>
                             {eventsCount > 0 && (
                                 <>
@@ -2030,25 +2969,7 @@ const DailyGreeting: React.FC<{
                                         <CalendarIcon className="w-4 h-4 text-emerald-400" />
                                         <span className="font-semibold">{eventsCount} events</span>
                                     </motion.button>
-                                    {meetingsCount > 0 || tasksCount > 0 ? <span>,</span> : <span> today.</span>}
-                                </>
-                            )}
-                            {meetingsCount > 0 && (
-                                <>
-                                    <motion.button
-                                        onClick={() => setTaskFilter(taskFilter === 'meetings' ? 'all' : 'meetings')}
-                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
-                                            taskFilter === 'meetings' ? 'bg-emerald-500/30' : 'hover:bg-white/5'
-                                        }`}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                        </svg>
-                                        <span className="font-semibold">{meetingsCount} meetings</span>
-                                    </motion.button>
-                                    {tasksCount > 0 ? <span> and</span> : <span> today.</span>}
+                                    {tasksCount > 0 || meetingsCount > 0 ? <span>,</span> : <span> today.</span>}
                                 </>
                             )}
                             {tasksCount > 0 && (
@@ -2061,15 +2982,37 @@ const DailyGreeting: React.FC<{
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                     >
-                                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                         </svg>
-                                        <span className="font-semibold">{tasksCount} tasks today.</span>
+                                        <span className="font-semibold">{tasksCount} tasks</span>
                                     </motion.button>
+                                    {meetingsCount > 0 ? <span> and</span> : <span> today.</span>}
                                 </>
                             )}
-                                </div>
-                                </div>
+                            {meetingsCount > 0 && (
+                                <>
+                                    <motion.button
+                                        onClick={() => setTaskFilter(taskFilter === 'meetings' ? 'all' : 'meetings')}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                                            taskFilter === 'meetings' ? 'bg-emerald-500/30' : 'hover:bg-white/5'
+                                        }`}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <svg className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                        <span className="font-semibold">{meetingsCount} meetings</span>
+                                    </motion.button>
+                                    <span> today.</span>
+                                </>
+                            )}
+                            {eventsCount === 0 && tasksCount === 0 && meetingsCount === 0 && (
+                                <span>no scheduled items today.</span>
+                            )}
+            </div>
+                    </div>
 
                     {/* Mood/Activity Buttons - Only show in evening (9pm+) */}
                     {isEvening && (
@@ -2130,7 +3073,7 @@ const DailyGreeting: React.FC<{
                                 </motion.button>
                             );
                         })}
-                            </div>
+                    </div>
                     )}
 
                     {/* Next Up Insight - Mobile: inline, Desktop: popup on right */}
@@ -2150,17 +3093,31 @@ const DailyGreeting: React.FC<{
                                         <div className="flex items-center gap-2">
                                             <SparklesIcon className="w-5 h-5 text-emerald-400" />
                                             <h3 className="text-base font-bold text-white">Mira Daily</h3>
-                        </div>
-                                        <div className="text-xs text-white/70">
-                                            {insightExpanded ? 'Collapse ↑' : 'Tap to expand ↓'}
-                    </div>
-                </div>
-
+                                        </div>
+                                        <motion.button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setInsightExpanded(!insightExpanded);
+                                            }}
+                                            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center min-h-[28px] min-w-[28px]"
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
+                                        >
+                                            {insightExpanded ? (
+                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                                </svg>
+                                            ) : (
+                                                <PlusIcon className="w-4 h-4 text-white" />
+                                            )}
+                                        </motion.button>
+                                    </div>
+                                    
                                     <p className="text-sm text-white/90 mb-2">{dailyInsight.preview}</p>
 
                                     <AnimatePresence>
                                         {insightExpanded && (
-                        <motion.div
+                                            <motion.div
                                                 initial={{ height: 0, opacity: 0 }}
                                                 animate={{ height: 'auto', opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }}
@@ -2171,7 +3128,7 @@ const DailyGreeting: React.FC<{
                                                     <div key={key}>
                                                         <h4 className="text-xs font-semibold text-white/80 mb-1 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
                                                         <p className="text-sm text-white/90">{value}</p>
-                                </div>
+                                                    </div>
                                                 ))}
                                                 {dailyInsight.links && dailyInsight.links.length > 0 && (
                                                     <div className="mt-4 pt-4 border-t border-white/10">
@@ -2201,8 +3158,8 @@ const DailyGreeting: React.FC<{
                                                                 >
                                                                     {link.label}
                                                                 </motion.button>
-                        ))}
-            </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </motion.div>
@@ -2210,8 +3167,8 @@ const DailyGreeting: React.FC<{
                                     </AnimatePresence>
                                 </div>
                             </motion.button>
-                    </div>
-
+                        </div>
+                        
                         {/* Desktop: Clickable button that triggers popup on right */}
                         <div className="hidden md:block">
                             <motion.button
@@ -2227,27 +3184,85 @@ const DailyGreeting: React.FC<{
                                         <div className="flex items-center gap-2">
                                             <SparklesIcon className="w-5 h-5 text-emerald-400" />
                                             <h3 className="text-lg font-bold text-white">Mira Daily</h3>
-                    </div>
-                                        <div className="text-xs text-white/70">
-                                            {insightExpanded ? 'Collapse ↑' : 'Tap to expand →'}
-                        </div>
-                        </div>
+                                        </div>
+                                        <motion.button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setInsightExpanded(!insightExpanded);
+                                            }}
+                                            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center min-h-[28px] min-w-[28px]"
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
+                                        >
+                                            {insightExpanded ? (
+                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                                </svg>
+                                            ) : (
+                                                <PlusIcon className="w-4 h-4 text-white" />
+                                            )}
+                                        </motion.button>
+                                    </div>
                                     <p className="text-sm text-white/90 mb-2">{dailyInsight.preview}</p>
-                    </div>
+                                </div>
                             </motion.button>
+                        </div>
                     </div>
-                </div>
-
+                    
                     {/* Desktop Mira Daily Popup removed from DailyGreeting. Overlay is rendered at grid column level. */}
 
-                    {/* Task List - Filtered based on selection */}
-                    {getFilteredTasks().length > 0 && (
+                    {/* Task List or Suggested Schedule - Show selected date's tasks or suggestions for empty days */}
+                    {(selectedDate && displayDateTasks.length === 0 && generateSuggestedSchedule.length > 0) ? (
+                        // Show suggested schedule for empty selected day
                         <div className="space-y-2">
                             <h3 className="text-base md:text-lg font-bold text-white mb-3">
-                                {taskFilter === 'events' && `${eventsCount} Events`}
-                                {taskFilter === 'meetings' && `${meetingsCount} Meetings`}
-                                {taskFilter === 'tasks' && `${tasksCount} Tasks`}
-                                {taskFilter === 'all' && `Up Next`}
+                                Suggested Schedule for {displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                            </h3>
+                            <div className="space-y-3">
+                                {generateSuggestedSchedule.map((suggestion, index) => (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                        onClick={() => {
+                                            const [hour, minute] = suggestion.time?.split(':').map(Number) || [9, 0];
+                                            const dateWithTime = new Date(displayDate);
+                                            dateWithTime.setHours(hour, minute, 0, 0);
+                                            navigateToScheduleDate(dateWithTime);
+                                            setScreen('Schedule');
+                                        }}
+                                    >
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-xs opacity-60 text-white/70">{suggestion.time}</span>
+                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white">{suggestion.category}</span>
+                                                </div>
+                                                <h4 className="font-semibold mb-1 text-white">{suggestion.title}</h4>
+                                                <p className="text-sm opacity-70 text-white/80">{suggestion.description}</p>
+                                            </div>
+                                            <button className="ml-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                                                <PlusIcon className="w-5 h-5 text-white" />
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : getFilteredTasks().length > 0 ? (
+                        // Show tasks for selected date or today
+                        <div className="space-y-2">
+                            <h3 className="text-base md:text-lg font-bold text-white mb-3">
+                                {selectedDate ? (
+                                    `${displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`
+                                ) : (
+                                    taskFilter === 'events' ? `${eventsCount} Events` :
+                                    taskFilter === 'meetings' ? `${meetingsCount} Meetings` :
+                                    taskFilter === 'tasks' ? `${tasksCount} Tasks` :
+                                    'Up Next'
+                                )}
                             </h3>
                             {getFilteredTasks()
                                 .filter(task => {
@@ -2311,7 +3326,7 @@ const DailyGreeting: React.FC<{
                                             // Show undo option for recently completed tasks (within 5 seconds)
                                             if (undoTaskId === task.id || recentlyCompleted.has(task.id)) {
                                                 return (
-                                            <motion.div
+                                                    <motion.div
                                                         initial={{ opacity: 0, scale: 0.8 }}
                                                         animate={{ opacity: 1, scale: 1 }}
                                                         className="flex flex-col items-center gap-1"
@@ -2333,7 +3348,7 @@ const DailyGreeting: React.FC<{
                                                         >
                                                             Undo
                                                         </motion.button>
-                                            </motion.div>
+                                                    </motion.div>
                                                 );
                                             }
                                             return null; // Completed tasks without undo show nothing
@@ -2379,7 +3394,7 @@ const DailyGreeting: React.FC<{
                                 <motion.button
                                     onClick={() => {
                                         setScreen('Schedule');
-                                        navigateToScheduleDate(today);
+                                        navigateToScheduleDate(displayDate);
                                     }}
                                     className="w-full py-3 rounded-xl bg-white/5 text-white font-semibold hover:bg-white/10 transition-colors min-h-[44px]"
                                     whileHover={{ scale: 1.02 }}
@@ -2389,10 +3404,59 @@ const DailyGreeting: React.FC<{
                                 </motion.button>
                             )}
                                             </div>
-                )}
+                    ) : selectedDate ? (
+                        // Empty selected day - show message
+                        <div className="space-y-2">
+                            <h3 className="text-base md:text-lg font-bold text-white mb-3">
+                                {displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                            </h3>
+                            <div className="p-6 rounded-xl bg-white/5 text-center">
+                                <p className="text-white/70 mb-2">No tasks scheduled for this day</p>
+                                <motion.button
+                                    onClick={() => {
+                                        if (addTask) {
+                                            setPrefillDateForModal(displayDate);
+                                            setIsNewTaskModalOpen(true);
+                                        } else {
+                                            navigateToScheduleDate(displayDate);
+                                            setScreen('Schedule');
+                                        }
+                                    }}
+                                    className="px-4 py-2 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition-colors"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    Add Task
+                                </motion.button>
+                            </div>
+                        </div>
+                    ) : null}
                                         </div>
                                     </motion.div>
                             </div>
+
+        {/* New Task Modal */}
+        <AnimatePresence>
+            {isNewTaskModalOpen && addTask && (
+                <NewTaskModal
+                    onClose={() => setIsNewTaskModalOpen(false)}
+                    addTask={(task) => {
+                        addTask(task);
+                        setIsNewTaskModalOpen(false);
+                        // Task will appear automatically if it matches the selected date
+                    }}
+                    selectedDate={prefillDateForModal}
+                    projects={projects}
+                    notes={notes}
+                    categories={categories}
+                    categoryColors={categoryColors}
+                    onAddNewCategory={onAddNewCategory || (() => false)}
+                    allTasks={allTasks}
+                    showToast={showToast || (() => {})}
+                />
+            )}
+        </AnimatePresence>
+        </>
     );
 };
 
@@ -2657,7 +3721,7 @@ const SoenRewardsWidget: React.FC<{
 const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
     const [insightExpanded, setInsightExpanded] = useState(false);
     const [miraChatOpen, setMiraChatOpen] = useState(false);
-    const { tasks, notes, healthData, briefing, isBriefingLoading, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' } = props;
+    const { tasks, notes, healthData, briefing, isBriefingLoading, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave', addTask, projects = [], categories = [], onAddNewCategory, showToast } = props;
     
     // Focus mode state
     const [isFocusMode, setIsFocusMode] = useState(false);
@@ -2936,6 +4000,8 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                                 briefing={briefing}
                                 isBriefingLoading={isBriefingLoading}
                                 notes={notes}
+                                goals={props.goals}
+                                allTasks={tasks}
                                 onCompleteTask={onCompleteTask}
                                 navigateToScheduleDate={navigateToScheduleDate}
                                 setScreen={setScreen}
@@ -2943,36 +4009,58 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                                 insightExpanded={insightExpanded}
                                 setInsightExpanded={setInsightExpanded}
                                 userName={props.userName}
+                                addTask={addTask}
+                                projects={projects}
+                                categories={categories}
+                                onAddNewCategory={onAddNewCategory}
+                                showToast={showToast}
                             />
                         </div>
                         
                         {/* Right Column: Mira Daily (if expanded) then Flow + Notes */}
-                        <div className="lg:col-span-4 order-2 space-y-4 sm:space-y-6">
+                        <div className="lg:col-span-4 order-2 pr-4 md:pr-6 lg:pr-8 flex flex-col">
+                            {/* Mira Daily Panel - When expanded, starts at top (where Flow currently is), ends where "Up Next" ends */}
                             {insightExpanded && (
-                                <MiraDailyPanel
-                                    tasks={tasks}
-                                    notes={notes}
-                                    healthData={healthData}
-                                    onClose={() => setInsightExpanded(false)}
-                                    setScreen={setScreen}
-                                    navigateToScheduleDate={navigateToScheduleDate}
-                                />
+                                <div className="mb-4 sm:mb-6 rounded-3xl overflow-hidden" style={{ 
+                                    height: '600px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    backgroundColor: '#06B6D4'
+                                }}>
+                                    <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ 
+                                        scrollBehavior: 'smooth'
+                                    }}>
+                                        <MiraDailyPanel
+                                            tasks={tasks}
+                                            notes={notes}
+                                            healthData={healthData}
+                                            onClose={() => setInsightExpanded(false)}
+                                            setScreen={setScreen}
+                                            navigateToScheduleDate={navigateToScheduleDate}
+                                        />
+                                    </div>
+                                </div>
                             )}
+                            
+                            {/* Flow and Notes - Start where calendar dates are positioned in DailyGreeting */}
+                            {/* Align to match calendar strip vertical position (~180px from top) */}
+                            <div className={`space-y-4 sm:space-y-6 ${insightExpanded ? 'lg:mt-auto' : 'lg:pt-[180px]'} mt-0`}>
                                 <SoenRewardsWidget
                                     tasks={tasks}
                                     healthData={healthData}
-                                soenFlow={soenFlow}
-                                purchasedRewards={purchasedRewards}
-                                activeTheme={activeTheme}
-                                activeFocusBackground={activeFocusBackground}
+                                    soenFlow={soenFlow}
+                                    purchasedRewards={purchasedRewards}
+                                    activeTheme={activeTheme}
+                                    activeFocusBackground={activeFocusBackground}
                                     onOpenRewards={() => setScreen('Rewards')}
-                            />
-                            
-                            {/* Recent Notes Widget - Small, looping animation */}
-                            <RecentNotesWidget 
-                                notes={notes}
-                                onOpenNote={() => setScreen('Notes')}
-                            />
+                                />
+                                
+                                {/* Recent Notes Widget - Small, looping animation */}
+                                <RecentNotesWidget 
+                                    notes={notes}
+                                    onOpenNote={() => setScreen('Notes')}
+                                />
+                            </div>
                         </div>
 
                     </div>
@@ -2980,7 +4068,7 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
 
 
                     {/* Main Content Grid - Tasks removed; Habits spans full width */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 px-4 md:px-6 lg:px-8">
                         <div className="lg:col-span-12 order-1">
                             <HabitInsights healthData={healthData} />
                         </div>
@@ -2996,16 +4084,16 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                         });
                         if (!active) return null;
                         return (
-                    <div className="w-full">
-                            <FocusTimerWidget
-                                tasks={tasks}
-                                healthData={healthData}
-                                onStartFocusMode={handleStartFocusMode}
-                                activeTheme={activeTheme}
-                                activeFocusBackground={activeFocusBackground}
-                                purchasedRewards={purchasedRewards}
-                            />
-                    </div>
+                            <div className="w-full">
+                                <FocusTimerWidget
+                                    tasks={tasks}
+                                    healthData={healthData}
+                                    onStartFocusMode={handleStartFocusMode}
+                                    activeTheme={activeTheme}
+                                    activeFocusBackground={activeFocusBackground}
+                                    purchasedRewards={purchasedRewards}
+                                />
+                            </div>
                         );
                     })()}
 
@@ -3134,7 +4222,7 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
     };
 
     return (
-        <div ref={panelRef} className="rounded-3xl p-6" style={{ backgroundColor: '#06B6D4', color: '#fff' }}>
+        <div ref={panelRef} className="p-6 flex flex-col min-h-0" style={{ color: '#fff' }}>
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                     <StarIcon className="w-5 h-5 text-white" />
@@ -3212,8 +4300,8 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
                 }
                 
                 return (
-                    <div className="mb-4 space-y-3">
-                        <div>
+            <div className="mb-4 space-y-3">
+                <div>
                             <div className="flex items-center justify-between text-xs text-white/70 mb-1">
                                 <span>{focusLabel}</span>
                                 <span>{focusLevel}%</span>
@@ -3221,15 +4309,15 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
                             <div className="h-2 bg-white/10 rounded-full">
                                 <div className="h-full bg-emerald-400 rounded-full transition-all duration-500" style={{width:`${focusLevel}%`}}/>
                             </div>
-                        </div>
-                        <div>
+                </div>
+                <div>
                             <div className="flex items-center justify-between text-xs text-white/70 mb-1">
                                 <span>{recoveryLabel}</span>
                                 <span>{recoveryLevel}%</span>
-                            </div>
+                </div>
                             <div className="h-2 bg-white/10 rounded-full">
                                 <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{width:`${recoveryLevel}%`}}/>
-                            </div>
+            </div>
                         </div>
                     </div>
                 );
@@ -3244,7 +4332,7 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
                         </svg>
                         Meetings Today ({todayMeetings.length})
                     </h4>
-                    <div className="space-y-2">
+                <div className="space-y-2">
                         {todayMeetings.map(meeting => {
                             const meetingNotes = getMeetingNotes(meeting);
                             const url = (meeting.linkedUrl || meeting.referenceUrl || '').toString();
@@ -3304,11 +4392,11 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
 
                                     {/* Quick actions */}
                                     <div className="flex gap-2 mt-2">
-                                        <button
-                                            onClick={() => {
+                            <button
+                                onClick={() => {
                                                 navigateToScheduleDate(new Date(meeting.startTime), meeting.id);
-                                                setScreen('Schedule');
-                                            }}
+                                    setScreen('Schedule');
+                                }}
                                             className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs flex-1"
                                         >
                                             Open Meeting
@@ -3326,15 +4414,15 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
                                         )}
                                         <button
                                             onClick={() => openMeetingPrep(meeting)}
-                                            className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs"
+                                className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs"
                                         >
                                             Prep with Mira
                                         </button>
-                                    </div>
-                                </div>
+                        </div>
+                </div>
                             );
                         })}
-                    </div>
+            </div>
                 </div>
             )}
 

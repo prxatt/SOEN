@@ -110,6 +110,7 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
 function Navigation({ activeScreen, setScreen }: NavigationProps) {
   const [collapsed, setCollapsed] = useState(true); // Always start collapsed
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(false); // hidden on load
+  const [scrolled, setScrolled] = useState(false); // Track scroll state for SOEN text visibility
   const hasShownOnceRef = useRef(false);
   const lastScrollYRef = useRef(0);
   const hideTimerRef = useRef<number | null>(null);
@@ -137,6 +138,15 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
     setScreen(screen);
     setCollapsed(true);
   }, [setScreen]);
+
+  // Track scroll state for SOEN text visibility in sidebar
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 60);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Mobile: scroll-aware bottom navigation behavior
   useEffect(() => {
@@ -207,38 +217,41 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          {/* Header Section */}
+          {/* Header Section - SOEN text always visible when expanded, or when scrolled and collapsed */}
           <div className="p-4 border-b border-white/10">
             <AnimatePresence mode="wait">
-              {collapsed ? (
-                <motion.div
-                  key="collapsed-logo"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex justify-center"
-                >
-          <div className="px-2 py-1 border border-white/60 rounded-sm">
-            <span className="text-white font-extrabold text-[10px] tracking-widest">SOEN</span>
-          </div>
-                </motion.div>
-              ) : (
-            <motion.div
-                  key="expanded-logo"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3, delay: 0.1 }}
-                  className="flex items-center space-x-3"
-                >
-                  <div className="px-2 py-1 border border-white/60 rounded-sm">
-                    <span className="text-white font-extrabold text-sm tracking-widest">SOEN</span>
-                  </div>
-                  <div>
-                    <h1 className="text-white font-semibold text-sm tracking-wide uppercase">SOEN by SURFACE TENSION</h1>
-                  </div>
-            </motion.div>
+              {(scrolled || !collapsed) && (
+                <>
+                  {collapsed ? (
+                    <motion.div
+                      key="collapsed-logo"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex justify-center"
+                    >
+                      <span className="text-white font-extrabold text-[10px] tracking-widest">SOEN</span>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="expanded-logo"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3, delay: 0.1 }}
+                      className="flex flex-col items-start"
+                    >
+                      <span className="text-white font-extrabold text-base tracking-wider mb-2">SOEN</span>
+                      <h1 
+                        className="text-white font-normal text-[9px] tracking-[0.2em] uppercase leading-[1.3] font-brand"
+                        style={{ fontFamily: '"Ivy Presto Display", "Playfair Display", serif' }}
+                      >
+                        By SURFACE TENSION
+                      </h1>
+                    </motion.div>
+                  )}
+                </>
               )}
             </AnimatePresence>
           </div>

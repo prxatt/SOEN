@@ -23,7 +23,8 @@ export default {
       fontFamily: {
         sans: ['"Instrument Sans"', 'sans-serif'],
         display: ['Poppins', 'sans-serif'],
-        mono: ['"Roboto Mono"', 'monospace']
+        mono: ['"Roboto Mono"', 'monospace'],
+        brand: ['"Ivy Presto Display"', '"Playfair Display"', 'serif']
       },
       backdropBlur: {
         'xl': '24px'

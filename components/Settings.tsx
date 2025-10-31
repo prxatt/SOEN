@@ -59,16 +59,19 @@ function SettingsRow({ icon, title, subtitle, onClick, action }: SettingsRowProp
 function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme, setActiveTheme, purchasedRewards, browserPushEnabled, setBrowserPushEnabled }: SettingsProps) {
   const purchasedThemes = REWARDS_CATALOG.filter(r => r.type === 'theme' && purchasedRewards.includes(r.id));
   
-  // Travel Mode and Sick Mode state
+  // Travel Mode, Sick Mode, and Temperature Unit state
   const [travelMode, setTravelMode] = React.useState(false);
   const [sickMode, setSickMode] = React.useState(false);
+  const [temperatureUnit, setTemperatureUnit] = React.useState<'c' | 'f'>('c');
 
   React.useEffect(() => {
     // Load modes from localStorage
     const savedTravelMode = localStorage.getItem('soen-travel-mode') === 'true';
     const savedSickMode = localStorage.getItem('soen-sick-mode') === 'true';
+    const savedTempUnit = (localStorage.getItem('soen-temperature-unit') || 'c') as 'c' | 'f';
     setTravelMode(savedTravelMode);
     setSickMode(savedSickMode);
+    setTemperatureUnit(savedTempUnit);
   }, []);
 
   const handleTravelModeToggle = () => {
@@ -81,6 +84,12 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
     const newValue = !sickMode;
     setSickMode(newValue);
     localStorage.setItem('soen-sick-mode', String(newValue));
+  };
+
+  const handleTemperatureUnitToggle = () => {
+    const newUnit = temperatureUnit === 'c' ? 'f' : 'c';
+    setTemperatureUnit(newUnit);
+    localStorage.setItem('soen-temperature-unit', newUnit);
   };
 
   return (
@@ -199,6 +208,18 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                         <button onClick={handleSickModeToggle} role="switch" aria-checked={sickMode}
                             className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${sickMode ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}>
                             <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${sickMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    }
+                />
+                <div className="border-t border-border/50 my-1 mx-2"></div>
+                <SettingsRow 
+                    icon={<svg className="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/></svg>}
+                    title="Temperature Unit"
+                    subtitle={`Display temperature in ${temperatureUnit.toUpperCase() === 'C' ? 'Fahrenheit' : 'Celsius'}`}
+                    action={
+                        <button onClick={handleTemperatureUnitToggle} role="switch" aria-checked={temperatureUnit === 'f'}
+                            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${temperatureUnit === 'f' ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${temperatureUnit === 'f' ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     }
                 />

@@ -7,7 +7,7 @@ This document outlines the AI logic system for SOEN, a personal productivity and
 
 ### 1. Daily Greeting & Insights System
 
-#### Morning Insights (Before 9pm)
+#### Morning Insights (Before 12pm)
 - **Schedule Analysis**: AI analyzes the user's daily schedule to identify:
   - Events (non-workout, non-meeting activities)
   - Meetings (work-related meetings)

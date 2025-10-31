@@ -3,7 +3,7 @@
 @theme {
   --color-accent: #000000;
   --color-accent-hover: #333333;
-  --color-bg: #101010;
+  --color-bg: #0B0B0C;
   --color-card: #1C1C1E;
   --color-border: #404040;
   --color-text: #F3F4F6;
@@ -17,8 +17,8 @@
   --color-accent: #000000;
   --color-accent-hover: #333333;
 
-  /* Default Mode: Dark */
-  --color-bg: #101010;
+  /* Default Mode: Dark - Matching Daily Greeting background */
+  --color-bg: #0B0B0C;
   --color-card: #1C1C1E;
   --color-border: #404040; /* Increased contrast for UI elements */
   --color-text: #F3F4F6;
@@ -74,8 +74,16 @@ html, body, #root {
   padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 
-/* Fluid container up to 1440px with responsive gutters */
+/* Fluid container up to 1440px - no padding for full-bleed dashboard */
 .app-container {
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 0;
+  padding-right: 0;
+}
+/* Add padding utility class for screens that need it */
+.app-container-with-padding {
   max-width: 1440px;
   margin-left: auto;
   margin-right: auto;
@@ -83,10 +91,10 @@ html, body, #root {
   padding-right: 16px;
 }
 @media (min-width: 768px) {
-  .app-container { padding-left: 24px; padding-right: 24px; }
+  .app-container-with-padding { padding-left: 24px; padding-right: 24px; }
 }
 @media (min-width: 1024px) {
-  .app-container { padding-left: 32px; padding-right: 32px; }
+  .app-container-with-padding { padding-left: 32px; padding-right: 32px; }
 }
 
 .card {

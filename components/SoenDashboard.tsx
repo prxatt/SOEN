@@ -64,7 +64,7 @@ interface SoenDashboardProps {
 
 // Enhanced color scheme matching EnhancedDashboard
 const SOEN_COLORS = {
-    background: '#0a0a0a',
+    background: '#0B0B0C',
     surface: '#1a1a1a',
     surfaceLight: '#2a2a2a',
     text: {
@@ -223,7 +223,7 @@ const SoenHeader: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            <div className="app-container flex items-center justify-between">
+            <div className="app-container-with-padding flex items-center justify-between">
                 <motion.div
                     className="flex items-center gap-2 sm:gap-3"
                     animate={{ 
@@ -2671,13 +2671,13 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
             
         <motion.div
             className="min-h-screen relative overflow-x-hidden"
-            style={{ backgroundColor: '#0A0A0A' }}
+            style={{ backgroundColor: '#0B0B0C' }}
             variants={containerVariants}
             initial="hidden"
             animate="visible"
         >
             {/* Global dark background to eliminate any left gutter near the sidebar */}
-            <div className="fixed inset-0 bg-[#0A0A0A] -z-10" />
+            <div className="fixed inset-0 bg-[#0B0B0C] -z-10" />
             {/* Floating particles background */}
             <FloatingParticles count={50} />
 

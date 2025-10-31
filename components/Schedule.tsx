@@ -232,10 +232,10 @@ function EmptyDaySuggestions({ selectedDate, onAddTask, redirectToMiraAIWithChat
         if (activeGoals.length > 0) {
             activeGoals.slice(0, 2).forEach(goal => {
                 suggestions.push({
-                    title: `Work on ${goal.name}`,
+                    title: `Work on ${goal.text}`,
                     category: 'Goal',
                     time: isWeekend ? '10:00' : '18:00',
-                    description: `Make progress toward your "${goal.name}" goal`
+                    description: `Make progress toward your "${goal.text}" goal`
                 });
             });
         }
@@ -291,17 +291,13 @@ function EmptyDaySuggestions({ selectedDate, onAddTask, redirectToMiraAIWithChat
         const context = {
             date: selectedDate.toISOString(),
             isWeekend,
-            goals: goals.filter(g => g.status === 'active').map(g => g.name),
+            goals: goals.filter(g => g.status === 'active').map(g => g.text),
             recentTasksCount: tasks.filter(t => new Date(t.startTime) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length
         };
         const chatHistory: ChatMessage[] = [
             {
-                role: 'system',
-                content: `The user is viewing an empty day (${selectedDate.toLocaleDateString()}). Generate personalized task suggestions based on their goals and schedule patterns.`
-            },
-            {
                 role: 'user',
-                content: `What should I do on ${selectedDate.toLocaleDateString()}? ${isWeekend ? 'It\'s the weekend.' : 'It\'s a weekday.'} I have ${goals.filter(g => g.status === 'active').length} active goals.`
+                text: `I'm viewing an empty day (${selectedDate.toLocaleDateString()}). ${isWeekend ? 'It\'s the weekend.' : 'It\'s a weekday.'} I have ${goals.filter(g => g.status === 'active').length} active goals. Please suggest a personalized daily plan based on my goals and recent schedule.`
             }
         ];
         try {
@@ -733,7 +729,7 @@ function CalendarView({ tasks, categoryColors, onAddTask, onMoveTask, selectedDa
 
 // FIX: Refactor to a standard function component to avoid potential type issues with React.FC and framer-motion.
 function Schedule(props: ScheduleProps) {
-    const { tasks, setTasks, showToast, onCompleteTask, onUndoCompleteTask, categoryColors, initialDate, initialTaskId } = props;
+    const { tasks, setTasks, showToast, onCompleteTask, onUndoCompleteTask, categoryColors, initialDate, initialTaskId, goals, notes, redirectToMiraAIWithChat } = props;
     const [view, setView] = useState<ScheduleView>('today');
     const [selectedDate, setSelectedDate] = useState(initialDate || new Date());
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);

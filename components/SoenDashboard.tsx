@@ -1678,8 +1678,48 @@ const DailyGreeting: React.FC<{
         )
     );
     
-    // Enhanced AI insight based on schedule with meeting research
+    // Get user context: lifestyle profile, travel mode, sick mode
+    const getUserContext = () => {
+        try {
+            const lifestyle = localStorage.getItem('soen-lifestyle-profile') || 'general';
+            const travelMode = localStorage.getItem('soen-travel-mode') === 'true';
+            const sickMode = localStorage.getItem('soen-sick-mode') === 'true';
+            const moodHistory = localStorage.getItem('soen-mood-history');
+            let recentMoods: string[] = [];
+            if (moodHistory) {
+                try {
+                    const history = JSON.parse(moodHistory) as Array<{ date: string; mood: string }>;
+                    const sevenDaysAgo = new Date();
+                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                    recentMoods = history
+                        .filter(h => new Date(h.date) >= sevenDaysAgo)
+                        .map(h => h.mood);
+                } catch {}
+            }
+            return { lifestyle, travelMode, sickMode, recentMoods };
+        } catch {
+            return { lifestyle: 'general', travelMode: false, sickMode: false, recentMoods: [] };
+        }
+    };
+
+    // Check for injury/accommodation patterns (skipped workouts, sick mode, etc.)
+    const detectInjuryAccommodation = (context: ReturnType<typeof getUserContext>) => {
+        if (context.sickMode) return 'sick';
+        // Check for skipped workout patterns (could be expanded with historical data)
+        const hasScheduledWorkout = todayTasks.some(t => 
+            t.category.toLowerCase().includes('workout') || 
+            t.category.toLowerCase().includes('exercise') || 
+            t.category.toLowerCase().includes('gym')
+        );
+        // If user typically has workouts but today doesn't, might be accommodating
+        // This is simplified - could be enhanced with pattern detection
+        return null;
+    };
+
+    // Enhanced AI insight based on schedule with meeting research, lifestyle, and accommodations
     const generateDailyInsight = () => {
+        const userContext = getUserContext();
+        const accommodation = detectInjuryAccommodation(userContext);
         const hasWorkout = todayTasks.some(t => t.category.toLowerCase().includes('workout') || t.category.toLowerCase().includes('exercise') || t.category.toLowerCase().includes('gym'));
         const hasMeetings = meetingsCount > 0;
         const hasWork = todayTasks.some(t => t.category.toLowerCase().includes('work'));
@@ -1691,18 +1731,125 @@ const DailyGreeting: React.FC<{
             todayMeetings.some(meeting => note.title?.toLowerCase().includes(meeting.title.toLowerCase()) || note.content?.toLowerCase().includes(meeting.title.toLowerCase()))
         );
         
-        if (hasWorkout && !hasMeetings) {
+        // Injury/Sick accommodation insights
+        if (accommodation === 'sick' || userContext.sickMode) {
             return {
-                preview: "Focus on hydration today - aim for 2.5L. Best workout time: 5-7pm based on your energy patterns.",
+                preview: "Sick Day Mode active. Focus on rest and recovery. All expectations adjusted.",
                 expanded: {
-                    hydration: "Your activity level suggests 2.5-3L water today. Track in the app.",
-                    workoutTime: "Your peak performance window is 5-7pm. Schedule workout then for optimal results.",
-                    recovery: "Plan 8+ hours sleep tonight for proper recovery. Your body will thank you tomorrow.",
-                    goals: "You're 2 workouts away from your monthly goal. Keep the momentum!"
+                    recovery: "Prioritize rest and hydration. Your body needs time to heal.",
+                    tasks: "Lighten your workload today. Postpone non-essential tasks.",
+                    expectations: "All productivity expectations are adjusted. Take it easy.",
+                    support: "Mira is here to help you recover. Ask for gentle activity suggestions.",
+                    return: "Focus on getting better. We'll help you ease back into your routine when you're ready."
+                },
+                links: relatedNotes.slice(0, 1).map(note => ({ label: note.title || 'Note', type: 'note', id: note.id }))
+            };
+        }
+        
+        // Travel mode insights
+        if (userContext.travelMode) {
+            return {
+                preview: "Travel Mode active. Your schedule has been adjusted for time zone changes.",
+                expanded: {
+                    timezone: "Schedule adjusted for your current timezone. All times display in local time.",
+                    flexibility: "Today's schedule is flexible to accommodate travel adjustments.",
+                    connectivity: "Consider connectivity needs for meetings and tasks while traveling.",
+                    energy: "Travel can be draining. Prioritize rest and hydration.",
+                    work: hasWork ? "Work tasks adjusted for travel context. Focus on essentials only." : "Enjoy your travel time. Minimal tasks scheduled."
+                },
+                links: relatedNotes.slice(0, 1).map(note => ({ label: note.title || 'Note', type: 'note', id: note.id }))
+            };
+        }
+        
+        // Lifestyle-aware insights
+        const getLifestyleInsight = (lifestyle: string) => {
+            switch (lifestyle.toLowerCase()) {
+                case 'white-collar':
+                case 'whitecollar':
+                case 'office':
+                    return {
+                        focus: "Deadline management and meeting prep",
+                        balance: "Work-life balance optimization",
+                        energy: "Peak focus: 9-11am for deep work"
+                    };
+                case 'retail':
+                case 'service':
+                    return {
+                        focus: "Shift scheduling and energy management",
+                        balance: "Customer interaction strategies",
+                        energy: "Post-shift recovery and meal timing"
+                    };
+                case 'student':
+                    return {
+                        focus: "Study schedules and exam prep",
+                        balance: "Assignment deadlines and learning optimization",
+                        energy: "Peak study hours: morning for memorization, evening for creative work"
+                    };
+                case 'freelancer':
+                case 'self-employed':
+                    return {
+                        focus: "Project management and client communication",
+                        balance: "Income optimization and workflow efficiency",
+                        energy: "Client calls: morning, deep work: afternoon"
+                    };
+                case 'homemaker':
+                    return {
+                        focus: "Household management and family scheduling",
+                        balance: "Personal time optimization",
+                        energy: "Peak productivity: early morning, personal time: evening"
+                    };
+                case 'law enforcement':
+                case 'officer':
+                    return {
+                        focus: "Shift work and stress management",
+                        balance: "Recovery strategies between shifts",
+                        energy: "Post-shift recovery critical for next shift performance"
+                    };
+                default:
+                    return {
+                        focus: "Productivity and goal achievement",
+                        balance: "Work-life harmony",
+                        energy: "Peak hours: 9-11am"
+                    };
+            }
+        };
+        const lifestyleInsight = getLifestyleInsight(userContext.lifestyle);
+        
+        // Workout-specific guidance (enhanced)
+        if (hasWorkout && !hasMeetings) {
+            const workoutTasks = todayTasks.filter(t => 
+                t.category.toLowerCase().includes('workout') || 
+                t.category.toLowerCase().includes('exercise') || 
+                t.category.toLowerCase().includes('gym')
+            );
+            const workoutCount = workoutTasks.length;
+            const totalWorkoutDuration = workoutTasks.reduce((sum, t) => sum + (t.plannedDuration || 30), 0);
+            
+            // Calculate optimal hydration based on activity level
+            const hydrationTarget = totalWorkoutDuration > 90 ? '3-3.5L' : totalWorkoutDuration > 60 ? '2.5-3L' : '2-2.5L';
+            
+            // Determine best workout time based on schedule
+            const workoutTimes = workoutTasks.map(t => new Date(t.startTime).getHours());
+            const avgWorkoutTime = workoutTimes.reduce((sum, h) => sum + h, 0) / workoutTimes.length;
+            const bestTime = avgWorkoutTime < 12 ? 'Morning workouts boost energy all day' : 
+                           avgWorkoutTime < 17 ? 'Midday workouts break up the day nicely' : 
+                           'Evening workouts help you decompress';
+            
+            return {
+                preview: `Workout day! Focus on hydration - aim for ${hydrationTarget}. ${bestTime}.`,
+                expanded: {
+                    hydration: `Your ${totalWorkoutDuration}min of activity suggests ${hydrationTarget} water today. Track in Apple Health.`,
+                    workoutTime: bestTime,
+                    recovery: "Plan 8+ hours sleep tonight for proper recovery. Your body needs rest after today's activities.",
+                    nutrition: "Refuel with protein and carbs within 30min post-workout. Your body will recover faster.",
+                    goals: workoutCount > 1 ? `Great job with ${workoutCount} workouts today! You're building serious momentum.` : "You're building consistency. Keep it up!",
+                    progression: "Track your performance in Apple Health. Monitor heart rate zones and energy levels.",
+                    rest: "Active recovery tomorrow - light movement like walking or stretching will help."
                 },
                 links: relatedNotes.slice(0, 2).map(note => ({ label: note.title || 'Note', type: 'note', id: note.id }))
             };
         } else if (hasMeetings && hasWorkout) {
+            // Hybrid day: Work + Workout with lifestyle awareness
             const meetingInsights = todayMeetings.map((meeting, idx) => {
                 const relatedNote = meetingNotes.find(n => 
                     n.title?.toLowerCase().includes(meeting.title.toLowerCase()) ||
@@ -1721,9 +1868,10 @@ const DailyGreeting: React.FC<{
                 expanded: {
                     meetings: `Review meeting agendas 15min before each. ${meetingNotes.length > 0 ? `${meetingNotes.length} prep notes available.` : 'No prep notes found.'}`,
                     meetingDetails: meetingInsights.length > 0 ? meetingInsights.map(m => `${m.meeting} at ${m.time} - ${m.prep}`).join(' | ') : '',
-                    workoutTime: "Schedule workout for 6-7pm - perfect timing after your last meeting ends.",
-                    energy: "Take 5min breaks between meetings. Your energy typically dips around 2-3pm.",
-                    balance: "You're balancing work and fitness well today. Keep this rhythm!"
+                    workoutTime: "Schedule workout for 6-7pm - perfect timing after your last meeting ends. Exercise helps clear your mind.",
+                    energy: `Take 5min breaks between meetings. ${lifestyleInsight.energy}. Your energy typically dips around 2-3pm.`,
+                    balance: "You're balancing work and fitness well today. Keep this rhythm!",
+                    lifestyle: userContext.lifestyle !== 'general' ? `${lifestyleInsight.focus} for ${userContext.lifestyle.replace(/-/g, ' ')} lifestyle.` : ""
                 },
                 links: [
                     ...meetingNotes.slice(0, 2).map(note => ({ label: note.title || 'Meeting Note', type: 'note', id: note.id })),
@@ -1762,13 +1910,26 @@ const DailyGreeting: React.FC<{
             };
         }
         
+        // Default insights with lifestyle awareness
+        const recentMoodTrend = userContext.recentMoods.length > 0 
+            ? userContext.recentMoods.filter(m => ['Awful', 'Bad'].includes(m)).length / userContext.recentMoods.length
+            : 0;
+        
+        const moodInsight = recentMoodTrend > 0.4 
+            ? "I notice you've had some challenging days recently. Let's focus on achievable goals today and build positive momentum."
+            : recentMoodTrend < 0.2 && userContext.recentMoods.length >= 3
+            ? "You've been in great spirits! Keep the momentum going with today's tasks."
+            : "";
+        
         return {
-            preview: "Today looks balanced. Focus on completing your top 3 tasks before noon for maximum productivity.",
+            preview: `Today looks balanced. ${lifestyleInsight.focus}. ${moodInsight || `Focus on your top 3 tasks during ${lifestyleInsight.energy.split(':')[1]?.trim() || 'peak hours'}.`}`,
             expanded: {
-                productivity: "Your energy peaks 9-11am. Schedule your most important tasks during this window.",
-                balance: "Today's schedule is well-balanced. Consider adding a short workout if time allows.",
-                momentum: "You're on a 7-day completion streak. Keep it going!",
-                insights: "Based on your habits, you work best with 25min focus blocks. Try Pomodoro today."
+                productivity: `Your energy peaks ${lifestyleInsight.energy}. Schedule your most important tasks during this window.`,
+                focus: lifestyleInsight.focus,
+                balance: lifestyleInsight.balance,
+                momentum: todayTasks.length > 5 ? "You have a full day ahead. Pace yourself and take breaks." : "Today's schedule is manageable. You've got this!",
+                insights: moodInsight || "Based on your habits, you work best with 25min focus blocks. Try Pomodoro for deep work.",
+                lifestyle: userContext.lifestyle !== 'general' ? `Insights tailored for ${userContext.lifestyle.replace(/-/g, ' ')} lifestyle.` : ""
             },
             links: relatedNotes.slice(0, 2).map(note => ({ label: note.title || 'Note', type: 'note', id: note.id }))
         };
@@ -2958,16 +3119,75 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
                 </div>
             </div>
 
-            <div className="mb-4 space-y-3">
-                <div>
-                    <div className="flex items-center justify-between text-xs text-white/70 mb-1"><span>Focus</span><span>75%</span></div>
-                    <div className="h-2 bg-white/10 rounded-full"><div className="h-full bg-emerald-400 rounded-full" style={{width:'75%'}}/></div>
-                </div>
-                <div>
-                    <div className="flex items-center justify-between text-xs text-white/70 mb-1"><span>Recovery</span><span>60%</span></div>
-                    <div className="h-2 bg-white/10 rounded-full"><div className="h-full bg-blue-400 rounded-full" style={{width:'60%'}}/></div>
-                </div>
-            </div>
+            {/* Dynamic KPI Bars - Context-aware */}
+            {(() => {
+                const userContext = (() => {
+                    try {
+                        const lifestyle = localStorage.getItem('soen-lifestyle-profile') || 'general';
+                        const travelMode = localStorage.getItem('soen-travel-mode') === 'true';
+                        const sickMode = localStorage.getItem('soen-sick-mode') === 'true';
+                        return { lifestyle, travelMode, sickMode };
+                    } catch {
+                        return { lifestyle: 'general', travelMode: false, sickMode: false };
+                    }
+                })();
+                
+                const hasWorkout = todayTasks.some(t => 
+                    t.category.toLowerCase().includes('workout') || 
+                    t.category.toLowerCase().includes('exercise') || 
+                    t.category.toLowerCase().includes('gym')
+                );
+                const hasMeetings = todayMeetings.length > 0;
+                
+                // Calculate dynamic KPIs based on context
+                let focusLevel = 75;
+                let recoveryLevel = 60;
+                let focusLabel = 'Focus';
+                let recoveryLabel = 'Recovery';
+                
+                if (userContext.sickMode) {
+                    focusLevel = 30; // Lower focus when sick
+                    recoveryLevel = 90; // High recovery priority
+                    recoveryLabel = 'Recovery Priority';
+                } else if (userContext.travelMode) {
+                    focusLevel = 50; // Lower focus during travel
+                    recoveryLevel = 70;
+                    focusLabel = 'Travel Energy';
+                } else if (hasWorkout && !hasMeetings) {
+                    focusLevel = 85; // High focus on workout days
+                    recoveryLevel = 40; // Lower recovery (needs post-workout recovery)
+                    recoveryLabel = 'Pre-Workout Energy';
+                } else if (hasMeetings && hasWorkout) {
+                    focusLevel = 70; // Balanced for hybrid days
+                    recoveryLevel = 55;
+                } else if (hasMeetings) {
+                    focusLevel = 65; // Meetings can drain focus
+                    recoveryLevel = 60;
+                }
+                
+                return (
+                    <div className="mb-4 space-y-3">
+                        <div>
+                            <div className="flex items-center justify-between text-xs text-white/70 mb-1">
+                                <span>{focusLabel}</span>
+                                <span>{focusLevel}%</span>
+                            </div>
+                            <div className="h-2 bg-white/10 rounded-full">
+                                <div className="h-full bg-emerald-400 rounded-full transition-all duration-500" style={{width:`${focusLevel}%`}}/>
+                            </div>
+                        </div>
+                        <div>
+                            <div className="flex items-center justify-between text-xs text-white/70 mb-1">
+                                <span>{recoveryLabel}</span>
+                                <span>{recoveryLevel}%</span>
+                            </div>
+                            <div className="h-2 bg-white/10 rounded-full">
+                                <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{width:`${recoveryLevel}%`}}/>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Meetings Today - Enhanced with note linking and prep */}
             {todayMeetings.length > 0 && (

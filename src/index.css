@@ -3,7 +3,7 @@
 @theme {
   --color-accent: #000000;
   --color-accent-hover: #333333;
-  --color-bg: #101010;
+  --color-bg: #0B0B0C;
   --color-card: #1C1C1E;
   --color-border: #404040;
   --color-text: #F3F4F6;
@@ -17,12 +17,17 @@
   --color-accent: #000000;
   --color-accent-hover: #333333;
 
-  /* Default Mode: Dark */
-  --color-bg: #101010;
+  /* Default Mode: Dark - Matching Daily Greeting background */
+  --color-bg: #0B0B0C;
   --color-card: #1C1C1E;
   --color-border: #404040; /* Increased contrast for UI elements */
   --color-text: #F3F4F6;
   --color-text-secondary: #B0B0B0; /* Increased contrast for readability (WCAG AA) */
+
+  /* Focus ring defaults (Tailwind-like) */
+  --ring-width: 2px;
+  --ring-offset-width: 2px;
+  --ring-offset-color: var(--color-card);
 }
 
 html:not(.dark) {
@@ -49,6 +54,49 @@ body {
   overflow-x: hidden; /* Prevent horizontal scroll on mobile */
 }
 
+/* Ensure mobile fills viewport without unexpected offsets */
+html, body, #root {
+  width: 100%;
+  min-height: 100%;
+}
+
+/* Safe area utilities for mobile devices with notches/home indicators */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-area-insets {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Content should not be obscured by mobile bottom nav */
+.pb-mobile-nav {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+/* Fluid container up to 1440px - no padding for full-bleed dashboard */
+.app-container {
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 0;
+  padding-right: 0;
+}
+/* Add padding utility class for screens that need it */
+.app-container-with-padding {
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+@media (min-width: 768px) {
+  .app-container-with-padding { padding-left: 24px; padding-right: 24px; }
+}
+@media (min-width: 1024px) {
+  .app-container-with-padding { padding-left: 32px; padding-right: 32px; }
+}
+
 .card {
   background-color: var(--color-card);
   border: 1px solid var(--color-border);
@@ -64,7 +112,12 @@ html:not(.dark) .card {
 /* Consistent focus styles */
 input:focus, select:focus, textarea:focus, button:focus-visible, [contenteditable]:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+    /* Emulate Tailwind ring + ring-offset with current theme variables */
+    box-shadow:
+        0 0 0 var(--ring-offset-width) var(--ring-offset-color),
+        0 0 0 calc(var(--ring-offset-width) + var(--ring-width)) var(--color-accent);
+    /* Ensure focus indicator respects the element's border radius */
+    border-radius: inherit;
 }
 .break-word {
   overflow-wrap: break-word;
@@ -98,3 +151,21 @@ input:focus, select:focus, textarea:focus, button:focus-visible, [contenteditabl
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
 }
+
+/* Visual system tokens - October 2025 trends */
+.card-elevation-1 {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+.card-elevation-2 {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+.card-elevation-3 {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Consistent border radius scale */
+.radius-sm { border-radius: 0.5rem; }
+.radius-md { border-radius: 1rem; }
+.radius-lg { border-radius: 1.5rem; }
+.radius-xl { border-radius: 2rem; }
+.radius-2xl { border-radius: 3rem; }

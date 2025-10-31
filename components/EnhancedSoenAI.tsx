@@ -299,7 +299,7 @@ export const EnhancedSoenAI: React.FC<EnhancedSoenAIProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="h-full flex flex-col bg-bg">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-700">
         <div className="flex items-center space-x-3">

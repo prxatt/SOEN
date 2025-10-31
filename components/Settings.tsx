@@ -58,6 +58,39 @@ function SettingsRow({ icon, title, subtitle, onClick, action }: SettingsRowProp
 
 function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme, setActiveTheme, purchasedRewards, browserPushEnabled, setBrowserPushEnabled }: SettingsProps) {
   const purchasedThemes = REWARDS_CATALOG.filter(r => r.type === 'theme' && purchasedRewards.includes(r.id));
+  
+  // Travel Mode, Sick Mode, and Temperature Unit state
+  const [travelMode, setTravelMode] = React.useState(false);
+  const [sickMode, setSickMode] = React.useState(false);
+  const [temperatureUnit, setTemperatureUnit] = React.useState<'c' | 'f'>('c');
+
+  React.useEffect(() => {
+    // Load modes from localStorage
+    const savedTravelMode = localStorage.getItem('soen-travel-mode') === 'true';
+    const savedSickMode = localStorage.getItem('soen-sick-mode') === 'true';
+    const savedTempUnit = (localStorage.getItem('soen-temperature-unit') || 'c') as 'c' | 'f';
+    setTravelMode(savedTravelMode);
+    setSickMode(savedSickMode);
+    setTemperatureUnit(savedTempUnit);
+  }, []);
+
+  const handleTravelModeToggle = () => {
+    const newValue = !travelMode;
+    setTravelMode(newValue);
+    localStorage.setItem('soen-travel-mode', String(newValue));
+  };
+
+  const handleSickModeToggle = () => {
+    const newValue = !sickMode;
+    setSickMode(newValue);
+    localStorage.setItem('soen-sick-mode', String(newValue));
+  };
+
+  const handleTemperatureUnitToggle = () => {
+    const newUnit = temperatureUnit === 'c' ? 'f' : 'c';
+    setTemperatureUnit(newUnit);
+    localStorage.setItem('soen-temperature-unit', newUnit);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-h-[calc(100vh-8.5rem)] overflow-y-auto pb-4 pr-2 -mr-2">
@@ -152,6 +185,41 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                             className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${browserPushEnabled ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}
                         >
                             <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${browserPushEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    }
+                />
+                <div className="border-t border-border/50 my-1 mx-2"></div>
+                <SettingsRow 
+                    icon={<svg className="w-6 h-6 text-teal-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 00-7 7v2H4a2 2 0 00-2 2v7h20v-7a2 2 0 00-2-2h-1V9a7 7 0 00-7-7zm0 2a5 5 0 015 5v2H7V9a5 5 0 015-5z"/></svg>}
+                    title="Travel Mode"
+                    subtitle="Adjust notifications and insights for travel"
+                    action={
+                        <button onClick={handleTravelModeToggle} role="switch" aria-checked={travelMode}
+                            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${travelMode ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${travelMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    }
+                />
+                <SettingsRow 
+                    icon={<svg className="w-6 h-6 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2 2 0 01-2-2h4a2 2 0 01-2 2zM5 17h14a1 1 0 001-1v-4a7 7 0 00-5-6.708V4a2 2 0 10-4 0v1.292A7 7 0 004 12v4a1 1 0 001 1z"/></svg>}
+                    title="Sick Day Mode"
+                    subtitle="Reduce workload and adjust insights for recovery"
+                    action={
+                        <button onClick={handleSickModeToggle} role="switch" aria-checked={sickMode}
+                            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${sickMode ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${sickMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    }
+                />
+                <div className="border-t border-border/50 my-1 mx-2"></div>
+                <SettingsRow 
+                    icon={<svg className="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/></svg>}
+                    title="Temperature Unit"
+                    subtitle={`Display temperature in ${temperatureUnit.toUpperCase() === 'C' ? 'Fahrenheit' : 'Celsius'}`}
+                    action={
+                        <button onClick={handleTemperatureUnitToggle} role="switch" aria-checked={temperatureUnit === 'f'}
+                            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${temperatureUnit === 'f' ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${temperatureUnit === 'f' ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     }
                 />

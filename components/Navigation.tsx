@@ -55,7 +55,7 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
       className="relative"
     >
       <motion.button
-        onClick={onClick}
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
         aria-current={isActive ? 'page' : undefined}
         aria-label={label}
         className={`
@@ -219,9 +219,9 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
                   transition={{ duration: 0.2 }}
                   className="flex justify-center"
                 >
-                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                    <span className="text-black font-bold text-sm">P</span>
-                  </div>
+          <div className="px-2 py-1 border border-white/60 rounded-sm">
+            <span className="text-white font-extrabold text-[10px] tracking-widest">SOEN</span>
+          </div>
                 </motion.div>
               ) : (
             <motion.div
@@ -232,12 +232,11 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
                   transition={{ duration: 0.3, delay: 0.1 }}
                   className="flex items-center space-x-3"
                 >
-                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                    <span className="text-black font-bold text-sm">P</span>
+                  <div className="px-2 py-1 border border-white/60 rounded-sm">
+                    <span className="text-white font-extrabold text-sm tracking-widest">SOEN</span>
                   </div>
                   <div>
-                    <h1 className="text-white font-bold text-lg tracking-tight">Soen</h1>
-                    <p className="text-white/60 text-xs">AI Command Center</p>
+                    <h1 className="text-white font-semibold text-sm tracking-wide uppercase">SOEN by SURFACE TENSION</h1>
                   </div>
             </motion.div>
               )}

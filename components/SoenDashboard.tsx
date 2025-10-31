@@ -214,10 +214,8 @@ const SoenHeader: React.FC = () => {
 
     return (
         <motion.header
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-                scrolled 
-                    ? 'bg-black/80 backdrop-blur-md border-b border-white/10 py-2' 
-                    : 'bg-transparent py-3 md:py-4'
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent ${
+                scrolled ? 'py-2' : 'py-3 md:py-4'
             }`}
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -243,9 +241,9 @@ const SoenHeader: React.FC = () => {
                                 animate={{ opacity: 1, width: 'auto' }}
                                 exit={{ opacity: 0, width: 0 }}
                                 transition={{ duration: 0.3 }}
-                                className="font-bold text-lg sm:text-2xl text-white whitespace-nowrap"
+                                className="font-extrabold tracking-tight text-lg sm:text-2xl text-white whitespace-nowrap"
                             >
-                                Soen
+                                SOEN
                             </motion.span>
                         )}
                     </AnimatePresence>
@@ -2401,7 +2399,8 @@ const DailyGreeting: React.FC<{
 // Recent Notes Widget - Small widget with looping animation showing recent notes
 const RecentNotesWidget: React.FC<{
     notes: Note[];
-}> = ({ notes }) => {
+    onOpenNote?: (noteId: number) => void;
+}> = ({ notes, onOpenNote }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     
     const recentNotes = notes
@@ -2476,7 +2475,11 @@ const RecentNotesWidget: React.FC<{
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.5 }}
-                    className="space-y-2"
+                    className="space-y-2 cursor-pointer"
+                    onClick={() => {
+                        try { localStorage.setItem('soen-selected-note-id', String(currentNote.id)); } catch {}
+                        if (onOpenNote) onOpenNote(currentNote.id);
+                    }}
                 >
                     <h4 className="text-sm font-bold text-white line-clamp-1">{currentNote.title || 'Untitled Note'}</h4>
                     <p className="text-xs text-white/80 line-clamp-2">
@@ -2653,6 +2656,7 @@ const SoenRewardsWidget: React.FC<{
 // Main Dashboard Component
 const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
     const [insightExpanded, setInsightExpanded] = useState(false);
+    const [miraChatOpen, setMiraChatOpen] = useState(false);
     const { tasks, notes, healthData, briefing, isBriefingLoading, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' } = props;
     
     // Focus mode state
@@ -2965,7 +2969,10 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                             />
                             
                             {/* Recent Notes Widget - Small, looping animation */}
-                            <RecentNotesWidget notes={notes} />
+                            <RecentNotesWidget 
+                                notes={notes}
+                                onOpenNote={() => setScreen('Notes')}
+                            />
                         </div>
 
                     </div>
@@ -3005,6 +3012,45 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                 </motion.div>
             </div>
         </motion.div>
+
+        {/* Mira Chat Overlay - floating pop-up (does not shift layout) */}
+        <AnimatePresence>
+            {miraChatOpen && (
+                <motion.div
+                    key="mira-chat-overlay"
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                >
+                    <div className="absolute inset-0 bg-black/60" onClick={() => setMiraChatOpen(false)} />
+                    <motion.div
+                        className="relative w-full max-w-2xl rounded-2xl overflow-hidden"
+                        initial={{ scale: 0.95, y: 10, opacity: 0 }}
+                        animate={{ scale: 1, y: 0, opacity: 1 }}
+                        exit={{ scale: 0.95, y: 10, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{ backgroundColor: '#0B0B0C', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                        <div className="flex items-center justify-between p-3 border-b border-white/10">
+                            <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h8m-8 4h6" /></svg>
+                                <h4 className="font-semibold text-sm">Mira Chat</h4>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setScreen('Mira')} className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-xs">Open Full</button>
+                                <button onClick={() => setMiraChatOpen(false)} className="p-2 rounded-md bg-white/10 hover:bg-white/20" aria-label="Close">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div className="p-4 text-sm text-white/80">
+                            <p>This is a compact Mira chat pop-up. Type in the full chat for richer features.</p>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
         </>
     );
 };
@@ -3110,9 +3156,9 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
                 </div>
             </div>
 
-            <div className="mb-4">
-                <div className="text-sm text-white/80">{today.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</div>
-                <div className="mt-2 flex flex-wrap gap-2">
+            {/* KPIs and chips only; no date duplication */}
+            <div className="mb-2">
+                <div className="mt-1 flex flex-wrap gap-2">
                     <span className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs">Energy: {healthData.energyLevel || 'High'}</span>
                     <span className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs">Sleep: {healthData.avgSleepHours?.toFixed(0) || '7'}h</span>
                     <span className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs">Tasks: {todayTasks.length}</span>
@@ -3293,34 +3339,7 @@ function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigate
             )}
 
             {/* Other Tasks - Non-meeting tasks */}
-            <div className="mt-4">
-                <h4 className="text-xs font-semibold text-white/80 mb-2">
-                    {todayMeetings.length > 0 ? 'Other Tasks' : 'Suggested Actions'}
-                </h4>
-                <div className="space-y-2">
-                    {todayTasks
-                        .filter(t => !todayMeetings.includes(t))
-                        .slice(0, todayMeetings.length > 0 ? 3 : 6)
-                        .map(t => (
-                        <div key={`sug-${t.id}`} className="p-3 rounded-xl bg-white/5 text-sm flex items-center justify-between">
-                            <div className="truncate mr-3">{t.title}</div>
-                            <button
-                                onClick={() => {
-                                    navigateToScheduleDate(new Date(t.startTime), t.id);
-                                    setScreen('Schedule');
-                                }}
-                                className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs"
-                            >Open</button>
-                        </div>
-                    ))}
-                    {todayTasks.filter(t => !todayMeetings.includes(t)).length === 0 && todayMeetings.length > 0 && (
-                        <div className="p-3 rounded-xl bg-white/5 text-white/70 text-xs">No other tasks today.</div>
-                    )}
-                    {todayTasks.length === 0 && (
-                        <div className="p-3 rounded-xl bg-white/5 text-white/70 text-xs">No tasks today. Ask Mira for a plan.</div>
-                    )}
-                </div>
-            </div>
+            {/* Remove suggested actions and task repetition from Mira Daily */}
 
             {showDetailed && (
                 <div className="mt-6 space-y-3 border-t border-white/10 pt-4">

@@ -4,6 +4,12 @@ import type { HealthData, Task } from '../types';
 interface MobileDashboardTilesProps {
   healthData: HealthData;
   tasks: Task[];
+  // Optional dynamic props to avoid hardcoding placeholder values
+  weightChangeKg?: number;                // e.g., -3 (kg)
+  weightChangePercent?: number;           // e.g., -3.8 (percent)
+  calorieTrendPct?: number;               // e.g., +4.6 (percent)
+  meal?: { title: string; kcal: number }; // e.g., { title: 'Breakfast', kcal: 260 }
+  macros?: { proteins: number; carbs: number; fats: number; rdcPercent: number };
 }
 
 // Vivid, non-gradient palette (no purple, no gradients)
@@ -16,13 +22,16 @@ const TILE_COLORS = {
   white: '#FFFFFF'
 } as const;
 
-export default function MobileDashboardTiles({ healthData, tasks }: MobileDashboardTilesProps) {
+export default function MobileDashboardTiles({ healthData, tasks, weightChangeKg, weightChangePercent, calorieTrendPct, meal, macros }: MobileDashboardTilesProps) {
   const today = new Date().toDateString();
   const todaysCalories = Math.round(healthData?.caloriesBurned ?? 0);
   const todaysTasks = tasks.filter(t => new Date(t.startTime).toDateString() === today);
   const completionPct = todaysTasks.length
     ? Math.round((todaysTasks.filter(t => t.status === 'Completed').length / todaysTasks.length) * 100)
     : 0;
+
+  const computedMeal = meal ?? { title: 'Breakfast', kcal: 260 };
+  const computedMacros = macros ?? { proteins: 58.6, carbs: 48.8, fats: 20.3, rdcPercent: 16 };
 
   return (
     <section className="md:hidden space-y-4 pb-20">

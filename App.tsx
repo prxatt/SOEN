@@ -63,7 +63,6 @@ import Toast from './components/Toast';
 import IntegratedLoadingScreen from './components/IntegratedLoadingScreen'; // Integrated Loading Screen
 import ErrorBoundary from './components/ErrorBoundary'; // Error boundary for crash prevention
 import { SoenLogo } from './components/Icons';
-import MobileOptimizedStyles from './components/MobileOptimizedStyles';
 
 
 // Import services and utils
@@ -954,7 +953,6 @@ function App() {
 
     return (
         <ErrorBoundary>
-            <MobileOptimizedStyles />
             <div className={`min-h-screen font-sans bg-bg text-text transition-colors duration-300 flex`}>
                 {focusTask ? (
                      <ErrorBoundary>

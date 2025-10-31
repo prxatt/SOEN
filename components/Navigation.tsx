@@ -141,6 +141,11 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
   // Mobile: scroll-aware bottom navigation behavior
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      // Respect user preference: keep nav visible and skip scroll-driven animations
+      setIsMobileNavVisible(true);
+      return;
+    }
     const threshold = 6; // minimal delta to consider scroll direction
 
     const onScroll = () => {

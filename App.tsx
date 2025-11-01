@@ -185,6 +185,7 @@ function App() {
     const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
     const [previousScreen, setPreviousScreen] = useState<Screen>('Dashboard');
     const [uiMode, setUiMode] = useState<'dark' | 'glass'>('glass');
     const [activeTheme, setActiveTheme] = useState('obsidian');
@@ -999,9 +1000,12 @@ function App() {
                 ) : (
                     <>
                         <ErrorBoundary>
-                            <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
+                            <Navigation activeScreen={activeScreen} setScreen={navigateTo} onCollapsedChange={setSidebarCollapsed} />
                         </ErrorBoundary>
-                        <main className="flex-1 ml-0 md:ml-20 min-w-0 pb-mobile-nav md:pb-0 bg-bg" style={{ marginLeft: 0, backgroundColor: '#0B0B0C', width: '100%' }}>
+                        <main 
+                            className={`flex-1 ml-0 min-w-0 pb-mobile-nav md:pb-0 bg-bg transition-all duration-500 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}
+                            style={{ backgroundColor: '#0B0B0C' }}
+                        >
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={activeScreen}

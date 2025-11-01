@@ -206,7 +206,6 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
             h-full flex flex-col transition-all duration-500 ease-out
             ${collapsed ? 'w-16' : 'w-64'}
             bg-black/95 backdrop-blur-xl
-            border-r border-white/10
           `}
           style={{ 
             paddingLeft: collapsed ? '0.25rem' : '0rem',

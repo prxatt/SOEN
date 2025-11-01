@@ -50,7 +50,7 @@ html:not(.dark) {
 
 body {
   color: var(--color-text);
-  background-color: #0B0B0C;
+  background-color: var(--color-bg);
   overflow-x: hidden; /* Prevent horizontal scroll on mobile */
   margin: 0;
   padding: 0;
@@ -65,7 +65,7 @@ html, body, #root {
   left: 0;
   right: 0;
   overflow-x: hidden;
-  background-color: #0B0B0C;
+  background-color: var(--color-bg);
 }
 
 /* Safe area utilities for mobile devices with notches/home indicators */

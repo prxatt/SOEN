@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HomeIcon, CalendarIcon, DocumentTextIcon, UserCircleIcon, BabyPenguinIcon, GiftIcon } from './Icons';
+import { HomeIcon, CalendarIcon, DocumentTextIcon, UserCircleIcon, BabyPenguinIcon, GiftIcon, ChevronLeftIcon, ChevronRightIcon } from './Icons';
 import type { Screen } from '../types';
 
 interface NavigationProps {
   activeScreen: Screen;
   setScreen: (screen: Screen) => void;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
 interface NavButtonProps {
@@ -107,8 +108,13 @@ function NavButton({ Icon, screen, label, isActive, onClick, collapsed, index }:
   );
 }
 
-function Navigation({ activeScreen, setScreen }: NavigationProps) {
+function Navigation({ activeScreen, setScreen, onCollapsedChange }: NavigationProps) {
   const [collapsed, setCollapsed] = useState(true); // Always start collapsed
+  
+  // Notify parent when collapsed state changes
+  useEffect(() => {
+    onCollapsedChange?.(collapsed);
+  }, [collapsed, onCollapsedChange]);
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(false); // hidden on load
   const [scrolled, setScrolled] = useState(false); // Track scroll state for SOEN text visibility
   const hasShownOnceRef = useRef(false);
@@ -121,22 +127,13 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
     setCollapsed(!collapsed);
   }, [collapsed]);
 
-  // Click outside to collapse
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (navRef.current && !navRef.current.contains(event.target as Node)) {
-        setCollapsed(true);
-      }
-    };
+  // Don't auto-collapse on outside click - let user control it
+  // Removed auto-collapse behavior
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Auto-collapse when clicking on a tab
+  // Navigate without collapsing
   const handleTabClick = useCallback((screen: Screen) => {
     setScreen(screen);
-    setCollapsed(true);
+    // Don't auto-collapse - let user control sidebar state
   }, [setScreen]);
 
   // Track scroll state for SOEN text visibility in sidebar
@@ -199,18 +196,22 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
   return (
     <>
       {/* Desktop Navigation - Fixed to top-left corner */}
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 z-50">
+      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 z-50" style={{ margin: 0, padding: 0, left: 0, backgroundColor: '#0B0B0C' }}>
         <motion.div
           ref={navRef}
           className={`
             h-full flex flex-col transition-all duration-500 ease-out
             ${collapsed ? 'w-16' : 'w-64'}
             bg-black/95 backdrop-blur-xl
-            border-r border-white/10
           `}
           style={{ 
             paddingLeft: collapsed ? '0.25rem' : '0rem',
-            paddingRight: collapsed ? '0.25rem' : '0rem'
+            paddingRight: collapsed ? '0.25rem' : '0rem',
+            margin: 0,
+            left: 0,
+            borderRight: 'none',
+            outline: 'none',
+            backgroundColor: 'rgba(0, 0, 0, 0.95)'
           }}
           onClick={handleNavClick}
           initial={{ x: -100, opacity: 0 }}
@@ -307,7 +308,28 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
           </nav>
 
           {/* Bottom Navigation Items */}
-          <div className="p-4 border-t border-white/10">
+          <div className="p-4 border-t border-white/10 space-y-2">
+            {/* Expand/Collapse Button */}
+            <motion.button
+              onClick={() => setCollapsed(!collapsed)}
+              className={`
+                w-full flex items-center transition-all duration-300 rounded-xl
+                ${collapsed ? 'justify-center h-12' : 'justify-start h-12 px-4'}
+                bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-white/20
+              `}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {collapsed ? (
+                <ChevronRightIcon className="w-5 h-5" />
+              ) : (
+                <>
+                  <ChevronLeftIcon className="w-5 h-5 mr-3" />
+                  <span className="text-sm font-medium">Collapse</span>
+                </>
+              )}
+            </motion.button>
+            
             <ul className="space-y-2">
               {BOTTOM_NAV_ITEMS.map((item, index) => (
                 <NavButton

@@ -991,7 +991,7 @@ function App() {
 
     return (
         <ErrorBoundary>
-            <div className={`min-h-screen w-full font-sans bg-bg text-text transition-colors duration-300 flex overflow-x-hidden`} style={{ margin: 0, padding: 0 }}>
+            <div className={`min-h-screen w-full font-sans bg-bg text-text transition-colors duration-300 flex overflow-x-hidden`} style={{ margin: 0, padding: 0, backgroundColor: '#0B0B0C' }}>
                 {focusTask ? (
                      <ErrorBoundary>
                          <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
@@ -1001,7 +1001,7 @@ function App() {
                         <ErrorBoundary>
                             <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
                         </ErrorBoundary>
-                        <main className="flex-1 ml-0 md:ml-20 min-w-0 pb-mobile-nav md:pb-0 bg-bg" style={{ marginLeft: 0 }}>
+                        <main className="flex-1 ml-0 md:ml-20 min-w-0 pb-mobile-nav md:pb-0 bg-bg" style={{ marginLeft: 0, backgroundColor: '#0B0B0C', width: '100%' }}>
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={activeScreen}

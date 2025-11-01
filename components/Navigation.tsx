@@ -199,7 +199,7 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
   return (
     <>
       {/* Desktop Navigation - Fixed to top-left corner */}
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 z-50" style={{ margin: 0, padding: 0, left: 0 }}>
+      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 z-50" style={{ margin: 0, padding: 0, left: 0, backgroundColor: '#0B0B0C' }}>
         <motion.div
           ref={navRef}
           className={`
@@ -213,7 +213,8 @@ function Navigation({ activeScreen, setScreen }: NavigationProps) {
             margin: 0,
             left: 0,
             borderRight: 'none',
-            outline: 'none'
+            outline: 'none',
+            backgroundColor: 'rgba(0, 0, 0, 0.95)'
           }}
           onClick={handleNavClick}
           initial={{ x: -100, opacity: 0 }}

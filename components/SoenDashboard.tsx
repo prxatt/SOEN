@@ -3945,18 +3945,18 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
     return (
         <motion.div
             className="min-h-screen relative overflow-x-hidden"
-            style={{ backgroundColor: '#0B0B0C' }}
+            style={{ backgroundColor: '#0B0B0C', width: '100%', margin: 0, padding: 0 }}
             variants={containerVariants}
             initial="hidden"
             animate="visible"
         >
             {/* Global dark background to eliminate any white line near the sidebar */}
-            <div className="fixed inset-0 bg-[#0B0B0C] -z-10" style={{ left: 0, right: 0, top: 0, bottom: 0 }} />
+            <div className="fixed inset-0 bg-[#0B0B0C] -z-10" style={{ left: 0, right: 0, top: 0, bottom: 0, width: '100%', backgroundColor: '#0B0B0C' }} />
             {/* Floating particles background */}
             <FloatingParticles count={50} />
 
             {/* Main Content - Mobile-first responsive design with proper touch targets */}
-            <div className="app-container py-4 md:py-6 lg:py-8 px-0 sm:px-0 lg:px-0 mx-0">
+            <div className="app-container py-1 md:py-2 lg:py-4 px-0 sm:px-0 lg:px-0 mx-0">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

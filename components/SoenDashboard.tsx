@@ -2936,16 +2936,17 @@ const DailyGreeting: React.FC<{
                                     }
                                 }}
                                 className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-colors min-h-[44px] min-w-[44px] justify-center relative ${
-                                        day.isToday && !isSelected ? 'bg-emerald-500' : 
-                                        isSelected ? 'bg-emerald-400' : 'bg-white/5 hover:bg-white/10'
+                                        isSelected ? 'bg-emerald-400' : 
+                                        day.isToday && !selectedDate ? 'bg-emerald-500' : 
+                                        'bg-white/5 hover:bg-white/10'
                                 }`}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                             >
-                                    <div className={`text-xs font-semibold ${day.isToday || isSelected ? 'text-white' : 'text-white/70'}`}>{day.day}</div>
-                                    <div className={`text-sm font-bold ${day.isToday || isSelected ? 'text-white' : 'text-white'}`}>{day.date}</div>
+                                    <div className={`text-xs font-semibold ${isSelected || (day.isToday && !selectedDate) ? 'text-white' : 'text-white/70'}`}>{day.day}</div>
+                                    <div className={`text-sm font-bold ${isSelected || (day.isToday && !selectedDate) ? 'text-white' : 'text-white'}`}>{day.date}</div>
                                 {day.taskCount > 0 && (
-                                        <div className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${day.isToday || isSelected ? 'bg-white' : 'bg-emerald-400'}`} />
+                                        <div className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isSelected || (day.isToday && !selectedDate) ? 'bg-white' : 'bg-emerald-400'}`} />
                                 )}
                             </motion.button>
                             );

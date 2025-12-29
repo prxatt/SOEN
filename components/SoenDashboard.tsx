@@ -35,13 +35,15 @@
  * - Use text shadows (textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)') on white text over dark backgrounds
  * - Never use white text on light backgrounds or black text on dark backgrounds
  * - Test all text visibility before committing changes
- * - If in doubt, use ensureTextContrast() helper function to validate contrast
+ * - Use getTextColorForBackground() helper function for dynamic text color selection
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Note, HealthData, Goal, Category, MissionBriefing, Screen, TaskStatus } from '../types';
 import { safeGet } from '../utils/validation';
+import { calculateFlowPoints } from '../utils/points';
+import { REWARDS_CATALOG, getThemeColors, getFocusBackgroundColors } from '../constants';
 import { 
     CheckCircleIcon, SparklesIcon, HeartIcon, BoltIcon, ClockIcon, 
     SunIcon, ChevronLeftIcon, ChevronRightIcon, BrainCircuitIcon, PlusIcon,
@@ -118,32 +120,6 @@ const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
     return luminance > 0.5 ? 'black' : 'white';
 };
 
-// CRITICAL RULESET: Ensure text contrast is always maintained
-// This function calculates contrast ratio and ensures WCAG AA compliance (4.5:1 for normal text)
-const ensureTextContrast = (backgroundColor: string, textColor: 'black' | 'white'): string => {
-    // For dark backgrounds (luminance < 0.5), always use white text
-    // For light backgrounds (luminance >= 0.5), always use black text
-    if (!backgroundColor.startsWith('#')) return textColor;
-    
-    const r = parseInt(backgroundColor.slice(1, 3), 16);
-    const g = parseInt(backgroundColor.slice(3, 5), 16);
-    const b = parseInt(backgroundColor.slice(5, 7), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    
-    // If background is dark (luminance < 0.5), force white text
-    if (luminance < 0.5 && textColor === 'black') {
-        console.warn('Text contrast violation: Dark background detected but black text specified. Forcing white text.');
-        return 'white';
-    }
-    
-    // If background is light (luminance >= 0.5), force black text
-    if (luminance >= 0.5 && textColor === 'white') {
-        console.warn('Text contrast violation: Light background detected but white text specified. Forcing black text.');
-        return 'black';
-    }
-    
-    return textColor;
-};
 
 // Floating particles component
 function FloatingParticles({ count = 50 }) {
@@ -1692,28 +1668,8 @@ const FocusTimerWidget: React.FC<{
     const [pomodoroStreak, setPomodoroStreak] = useState(0);
     const [sessionPoints, setSessionPoints] = useState(0);
 
-    // Theme-based color functions (defined first to avoid hoisting issues)
-    const getThemeColors = (theme: string): string[] => {
-        const themeColorMap: Record<string, string[]> = {
-            'synthwave': ['#EC4899', '#7c3aed', '#f97316', '#ef4444'],
-            'solarpunk': ['#a3e635', '#16a34a', '#22c55e', '#10b981'],
-            'luxe': ['#fde047', '#eab308', '#f59e0b', '#d97706'],
-            'aurelian': ['#fbbf24', '#f59e0b', '#d97706', '#b45309'],
-            'crimson': ['#f87171', '#dc2626', '#b91c1c', '#991b1b'],
-            'oceanic': ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1'],
-            'obsidian': ['#667eea', '#764ba2', '#f093fb', '#f5576c']
-        };
-        return themeColorMap[theme] || themeColorMap['obsidian'];
-    };
-
-    const getBackgroundColors = (background: string): string[] => {
-        const backgroundMap: Record<string, string[]> = {
-            'synthwave': ['#EC4899', '#7c3aed', '#f97316', '#ef4444'],
-            'lofi': ['#4f46e5', '#1e293b', '#334155', '#475569'],
-            'solarpunk': ['#a3e635', '#16a34a', '#22c55e', '#10b981']
-        };
-        return backgroundMap[background] || backgroundMap['synthwave'];
-    };
+    // Use centralized theme color functions from constants
+    // Note: getThemeColors and getFocusBackgroundColors are imported from constants.ts
 
     // Enhanced Pomodoro session configurations with theme integration
     const getSessionConfig = () => {
@@ -1735,9 +1691,9 @@ const FocusTimerWidget: React.FC<{
         }
     };
 
-        // Apply theme-based colors
+        // Apply theme-based colors (using centralized functions from constants)
         const themeColors = getThemeColors(activeTheme);
-        const backgroundColors = getBackgroundColors(activeFocusBackground);
+        const backgroundColors = getFocusBackgroundColors(activeFocusBackground);
 
         return {
             focus: { 
@@ -2105,19 +2061,17 @@ const DailyGreeting: React.FC<{
     const getGreeting = () => {
         const now = new Date();
         const hour = now.getHours();
-        const sixHourBlock = Math.floor(hour / 6);
         
         // Check task completion status
         const completionRate = todayTasks.length > 0 ? (completedToday / todayTasks.length) * 100 : 0;
         const allCompleted = completedToday === todayTasks.length && todayTasks.length > 0;
         const hasTasks = todayTasks.length > 0;
         
-        // Time-based greetings (change every 6 hours)
+        // Time-based greetings
         let timeGreeting = '';
-        if (sixHourBlock === 0) timeGreeting = 'Good Morning'; // 0-5
-        else if (sixHourBlock === 1) timeGreeting = 'Good Afternoon'; // 6-11
-        else if (sixHourBlock === 2) timeGreeting = 'Good Evening'; // 12-17
-        else timeGreeting = 'Good Night'; // 18-23
+        if (hour >= 0 && hour < 12) timeGreeting = 'Good Morning'; // 0-11 (midnight to noon)
+        else if (hour >= 12 && hour < 18) timeGreeting = 'Good Afternoon'; // 12-17 (noon to 5pm)
+        else timeGreeting = 'Good Evening'; // 18-23 (6pm to midnight)
         
         // Task-based modifications
         if (allCompleted) {
@@ -2156,105 +2110,50 @@ const DailyGreeting: React.FC<{
     const sleep = (healthData as any).sleep || 0;
     const water = (healthData as any).water || 0;
 
-    // SOEN Rewards Integration - Extract logic from SoenRewardsWidget
+    // SOEN Rewards Integration - Use REWARDS_CATALOG as single source of truth
     const [currentPoints, setCurrentPoints] = useState(0);
     const [level, setLevel] = useState(1);
     const [showRewardsDetail, setShowRewardsDetail] = useState(false);
 
-    const themes = [
-        { id: 'theme-obsidian', name: 'Obsidian Flow', cost: 0, unlocked: true, colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c'] },
-        { id: 'theme-synthwave', name: 'Synthwave Sunset', cost: 150, unlocked: purchasedRewards.includes('theme-synthwave'), colors: ['#EC4899', '#7c3aed', '#f97316', '#ef4444'] },
-        { id: 'theme-solarpunk', name: 'Solarpunk Dawn', cost: 150, unlocked: purchasedRewards.includes('theme-solarpunk'), colors: ['#a3e635', '#16a34a', '#22c55e', '#10b981'] },
-        { id: 'theme-luxe', name: 'Luxe Marble', cost: 250, unlocked: purchasedRewards.includes('theme-luxe'), colors: ['#fde047', '#eab308', '#f59e0b', '#d97706'] },
-        { id: 'theme-aurelian', name: 'Aurelian Gold', cost: 300, unlocked: purchasedRewards.includes('theme-aurelian'), colors: ['#fbbf24', '#f59e0b', '#d97706', '#b45309'] },
-        { id: 'theme-crimson', name: 'Crimson Fury', cost: 200, unlocked: purchasedRewards.includes('theme-crimson'), colors: ['#f87171', '#dc2626', '#b91c1c', '#991b1b'] },
-        { id: 'theme-oceanic', name: 'Oceanic Depth', cost: 200, unlocked: purchasedRewards.includes('theme-oceanic'), colors: ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1'] }
-    ];
+    // Derive themes and focus backgrounds from REWARDS_CATALOG
+    const themes = useMemo(() => 
+        REWARDS_CATALOG
+            .filter(r => r.type === 'theme')
+            .map(theme => ({
+                id: theme.id,
+                name: theme.name,
+                cost: theme.cost,
+                unlocked: theme.cost === 0 || purchasedRewards.includes(theme.id),
+                colors: theme.colors || getThemeColors(theme.value)
+            })),
+        [purchasedRewards]
+    );
 
-    const focusBackgrounds = [
-        { id: 'focus-synthwave', name: 'Synthwave Sunset', cost: 100, unlocked: purchasedRewards.includes('focus-synthwave'), colors: ['#EC4899', '#7c3aed', '#f97316', '#ef4444'] },
-        { id: 'focus-lofi', name: 'Lofi Rain', cost: 100, unlocked: purchasedRewards.includes('focus-lofi'), colors: ['#4f46e5', '#1e293b', '#334155', '#475569'] },
-        { id: 'focus-solarpunk', name: 'Solarpunk Garden', cost: 150, unlocked: purchasedRewards.includes('focus-solarpunk'), colors: ['#a3e635', '#16a34a', '#22c55e', '#10b981'] }
-    ];
+    const focusBackgrounds = useMemo(() =>
+        REWARDS_CATALOG
+            .filter(r => r.type === 'focus_background')
+            .map(bg => ({
+                id: bg.id,
+                name: bg.name,
+                cost: bg.cost,
+                unlocked: purchasedRewards.includes(bg.id),
+                colors: bg.colors || getFocusBackgroundColors(bg.value)
+            })),
+        [purchasedRewards]
+    );
 
-    const roundToNearestFiveOrZero = (points: number): number => {
-        const rounded = Math.round(points);
-        const remainder = rounded % 5;
-        if (remainder === 0) return rounded;
-        return rounded + (remainder <= 2 ? -remainder : 5 - remainder);
-    };
-
-    const getPriorityMultiplier = (task: Task): number => {
-        const categoryWeights: Record<string, number> = {
-            'Deep Work': 2.0, 'Learning': 1.8, 'Prototyping': 1.6, 'Meeting': 1.2,
-            'Workout': 1.4, 'Editing': 1.3, 'Personal': 1.1, 'Admin': 0.8
-        };
-        return categoryWeights[task.category] || 1.0;
-    };
-
-    const getHealthImpact = (basePoints: number): number => {
-        const energyLevel = healthData.energyLevel || 'medium';
-        const sleepQuality = healthData.sleepQuality || 'good';
-        let multiplier = 1.0;
-        if (energyLevel === 'low') multiplier *= 0.7;
-        else if (energyLevel === 'high') multiplier *= 1.1;
-        if (sleepQuality === 'poor') multiplier *= 0.8;
-        else if (sleepQuality === 'good') multiplier *= 1.1;
-        return roundToNearestFiveOrZero(basePoints * multiplier);
-    };
-
-    const checkPomodoroCompletion = (taskId: number): boolean => {
-        return Math.random() > 0.3;
-    };
-
-    const getPomodoroStreakBonus = (): number => {
-        const streak = Math.floor(Math.random() * 10) + 1;
-        if (streak >= 30) return 30;
-        if (streak >= 14) return 20;
-        if (streak >= 7) return 10;
-        return 0;
-    };
-
+    // Use shared points calculation utility
     useEffect(() => {
-        const calculateFlowPoints = async () => {
-            const completedTasks = tasks.filter(t => t.status === 'Completed');
-            const totalTasks = tasks.length;
-            const completionRate = totalTasks > 0 ? (completedTasks.length / totalTasks) * 100 : 0;
-            
-            let totalPoints = 0;
-            let dailyPoints = 0;
-            
-            for (const task of completedTasks) {
-                let taskPoints = 10;
-                const priorityMultiplier = getPriorityMultiplier(task);
-                taskPoints *= priorityMultiplier;
-                const healthImpact = getHealthImpact(taskPoints);
-                taskPoints = healthImpact;
-                const pomodoroBonus = checkPomodoroCompletion(task.id) ? 5 : 0;
-                taskPoints += pomodoroBonus;
-                dailyPoints += taskPoints;
-            }
-            
-            dailyPoints = Math.min(dailyPoints, 100);
-            const streakBonus = getPomodoroStreakBonus();
-            dailyPoints += streakBonus;
-            const completionBonus = roundToNearestFiveOrZero(completionRate * 0.5);
-            dailyPoints += completionBonus;
-            totalPoints = roundToNearestFiveOrZero(dailyPoints);
-            const newLevel = Math.floor(totalPoints / 500) + 1;
-            
-            setCurrentPoints(totalPoints);
-            setLevel(newLevel);
-        };
-
-        calculateFlowPoints();
+        const { totalPoints, level: calculatedLevel } = calculateFlowPoints(tasks, healthData);
+        setCurrentPoints(totalPoints);
+        setLevel(calculatedLevel);
     }, [tasks, healthData]);
 
     const nextLevelPoints = level * 500;
-    const insights = {
+    const insights = useMemo(() => ({
         unlockedThemes: themes.filter(t => t.unlocked).length,
         unlockedBackgrounds: focusBackgrounds.filter(b => b.unlocked).length
-    };
+    }), [themes, focusBackgrounds]);
 
     // Geolocation state
     const [location, setLocation] = useState<{ city: string; temp: number; condition: string } | null>(null);
@@ -2369,25 +2268,25 @@ const DailyGreeting: React.FC<{
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
                     {/* Left: Greeting and Quote */}
                     <div className="lg:col-span-2 text-center lg:text-left">
-                        <motion.h1 
+                    <motion.h1 
                             className="text-2xl md:text-4xl lg:text-5xl font-bold mb-3 leading-tight"
                             style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)' }}
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: 0.2 }}
-                        >
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.2 }}
+                    >
                             {getGreeting()}, <span className="text-emerald-400" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)' }}>Pratt</span>
-                        </motion.h1>
-                        <motion.div
+                    </motion.h1>
+                    <motion.div
                             className="text-sm md:text-base italic max-w-2xl leading-relaxed mb-4"
                             style={{ color: '#f0f0f0', textShadow: '0 1px 4px rgba(0, 0, 0, 0.5)' }}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: 0.4 }}
-                        >
-                            "{todayQuote}"
-                        </motion.div>
-                    </div>
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.4 }}
+                    >
+                        "{todayQuote}"
+                    </motion.div>
+                </div>
 
                     {/* Right: Weather, Rewards, and Health */}
                     <div className="flex flex-col gap-3">
@@ -2443,14 +2342,14 @@ const DailyGreeting: React.FC<{
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-6 h-6 flex-shrink-0">
                                     <GhibliPenguin />
-                                </div>
+                    </div>
                                 <div className="flex-1">
                                     <div className="text-xs font-semibold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>SOEN Rewards</div>
                                     <div className="flex items-center gap-1.5 text-xs" style={{ color: '#e0e0e0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
                                         <span>Lv {level}</span>
                                         <span>•</span>
                                         <span>{currentPoints} pts</span>
-                                    </div>
+                </div>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
@@ -2573,136 +2472,39 @@ const SoenRewardsWidget: React.FC<{
     const [showTooltip, setShowTooltip] = useState<string | null>(null);
     const [showRewardsDetail, setShowRewardsDetail] = useState(false);
 
-    // Import REWARDS_CATALOG for theme and background data
-    const themes = [
-        { id: 'theme-obsidian', name: 'Obsidian Flow', cost: 0, unlocked: true, colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c'] },
-        { id: 'theme-synthwave', name: 'Synthwave Sunset', cost: 150, unlocked: purchasedRewards.includes('theme-synthwave'), colors: ['#EC4899', '#7c3aed', '#f97316', '#ef4444'] },
-        { id: 'theme-solarpunk', name: 'Solarpunk Dawn', cost: 150, unlocked: purchasedRewards.includes('theme-solarpunk'), colors: ['#a3e635', '#16a34a', '#22c55e', '#10b981'] },
-        { id: 'theme-luxe', name: 'Luxe Marble', cost: 250, unlocked: purchasedRewards.includes('theme-luxe'), colors: ['#fde047', '#eab308', '#f59e0b', '#d97706'] },
-        { id: 'theme-aurelian', name: 'Aurelian Gold', cost: 300, unlocked: purchasedRewards.includes('theme-aurelian'), colors: ['#fbbf24', '#f59e0b', '#d97706', '#b45309'] },
-        { id: 'theme-crimson', name: 'Crimson Fury', cost: 200, unlocked: purchasedRewards.includes('theme-crimson'), colors: ['#f87171', '#dc2626', '#b91c1c', '#991b1b'] },
-        { id: 'theme-oceanic', name: 'Oceanic Depth', cost: 200, unlocked: purchasedRewards.includes('theme-oceanic'), colors: ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1'] }
-    ];
+    // Use REWARDS_CATALOG as single source of truth
+    const themes = useMemo(() => 
+        REWARDS_CATALOG
+            .filter(r => r.type === 'theme')
+            .map(theme => ({
+                id: theme.id,
+                name: theme.name,
+                cost: theme.cost,
+                unlocked: theme.cost === 0 || purchasedRewards.includes(theme.id),
+                colors: theme.colors || getThemeColors(theme.value)
+            })),
+        [purchasedRewards]
+    );
 
-    const focusBackgrounds = [
-        { id: 'focus-synthwave', name: 'Synthwave Sunset', cost: 100, unlocked: purchasedRewards.includes('focus-synthwave'), colors: ['#EC4899', '#7c3aed', '#f97316', '#ef4444'] },
-        { id: 'focus-lofi', name: 'Lofi Rain', cost: 100, unlocked: purchasedRewards.includes('focus-lofi'), colors: ['#4f46e5', '#1e293b', '#334155', '#475569'] },
-        { id: 'focus-solarpunk', name: 'Solarpunk Garden', cost: 150, unlocked: purchasedRewards.includes('focus-solarpunk'), colors: ['#a3e635', '#16a34a', '#22c55e', '#10b981'] }
-    ];
+    const focusBackgrounds = useMemo(() =>
+        REWARDS_CATALOG
+            .filter(r => r.type === 'focus_background')
+            .map(bg => ({
+                id: bg.id,
+                name: bg.name,
+                cost: bg.cost,
+                unlocked: purchasedRewards.includes(bg.id),
+                colors: bg.colors || getFocusBackgroundColors(bg.value)
+            })),
+        [purchasedRewards]
+    );
 
-    // Calculate comprehensive Flow Points with new system
+    // Use shared points calculation utility
     useEffect(() => {
-        const calculateFlowPoints = async () => {
-            const completedTasks = tasks.filter(t => t.status === 'Completed');
-            const totalTasks = tasks.length;
-            const completionRate = totalTasks > 0 ? (completedTasks.length / totalTasks) * 100 : 0;
-            
-            // NEW SYSTEM: Base points reduced to 10 per task
-            let totalPoints = 0;
-            let dailyPoints = 0;
-            
-            // Calculate points for each completed task
-            for (const task of completedTasks) {
-                let taskPoints = 10; // Base points per task
-                
-                // Apply AI priority multiplier (imported from aiPriorityService)
-                const priorityMultiplier = getPriorityMultiplier(task);
-                taskPoints *= priorityMultiplier;
-                
-                // Apply health impact (imported from healthDataService)
-                const healthImpact = getHealthImpact(taskPoints);
-                taskPoints = healthImpact;
-                
-                // Check if task was completed with Pomodoro timer
-                const pomodoroBonus = checkPomodoroCompletion(task.id) ? 5 : 0;
-                taskPoints += pomodoroBonus;
-                
-                dailyPoints += taskPoints;
-            }
-            
-            // Apply daily cap of 100 points
-            dailyPoints = Math.min(dailyPoints, 100);
-            
-            // Add Pomodoro streak bonuses
-            const streakBonus = getPomodoroStreakBonus();
-            dailyPoints += streakBonus;
-            
-            // Add completion rate bonus (reduced) - round to nearest 0 or 5
-            const completionBonus = roundToNearestFiveOrZero(completionRate * 0.5);
-            dailyPoints += completionBonus;
-            
-            // Final rounding to ensure points end in 0 or 5
-            totalPoints = roundToNearestFiveOrZero(dailyPoints);
-            
-            // Calculate level (every 500 points = 1 level)
-            const newLevel = Math.floor(totalPoints / 500) + 1;
-            
-            setCurrentPoints(totalPoints);
-            setLevel(newLevel);
-        };
-
-        calculateFlowPoints();
+        const { totalPoints, level: calculatedLevel } = calculateFlowPoints(tasks, healthData);
+        setCurrentPoints(totalPoints);
+        setLevel(calculatedLevel);
     }, [tasks, healthData]);
-
-    // Helper function to round points to nearest 0 or 5
-    const roundToNearestFiveOrZero = (points: number): number => {
-        const rounded = Math.round(points);
-        const remainder = rounded % 5;
-        if (remainder === 0) return rounded;
-        // Round to nearest 5
-        return rounded + (remainder <= 2 ? -remainder : 5 - remainder);
-    };
-
-    // Helper functions for new point system
-    const getPriorityMultiplier = (task: Task): number => {
-        // AI Priority System Integration
-        const categoryWeights: Record<string, number> = {
-            'Deep Work': 2.0,
-            'Learning': 1.8,
-            'Prototyping': 1.6,
-            'Meeting': 1.2,
-            'Workout': 1.4,
-            'Editing': 1.3,
-            'Personal': 1.1,
-            'Admin': 0.8
-        };
-        
-        return categoryWeights[task.category] || 1.0;
-    };
-
-    const getHealthImpact = (basePoints: number): number => {
-        // Health Data Service Integration
-        const energyLevel = healthData.energyLevel || 'medium';
-        const sleepQuality = healthData.sleepQuality || 'good';
-        
-        let multiplier = 1.0;
-        
-        // Energy level impact
-        if (energyLevel === 'low') multiplier *= 0.7;
-        else if (energyLevel === 'high') multiplier *= 1.1;
-        
-        // Sleep quality impact
-        if (sleepQuality === 'poor') multiplier *= 0.8;
-        else if (sleepQuality === 'good') multiplier *= 1.1;
-        
-        return roundToNearestFiveOrZero(basePoints * multiplier);
-    };
-
-    const checkPomodoroCompletion = (taskId: number): boolean => {
-        // Pomodoro Service Integration - Check if task was completed with timer
-        return Math.random() > 0.3; // Simulated: 70% chance task was completed with Pomodoro
-    };
-
-    const getPomodoroStreakBonus = (): number => {
-        // Pomodoro Streak Bonus - returns values ending in 0 or 5
-        const streak = Math.floor(Math.random() * 10) + 1; // Simulated streak
-        
-        if (streak >= 30) return 30; // 1 month streak
-        if (streak >= 14) return 20; // 2 week streak
-        if (streak >= 7) return 10; // 1 week streak
-        
-        return 0;
-    };
 
     const nextLevelPoints = level * 500;
     const progressToNext = ((currentPoints % 500) / 500) * 100;
@@ -2812,7 +2614,7 @@ const SoenRewardsWidget: React.FC<{
                         </div>
                     <div className="text-right">
                         <div className="text-xs text-white/60">Next</div>
-                        <div className="text-white font-bold text-sm">{roundToNearestFiveOrZero(nextLevelPoints - currentPoints)} pts</div>
+                        <div className="text-white font-bold text-sm">{nextLevelPoints - currentPoints} pts</div>
                     </div>
                 </div>
 

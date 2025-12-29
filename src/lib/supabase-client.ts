@@ -1,53 +1,61 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase configuration - Environment variables are required for security
+// Supabase configuration
+// NOTE: In development, if env vars are missing we fall back to a safe mock client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Validate required environment variables
-if (!supabaseUrl) {
-  throw new Error(
-    'VITE_SUPABASE_URL environment variable is required but not set. ' +
-    'Please create a .env file in your project root with VITE_SUPABASE_URL=your_supabase_url'
-  )
-}
-if (!supabaseAnonKey) {
-  throw new Error(
-    'VITE_SUPABASE_ANON_KEY environment variable is required but not set. ' +
-    'Please create a .env file in your project root with VITE_SUPABASE_ANON_KEY=your_supabase_anon_key'
-  )
-}
+// Helper to build a safe mock client that won't crash the UI
+const createMockSupabaseClient = () => ({
+  auth: {
+    signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
+    signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
+    signOut: () => Promise.resolve({ error: null }),
+    getUser: () => Promise.resolve({ data: { user: null } }),
+    getSession: () => Promise.resolve({ data: { session: null } }),
+    resetPasswordForEmail: () => Promise.resolve({ error: null })
+  },
+  from: () => ({
+    select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }) }) }),
+    insert: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }) }),
+    update: () => ({ eq: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }) }) })
+  }),
+  channel: () => ({
+    on: () => ({ subscribe: () => ({}) })
+  })
+});
 
-// Create Supabase client with error handling
+// Create Supabase client with environment-aware fallbacks
 let supabase: any = null;
 
-try {
-  supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  });
-  console.log('✅ Supabase client initialized successfully');
-} catch (error) {
-  console.error('❌ Failed to initialize Supabase client:', error);
-  // Create a mock client for development
-  supabase = {
-    auth: {
-      signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
-      signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
-      signOut: () => Promise.resolve({ error: null }),
-      getUser: () => Promise.resolve({ data: { user: null } }),
-      getSession: () => Promise.resolve({ data: { session: null } }),
-      resetPasswordForEmail: () => Promise.resolve({ error: null })
-    },
-    from: () => ({
-      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }) }) }),
-      insert: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }) }),
-      update: () => ({ eq: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }) }) })
-    })
-  };
+if (!supabaseUrl || !supabaseAnonKey) {
+  if (import.meta.env.DEV) {
+    console.warn(
+      '[Supabase] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are not set. ' +
+      'Using a mock Supabase client in development. Auth and DB calls will be no-ops.'
+    );
+    supabase = createMockSupabaseClient();
+  } else {
+    throw new Error(
+      'Supabase environment variables are required but not set. ' +
+      'Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your production environment.'
+    );
+  }
+} else {
+  try {
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    });
+    console.log('✅ Supabase client initialized successfully');
+  } catch (error) {
+    console.error('❌ Failed to initialize Supabase client:', error);
+    // Fallback to mock client even if real initialization fails
+    supabase = createMockSupabaseClient();
+  }
 }
 
 export { supabase }

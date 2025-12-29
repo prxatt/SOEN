@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { GiftIcon, Cog6ToothIcon, ChevronRightIcon, LinkIcon, FlagIcon, CheckCircleIcon, PlusCircleIcon, SparklesIcon, CheckIcon, HeartIcon, ClockIcon, ActivityIcon, BoltIcon } from './Icons';
 import type { Screen, Goal, GoalTerm, Task, HealthData, RewardItem } from '../types';
-import { REWARDS_CATALOG } from '../constants';
+import { REWARDS_CATALOG, getThemeColors, getFocusBackgroundColors } from '../constants';
+import { calculateFlowPoints, roundToNearestFiveOrZero } from '../utils/points';
 
 // GhibliPenguin Component (same as dashboard)
 const GhibliPenguin: React.FC = () => {
@@ -126,13 +127,81 @@ interface GoalsHubProps {
   setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
 }
 
+/**
+ * Get focus background preview gradient from REWARDS_CATALOG colors
+ * Derives gradient from the first two colors of the focus background's color array
+ */
 const getFocusBgPreview = (value: string) => {
-    switch(value) {
-        case 'synthwave': return 'linear-gradient(135deg, #f5317f, #5b21b6)';
-        case 'lofi': return 'linear-gradient(135deg, #4f46e5, #1e293b)';
-        case 'solarpunk': return 'linear-gradient(135deg, #4ade80, #059669)';
-        default: return 'linear-gradient(135deg, #6b7280, #374151)';
+    const colors = getFocusBackgroundColors(value);
+    if (colors.length >= 2) {
+        return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
     }
+    // Fallback gradient
+    return 'linear-gradient(135deg, #6b7280, #374151)';
+};
+
+/**
+ * Health Metric Helper Functions
+ * Extract complex inline logic for better readability and reusability
+ */
+
+const HEALTH_COLORS = {
+    excellent: '#10b981', // green
+    good: '#f59e0b',      // amber
+    warning: '#f59e0b',   // amber
+    low: '#ef4444',       // red
+    poor: '#ef4444'       // red
+} as const;
+
+interface HealthMetric {
+    value: string;
+    color: string;
+}
+
+const getEnergyMetric = (energyLevel?: string): HealthMetric => {
+    const level = energyLevel?.toLowerCase();
+    if (level === 'high') {
+        return { value: 'High', color: HEALTH_COLORS.excellent };
+    }
+    if (level === 'low') {
+        return { value: 'Low', color: HEALTH_COLORS.low };
+    }
+    return { value: 'Medium', color: HEALTH_COLORS.warning };
+};
+
+const getSleepMetric = (avgSleepHours?: number): HealthMetric => {
+    const hours = avgSleepHours || 0;
+    if (hours >= 8) {
+        return { value: `${hours}h`, color: HEALTH_COLORS.excellent };
+    }
+    if (hours >= 6) {
+        return { value: `${hours}h`, color: HEALTH_COLORS.good };
+    }
+    return { value: `${hours}h`, color: HEALTH_COLORS.low };
+};
+
+const getActivityMetric = (stepsToday?: number): HealthMetric => {
+    if (!stepsToday) {
+        return { value: 'Good', color: HEALTH_COLORS.good };
+    }
+    if (stepsToday >= 10000) {
+        return { value: 'Excellent', color: HEALTH_COLORS.excellent };
+    }
+    if (stepsToday >= 5000) {
+        return { value: 'Good', color: HEALTH_COLORS.good };
+    }
+    return { value: 'Low', color: HEALTH_COLORS.low }; // Fixed: was incorrectly using green
+};
+
+const getStressMetric = (sleepQuality?: string): HealthMetric => {
+    const quality = sleepQuality?.toLowerCase();
+    if (quality === 'poor') {
+        return { value: 'High', color: HEALTH_COLORS.poor };
+    }
+    if (quality === 'good') {
+        return { value: 'Low', color: HEALTH_COLORS.excellent };
+    }
+    return { value: 'Medium', color: HEALTH_COLORS.warning };
 };
 
 function GoalsHub({ goals, setGoals }: GoalsHubProps) {
@@ -178,76 +247,17 @@ function Profile({ soenFlow, setScreen, goals, setGoals, activeFocusBackground, 
   const themes = REWARDS_CATALOG.filter(r => r.type === 'theme');
   const focusBackgrounds = REWARDS_CATALOG.filter(r => r.type === 'focus_background');
 
-  // Calculate points (same logic as DailyGreeting)
-  const roundToNearestFiveOrZero = (points: number): number => {
-    const rounded = Math.round(points);
-    const remainder = rounded % 5;
-    if (remainder === 0) return rounded;
-    return rounded + (remainder <= 2 ? -remainder : 5 - remainder);
-  };
-
-  const getPriorityMultiplier = (task: Task): number => {
-    const categoryWeights: Record<string, number> = {
-      'Deep Work': 2.0, 'Learning': 1.8, 'Prototyping': 1.6, 'Meeting': 1.2,
-      'Workout': 1.4, 'Editing': 1.3, 'Personal': 1.1, 'Admin': 0.8
-    };
-    return categoryWeights[task.category] || 1.0;
-  };
-
-  const getHealthImpact = (basePoints: number): number => {
-    if (!healthData) return basePoints;
-    const energyLevel = healthData.energyLevel || 'medium';
-    const sleepQuality = healthData.sleepQuality || 'good';
-    let multiplier = 1.0;
-    if (energyLevel === 'low') multiplier *= 0.7;
-    else if (energyLevel === 'high') multiplier *= 1.1;
-    if (sleepQuality === 'poor') multiplier *= 0.8;
-    else if (sleepQuality === 'good') multiplier *= 1.1;
-    return roundToNearestFiveOrZero(basePoints * multiplier);
-  };
-
-  const getPomodoroStreakBonus = (): number => {
-    const streak = Math.floor(Math.random() * 10) + 1;
-    if (streak >= 30) return 30;
-    if (streak >= 14) return 20;
-    if (streak >= 7) return 10;
-    return 0;
-  };
-
+  // Use shared points calculation utility
   useEffect(() => {
-    if (tasks.length === 0) return;
-    const calculateFlowPoints = async () => {
-      const completedTasks = tasks.filter(t => t.status === 'Completed');
-      const totalTasks = tasks.length;
-      const completionRate = totalTasks > 0 ? (completedTasks.length / totalTasks) * 100 : 0;
-      
-      let totalPoints = 0;
-      let dailyPoints = 0;
-      
-      for (const task of completedTasks) {
-        let taskPoints = 10;
-        const priorityMultiplier = getPriorityMultiplier(task);
-        taskPoints *= priorityMultiplier;
-        const healthImpact = getHealthImpact(taskPoints);
-        taskPoints = healthImpact;
-        const pomodoroBonus = Math.random() > 0.3 ? 5 : 0;
-        taskPoints += pomodoroBonus;
-        dailyPoints += taskPoints;
-      }
-      
-      dailyPoints = Math.min(dailyPoints, 100);
-      const streakBonus = getPomodoroStreakBonus();
-      dailyPoints += streakBonus;
-      const completionBonus = roundToNearestFiveOrZero(completionRate * 0.5);
-      dailyPoints += completionBonus;
-      totalPoints = roundToNearestFiveOrZero(dailyPoints);
-      const newLevel = Math.floor(totalPoints / 500) + 1;
-      
-      setCurrentPoints(totalPoints);
-      setLevel(newLevel);
-    };
-
-    calculateFlowPoints();
+    if (tasks.length === 0) {
+      setCurrentPoints(0);
+      setLevel(1);
+      return;
+    }
+    
+    const { totalPoints, level: calculatedLevel } = calculateFlowPoints(tasks, healthData);
+    setCurrentPoints(totalPoints);
+    setLevel(calculatedLevel);
   }, [tasks, healthData]);
 
   const nextLevelPoints = level * 500;
@@ -258,16 +268,7 @@ function Profile({ soenFlow, setScreen, goals, setGoals, activeFocusBackground, 
   }), [purchasedRewards, themes, focusBackgrounds]);
 
   const getThemePreview = (themeValue: string) => {
-    const themeMap: Record<string, string[]> = {
-      'obsidian': ['#667eea', '#764ba2', '#f093fb', '#f5576c'],
-      'synthwave': ['#EC4899', '#7c3aed', '#f97316', '#ef4444'],
-      'solarpunk': ['#a3e635', '#16a34a', '#22c55e', '#10b981'],
-      'luxe': ['#fde047', '#eab308', '#f59e0b', '#d97706'],
-      'aurelian': ['#fbbf24', '#f59e0b', '#d97706', '#b45309'],
-      'crimson': ['#f87171', '#dc2626', '#b91c1c', '#991b1b'],
-      'oceanic': ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1']
-    };
-    return themeMap[themeValue] || themeMap['obsidian'];
+    return getThemeColors(themeValue);
   };
 
   return (
@@ -360,10 +361,10 @@ function Profile({ soenFlow, setScreen, goals, setGoals, activeFocusBackground, 
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             {[
-                                { name: 'Energy', value: healthData.energyLevel?.charAt(0).toUpperCase() + healthData.energyLevel?.slice(1) || 'Medium', icon: BoltIcon, color: healthData.energyLevel === 'high' ? '#10b981' : healthData.energyLevel === 'low' ? '#ef4444' : '#f59e0b' },
-                                { name: 'Sleep', value: `${healthData.avgSleepHours || 0}h`, icon: ClockIcon, color: (healthData.avgSleepHours || 0) >= 8 ? '#10b981' : (healthData.avgSleepHours || 0) >= 6 ? '#f59e0b' : '#ef4444' },
-                                { name: 'Activity', value: healthData.stepsToday ? (healthData.stepsToday >= 10000 ? 'Excellent' : healthData.stepsToday >= 5000 ? 'Good' : 'Low') : 'Good', icon: ActivityIcon, color: healthData.stepsToday && healthData.stepsToday >= 10000 ? '#10b981' : healthData.stepsToday && healthData.stepsToday >= 5000 ? '#f59e0b' : '#10b981' },
-                                { name: 'Stress', value: healthData.sleepQuality === 'poor' ? 'High' : healthData.sleepQuality === 'good' ? 'Low' : 'Medium', icon: HeartIcon, color: healthData.sleepQuality === 'poor' ? '#ef4444' : healthData.sleepQuality === 'good' ? '#10b981' : '#f59e0b' }
+                                { name: 'Energy', ...getEnergyMetric(healthData.energyLevel), icon: BoltIcon },
+                                { name: 'Sleep', ...getSleepMetric(healthData.avgSleepHours), icon: ClockIcon },
+                                { name: 'Activity', ...getActivityMetric(healthData.stepsToday), icon: ActivityIcon },
+                                { name: 'Stress', ...getStressMetric(healthData.sleepQuality), icon: HeartIcon }
                             ].map((metric) => (
                                 <div key={metric.name} className="text-center">
                                     <div className="w-10 h-10 rounded-lg mx-auto mb-2 flex items-center justify-center bg-bg/50">

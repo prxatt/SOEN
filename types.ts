@@ -306,6 +306,7 @@ export interface RewardItem {
     cost: number;
     type: 'theme' | 'feature' | 'focus_background';
     value: string;
+    colors?: string[]; // Color array for theme/focus background previews
 }
 
 export type ScheduleView = 'today' | 'month';

@@ -918,7 +918,20 @@ function App() {
             case 'Dashboard': return <SoenDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} />;
             case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToMiraAIWithChat={redirectToMiraAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
             case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
-            case 'Profile': return <Profile soenFlow={soenFlow} setScreen={navigateTo} goals={goals} setGoals={setGoals} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} purchasedRewards={purchasedRewards} tasks={tasks} healthData={healthData} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} />;
+            case 'Profile': return <Profile
+                soenFlow={soenFlow}
+                setScreen={navigateTo}
+                goals={goals}
+                setGoals={setGoals}
+                activeFocusBackground={activeFocusBackground}
+                setActiveFocusBackground={handleSetActiveFocusBackground}
+                purchasedRewards={purchasedRewards}
+                tasks={tasks}
+                healthData={healthData}
+                activeTheme={activeTheme}
+                setActiveTheme={handleSetActiveTheme}
+                onPurchase={handlePurchaseReward}
+            />;
             case 'Projects': return <Projects projects={projects} setProjects={setProjects} />;
             case 'Mira': return <SoenAI 
                 chatHistory={chatHistory} 

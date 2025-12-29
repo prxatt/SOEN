@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { REWARDS_CATALOG } from '../constants';
+import { REWARDS_CATALOG, getThemeColors, getFocusBackgroundColors } from '../constants';
 import { RewardItem } from '../types';
 import { CheckCircleIcon, ChevronLeftIcon, SparklesIcon } from './Icons';
 
@@ -15,18 +15,20 @@ interface RewardsProps {
     setActiveFocusBackground: (bgValue: string) => void;
 }
 
-const getThemeGradient = (themeValue: string) => {
-    switch (themeValue) {
-        case 'obsidian': return 'linear-gradient(135deg, #4b5563, #111827)';
-        case 'synthwave': return 'linear-gradient(135deg, #EC4899, #7c3aed)';
-        case 'solarpunk': return 'linear-gradient(135deg, #a3e635, #16a34a)';
-        case 'luxe': return 'linear-gradient(135deg, #fde047, #eab308)';
-        case 'aurelian': return 'linear-gradient(135deg, #fbbf24, #f59e0b)';
-        case 'crimson': return 'linear-gradient(135deg, #f87171, #dc2626)';
-        case 'oceanic': return 'linear-gradient(135deg, #38bdf8, #0ea5e9)';
-        case 'lofi': return 'linear-gradient(135deg, #4f46e5, #1e293b)';
-        default: return 'linear-gradient(135deg, #6b7280, #374151)';
+/**
+ * Get theme gradient from REWARDS_CATALOG colors
+ * Derives gradient from the first two colors of the theme/focus background's color array
+ */
+const getThemeGradient = (themeValue: string, type: 'theme' | 'focus_background' = 'theme') => {
+    const colors = type === 'theme' 
+        ? getThemeColors(themeValue)
+        : getFocusBackgroundColors(themeValue);
+    
+    if (colors.length >= 2) {
+        return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
     }
+    // Fallback gradient
+    return 'linear-gradient(135deg, #6b7280, #374151)';
 };
 
 const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
@@ -60,7 +62,7 @@ function RewardCard({ item, isPurchased, isActive, canAfford, onPurchase, onAppl
         <motion.div 
             className="p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-xl"
             style={{ 
-                background: getThemeGradient(item.value),
+                background: getThemeGradient(item.value, item.type === 'focus_background' ? 'focus_background' : 'theme'),
                 color: textColor 
             }}
             initial={{ opacity: 0, y: 20 }}

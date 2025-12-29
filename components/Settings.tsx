@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Cog6ToothIcon, GoogleCalendarIcon, ChevronRightIcon, SparklesIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleLeftEllipsisIcon, CheckIcon, TravelIcon, SickDayIcon, TemperatureUnitIcon } from './Icons';
-import { REWARDS_CATALOG } from '../constants';
+import { REWARDS_CATALOG, getThemeColors } from '../constants';
 
 interface SettingsProps {
     uiMode: 'dark' | 'glass';
@@ -23,17 +23,17 @@ interface SettingsRowProps {
   action?: React.ReactNode;
 }
 
+/**
+ * Get theme gradient from REWARDS_CATALOG colors
+ * Derives gradient from the first two colors of the theme's color array
+ */
 const getThemeGradient = (themeValue: string) => {
-    switch (themeValue) {
-        case 'obsidian': return 'linear-gradient(135deg, #4b5563, #111827)';
-        case 'synthwave': return 'linear-gradient(135deg, #EC4899, #7c3aed)';
-        case 'solarpunk': return 'linear-gradient(135deg, #a3e635, #16a34a)';
-        case 'luxe': return 'linear-gradient(135deg, #fde047, #eab308)';
-        case 'aurelian': return 'linear-gradient(135deg, #fbbf24, #f59e0b)';
-        case 'crimson': return 'linear-gradient(135deg, #f87171, #dc2626)';
-        case 'oceanic': return 'linear-gradient(135deg, #38bdf8, #0ea5e9)';
-        default: return 'linear-gradient(135deg, #6b7280, #374151)';
+    const colors = getThemeColors(themeValue);
+    if (colors.length >= 2) {
+        return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
     }
+    // Fallback gradient
+    return 'linear-gradient(135deg, #6b7280, #374151)';
 };
 
 function SettingsRow({ icon, title, subtitle, onClick, action }: SettingsRowProps) {

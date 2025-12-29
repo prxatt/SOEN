@@ -134,7 +134,7 @@ export function withErrorHandling<T extends object>(
         className: 'p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400'
       }, [
         React.createElement('p', { key: 'error-msg' }, 'Component failed to render'),
-        process.env.NODE_ENV === 'development' && React.createElement('pre', {
+        import.meta.env.DEV && React.createElement('pre', {
           key: 'error-details',
           className: 'text-xs mt-2'
         }, String(error))

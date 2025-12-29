@@ -26,22 +26,31 @@
  * - Maintain consistent widget sizing and spacing as per previous user requests
  * - All new icons must be SVG and follow the existing icon styling conventions
  * - Do not remove or alter the core functionality of existing widgets unless explicitly instructed
+ * 
+ * CRITICAL TEXT CONTRAST RULESET:
+ * - Text must ALWAYS be clearly visible and readable against its background
+ * - For dark backgrounds (luminance < 0.5): ALWAYS use white text (#ffffff or #f0f0f0) with text shadows
+ * - For light backgrounds (luminance >= 0.5): ALWAYS use black/dark text (#000000 or #1a1a1a)
+ * - Minimum contrast ratio: 4.5:1 for normal text (WCAG AA compliance)
+ * - Use text shadows (textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)') on white text over dark backgrounds
+ * - Never use white text on light backgrounds or black text on dark backgrounds
+ * - Test all text visibility before committing changes
+ * - Use getTextColorForBackground() helper function for dynamic text color selection
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import MobileDashboardTiles from './MobileDashboardTiles';
 import { Task, Note, HealthData, Goal, Category, MissionBriefing, Screen, TaskStatus } from '../types';
 import { safeGet } from '../utils/validation';
+import { calculateFlowPoints } from '../utils/points';
+import { REWARDS_CATALOG, getThemeColors, getFocusBackgroundColors } from '../constants';
 import { 
     CheckCircleIcon, SparklesIcon, HeartIcon, BoltIcon, ClockIcon, 
-    SunIcon, CloudIcon, RainIcon, SnowIcon, ChevronLeftIcon, ChevronRightIcon, BrainCircuitIcon, PlusIcon,
+    SunIcon, ChevronLeftIcon, ChevronRightIcon, BrainCircuitIcon, PlusIcon,
     CalendarDaysIcon, DocumentTextIcon, ActivityIcon, ArrowTrendingUpIcon,
     FlagIcon, StarIcon, BoltIcon as ZapIcon, CalendarIcon,
-    ArrowRightIcon, CheckIcon, PencilIcon, TrashIcon, BabyPenguinIcon
+    ArrowRightIcon, CheckIcon, PencilIcon, TrashIcon
 } from './Icons';
-import NewTaskModal from './NewTaskModal';
-import { Project } from '../types';
 
 interface SoenDashboardProps {
     tasks: Task[];
@@ -53,7 +62,7 @@ interface SoenDashboardProps {
     dailyCompletionImage: string | null;
     categoryColors: Record<Category, string>;
     isBriefingLoading: boolean;
-    navigateToScheduleDate: (date: Date, taskId?: number) => void;
+    navigateToScheduleDate: (date: Date) => void;
     inferredLocation: string | null;
     setScreen: (screen: Screen) => void;
     onCompleteTask: (taskId: number) => void;
@@ -61,17 +70,11 @@ interface SoenDashboardProps {
     purchasedRewards?: string[];
     activeTheme?: string;
     activeFocusBackground?: string;
-    userName?: string;
-    addTask?: (task: Partial<Task> & { title: string }) => void;
-    projects?: Project[];
-    categories?: Category[];
-    onAddNewCategory?: (name: string) => boolean;
-    showToast?: (message: string) => void;
 }
 
 // Enhanced color scheme matching EnhancedDashboard
 const SOEN_COLORS = {
-    background: '#0B0B0C',
+    background: '#0a0a0a',
     surface: '#1a1a1a',
     surfaceLight: '#2a2a2a',
     text: {
@@ -117,6 +120,7 @@ const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
     return luminance > 0.5 ? 'black' : 'white';
 };
 
+
 // Floating particles component
 function FloatingParticles({ count = 50 }) {
     return (
@@ -146,67 +150,161 @@ function FloatingParticles({ count = 50 }) {
 }
 
 // Ultra-Cute Mira Baby Penguin with Engaging Design
-// Cute, Charming Mira (Baby Penguin) Component - Friendly Design
 const GhibliPenguin: React.FC = () => {
     return (
         <motion.div
-            className="relative w-full h-full flex items-center justify-center"
+            className="relative w-full h-full"
             animate={{ 
-                scale: [1, 1.02, 1],
-                y: [0, -1, 0]
+                rotate: [0, 3, -3, 0],
+                scale: [1, 1.05, 1],
+                y: [0, -3, 0]
             }}
             transition={{ 
-                duration: 2.5, 
+                duration: 3, 
                 repeat: Infinity, 
                 ease: 'easeInOut' 
             }}
         >
-            <svg
-                viewBox="0 0 100 120"
-                className="w-full h-full"
-                xmlns="http://www.w3.org/2000/svg"
+            {/* Penguin Body - More rounded and cute */}
+            <div 
+                className="absolute inset-0 rounded-full"
+                style={{ 
+                    background: 'linear-gradient(135deg, #1a202c 0%, #2d3748 30%, #4a5568 70%, #2d3748 100%)',
+                    boxShadow: `
+                        inset 0 3px 6px rgba(255,255,255,0.15),
+                        inset 0 -3px 6px rgba(0,0,0,0.4),
+                        0 6px 16px rgba(0,0,0,0.5),
+                        0 0 0 2px rgba(255,255,255,0.2)
+                    `,
+                    transform: 'perspective(120px) rotateX(10deg) rotateY(-3deg)'
+                }}
             >
-                <defs>
-                    <linearGradient id="miraBodyGradientHeader" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#3b3b3b" />
-                        <stop offset="100%" stopColor="#2a2a2a" />
-                    </linearGradient>
-                </defs>
+                {/* Penguin Belly - Larger and more prominent */}
+                <div 
+                    className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-7 h-6 rounded-full"
+                    style={{
+                        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
+                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(255,255,255,0.3)'
+                    }}
+                />
                 
-                {/* Body - Soft, rounded ellipse */}
-                <ellipse cx="50" cy="70" rx="35" ry="40" fill="url(#miraBodyGradientHeader)" />
+                {/* Big Cute Eyes - Much larger and more expressive */}
+                <div 
+                    className="absolute top-1.5 left-1.5 w-3 h-3 rounded-full"
+                    style={{
+                        background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f0f4f8 50%, #e2e8f0 100%)',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.8)'
+                    }}
+                />
+                <div 
+                    className="absolute top-1.5 right-1.5 w-3 h-3 rounded-full"
+                    style={{
+                        background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f0f4f8 50%, #e2e8f0 100%)',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.8)'
+                    }}
+                />
                 
-                {/* Belly - Soft white/cream */}
-                <ellipse cx="50" cy="75" rx="22" ry="28" fill="#fef3c7" />
+                {/* Eye pupils - Larger and more engaging */}
+                <div className="absolute top-2.5 left-2.5 w-1.5 h-1.5 bg-black rounded-full"></div>
+                <div className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-black rounded-full"></div>
                 
-                {/* Head - Soft, rounded circle */}
-                <circle cx="50" cy="35" r="28" fill="url(#miraBodyGradientHeader)" />
+                {/* Eye highlights - Sparkle effect */}
+                <div className="absolute top-2 left-2 w-0.5 h-0.5 bg-white rounded-full opacity-90"></div>
+                <div className="absolute top-2 right-2 w-0.5 h-0.5 bg-white rounded-full opacity-90"></div>
                 
-                {/* Left Eye - Large, friendly, dark */}
-                <circle cx="42" cy="32" r="7" fill="#1f2937" />
-                <circle cx="43.5" cy="30.5" r="3" fill="#ffffff" />
+                {/* Cute Smiley Face - Curved smile */}
+                <svg 
+                    className="absolute top-4 left-1/2 transform -translate-x-1/2 w-3 h-2"
+                    viewBox="0 0 12 8"
+                    style={{ fill: 'none', stroke: '#2d3748', strokeWidth: '1.5', strokeLinecap: 'round' }}
+                >
+                    <path d="M2 4 Q6 6 10 4" />
+                </svg>
                 
-                {/* Right Eye - Large, friendly, dark */}
-                <circle cx="58" cy="32" r="7" fill="#1f2937" />
-                <circle cx="59.5" cy="30.5" r="3" fill="#ffffff" />
+                {/* Penguin Beak - Smaller and cuter */}
+                <div 
+                    className="absolute top-3.5 left-1/2 transform -translate-x-1/2 w-1 h-0.8 rounded-full"
+                    style={{
+                        background: 'linear-gradient(135deg, #f6ad55 0%, #ed8936 100%)',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.3)'
+                    }}
+                />
                 
-                {/* Beak - Soft orange/yellow */}
-                <polygon points="50,40 46,44 54,44" fill="#fbbf24" />
-                
-                {/* Cheek blush - Soft pink */}
-                <circle cx="35" cy="38" r="4" fill="#fbcfe8" opacity="0.6" />
-                <circle cx="65" cy="38" r="4" fill="#fbcfe8" opacity="0.6" />
-                
-                {/* Left Foot - Soft orange */}
-                <ellipse cx="40" cy="108" rx="8" ry="5" fill="#f59e0b" />
-                
-                {/* Right Foot - Soft orange */}
-                <ellipse cx="60" cy="108" rx="8" ry="5" fill="#f59e0b" />
-            </svg>
+                {/* Enhanced Cheek blush - More prominent */}
+                <div 
+                    className="absolute top-4 left-0.5 w-1.5 h-1.5 rounded-full opacity-70"
+                    style={{ background: 'radial-gradient(circle, #fbb6ce 0%, #f687b3 100%)' }}
+                />
+                <div 
+                    className="absolute top-4 right-0.5 w-1.5 h-1.5 rounded-full opacity-70"
+                    style={{ background: 'radial-gradient(circle, #fbb6ce 0%, #f687b3 100%)' }}
+                />
+            </div>
+            
+            {/* Floating sparkles - Studio Ghibli magic */}
+            {[...Array(3)].map((_, i) => (
+                <motion.div
+                    key={i}
+                    className="absolute w-1 h-1 bg-yellow-300 rounded-full"
+                    style={{
+                        left: `${20 + i * 30}%`,
+                        top: `${10 + i * 20}%`,
+                    }}
+                    animate={{
+                        opacity: [0, 1, 0],
+                        scale: [0.5, 1, 0.5],
+                        y: [0, -10, 0]
+                    }}
+                    transition={{
+                        duration: 2 + i * 0.5,
+                        repeat: Infinity,
+                        delay: i * 0.7,
+                        ease: "easeInOut"
+                    }}
+                />
+            ))}
         </motion.div>
     );
 };
 
+// Soen Header Component with Studio Ghibli Penguin - Only visible at top of dashboard
+const SoenHeader: React.FC = () => {
+    const [isVisible, setIsVisible] = useState(true);
+    const [scrollY, setScrollY] = useState(0);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            setScrollY(currentScrollY);
+            // Hide when scrolled down more than 100px
+            setIsVisible(currentScrollY < 100);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    return (
+        <motion.div
+            className="fixed top-3 left-3 sm:top-4 sm:left-20 z-50 pointer-events-none"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ 
+                opacity: isVisible ? 1 : 0,
+                x: 0,
+                y: scrollY > 100 ? -20 : 0
+            }}
+            transition={{ duration: 0.3 }}
+            style={{ position: 'fixed' }}
+        >
+            <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10">
+                <GhibliPenguin />
+                </div>
+                <span className="font-bold text-lg sm:text-2xl text-white">Soen</span>
+            </div>
+        </motion.div>
+    );
+};
 
 
 
@@ -216,7 +314,7 @@ const NextUpWidget: React.FC<{
     tasks: Task[];
     categoryColors: Record<Category, string>;
     onCompleteTask: (taskId: number) => void;
-    navigateToScheduleDate: (date: Date, taskId?: number) => void;
+    navigateToScheduleDate: (date: Date) => void;
     setScreen: (screen: Screen) => void;
     canCompleteTasks: boolean;
 }> = ({ tasks, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks }) => {
@@ -372,12 +470,12 @@ const NextUpWidget: React.FC<{
     );
 };
 
-// Tasks Widget - Redesigned to match "Statements/Direct Debits" card style from reference
+// Today/Tomorrow Pill Toggle
 const TaskToggle: React.FC<{
     tasks: Task[];
     categoryColors: Record<Category, string>;
     onCompleteTask: (taskId: number) => void;
-    navigateToScheduleDate: (date: Date, taskId?: number) => void;
+    navigateToScheduleDate: (date: Date) => void;
     setScreen: (screen: Screen) => void;
     canCompleteTasks: boolean;
 }> = ({ tasks, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks }) => {
@@ -399,30 +497,35 @@ const TaskToggle: React.FC<{
 
     return (
         <motion.div
-            className="rounded-3xl p-4 md:p-5 lg:p-6 relative overflow-hidden"
+            className="rounded-2xl p-6 relative overflow-hidden min-h-[420px] h-full"
             style={{ 
-                backgroundColor: '#FDE047', // Vibrant yellow matching "Statements" card
-                color: '#0B0B0C' // Black text
+                backgroundColor: currentTasks.length > 0 ? (categoryColors[currentTasks[0].category] || '#10b981') : '#10b981',
+                color: 'white'
             }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                    <CalendarDaysIcon className="w-5 h-5 md:w-6 md:h-6 text-black" />
-                    <h3 className="text-base md:text-lg lg:text-xl font-bold text-black">Tasks</h3>
+            
+            {/* Pill Toggle */}
+            <div className="flex items-center justify-between mb-6 relative z-10">
+                <div className="flex items-center gap-3">
+                    <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                        <CalendarDaysIcon className="w-6 h-6 text-green-400" />
+                    </motion.div>
+                    <h3 className="text-2xl font-bold font-display text-white">Tasks</h3>
                 </div>
                 
-                {/* Pill Toggle */}
-                <div className="flex rounded-full p-1 bg-black/10">
+                <div className="flex rounded-full p-1" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
                     <motion.button
                         onClick={() => setActiveView('today')}
-                        className="px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold transition-all duration-300 min-h-[44px]"
+                        className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300"
                         style={{ 
-                            color: activeView === 'today' ? '#FDE047' : '#0B0B0C',
-                            backgroundColor: activeView === 'today' ? '#0B0B0C' : 'transparent'
+                            color: activeView === 'today' ? getTextColorForBackground('#10b981') : 'var(--color-text-secondary)',
+                            backgroundColor: activeView === 'today' ? '#10b981' : 'transparent'
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -431,10 +534,10 @@ const TaskToggle: React.FC<{
                     </motion.button>
                     <motion.button
                         onClick={() => setActiveView('tomorrow')}
-                        className="px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold transition-all duration-300 min-h-[44px]"
+                        className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300"
                         style={{ 
-                            color: activeView === 'tomorrow' ? '#FDE047' : '#0B0B0C',
-                            backgroundColor: activeView === 'tomorrow' ? '#0B0B0C' : 'transparent'
+                            color: activeView === 'tomorrow' ? getTextColorForBackground('#8b5cf6') : 'var(--color-text-secondary)',
+                            backgroundColor: activeView === 'tomorrow' ? '#8b5cf6' : 'transparent'
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -444,8 +547,8 @@ const TaskToggle: React.FC<{
                 </div>
             </div>
 
-            {/* Task List - equal height, scrollable on overflow (desktop) */}
-            <div className="space-y-2 max-h-[360px] overflow-y-auto">
+            {/* Task List */}
+            <div className="relative z-10">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeView}
@@ -453,83 +556,73 @@ const TaskToggle: React.FC<{
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.3 }}
-                        className="space-y-2"
+                        className="space-y-3"
                     >
                         {currentTasks.length > 0 ? (
-                            currentTasks.slice(0, 5).map((task, index) => (
+                            currentTasks.slice(0, 4).map((task, index) => (
                                 <motion.div
                                     key={task.id}
-                                    className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-black/5 hover:bg-black/10 transition-colors min-h-[44px]"
+                                    className="flex items-center justify-between p-4 rounded-xl transition-all duration-300"
+                                    style={{ 
+                                        backgroundColor: categoryColors[task.category] || '#6B7280',
+                                        color: 'white'
+                                    }}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.05 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    whileHover={{ 
+                                        scale: 1.02 
+                                    }}
                                 >
-                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        <div className="flex items-center justify-center w-8 h-8 rounded-lg min-w-[32px]"
-                                            style={{ 
-                                                backgroundColor: (() => {
-                                                    const catColor = categoryColors[task.category] || '#6B7280';
-                                                    // Ensure category color doesn't overlap with widget backgrounds
-                                                    // Widget backgrounds: Tasks #FDE047 (yellow), Habits #F59E0B (orange), Flow #10B981 (emerald)
-                                                    const widgetColors = ['#FDE047', '#F59E0B', '#10B981'];
-                                                    if (widgetColors.includes(catColor.toUpperCase())) {
-                                                        // Use a slight variation if there's overlap
-                                                        return catColor === '#FDE047' ? '#FACC15' : 
-                                                               catColor === '#F59E0B' ? '#FB923C' : 
-                                                               catColor === '#10B981' ? '#34D399' : catColor;
-                                                    }
-                                                    return catColor;
-                                                })()
-                                            }}
-                                        >
-                                            {/* simple AI icon mapping */}
-                                            {(() => {
-                                                const t = `${task.title} ${task.category}`.toLowerCase();
-                                                if (t.includes('meet') || t.includes('call')) return (
-                                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2"/></svg>
-                                                );
-                                                if (t.includes('run') || t.includes('gym') || t.includes('workout')) return (
-                                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                                );
-                                                if (t.includes('read') || t.includes('study')) return (
-                                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6l-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h3l2-2h5a2 2 0 002-2V8a2 2 0 00-2-2h-5z"/></svg>
-                                                );
-                                                return (
-                                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7"/></svg>
-                                                );
-                                            })()}
-                                        </div>
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <div 
+                                            className="w-3 h-3 rounded-full flex-shrink-0"
+                                            style={{ backgroundColor: categoryColors[task.category] || '#6B7280' }}
+                                        />
                                         <div className="flex-1 min-w-0">
-                                            <div className="text-base md:text-lg font-bold text-black truncate">{task.title}</div>
-                                            <div className="text-xs text-black/70 flex items-center gap-2">
-                                                <span>{new Date(task.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                <span className="capitalize">{task.category}</span>
+                                            <span className="text-xl font-bold block truncate text-white">{task.title}</span>
+                                            <span className="text-sm text-white/80">
+                                                {new Date(task.startTime).toLocaleTimeString([], { 
+                                                    hour: '2-digit', 
+                                                    minute: '2-digit' 
+                                                })}
+                                            </span>
                                         </div>
                                     </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {canCompleteTasks ? (
+                                    <div className="flex gap-2">
                                         <motion.button
-                                                onClick={() => onCompleteTask(task.id)}
-                                                className="px-3 py-1.5 rounded-lg font-semibold text-xs bg-black text-white hover:bg-black/90 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.95 }}
+                                            onClick={() => canCompleteTasks && onCompleteTask(task.id)}
+                                            className={`p-2 rounded-full transition-colors ${
+                                                canCompleteTasks ? '' : 'opacity-50 cursor-not-allowed'
+                                            }`}
+                                            style={{ 
+                                                backgroundColor: 'rgba(0,0,0,0.2)',
+                                                color: 'white'
+                                            }}
+                                            whileHover={canCompleteTasks ? { 
+                                                scale: 1.1,
+                                                backgroundColor: 'rgba(0,0,0,0.3)'
+                                            } : {}}
+                                            whileTap={canCompleteTasks ? { scale: 0.9 } : {}}
+                                            disabled={!canCompleteTasks}
                                         >
                                             <CheckCircleIcon className="w-4 h-4" />
                                         </motion.button>
-                                        ) : (
-                                            <div className="px-3 py-1.5 rounded-lg font-semibold text-xs bg-black/20 text-black/50 cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center">
-                                                <ClockIcon className="w-4 h-4" />
-                                            </div>
-                                        )}
                                         <motion.button
                                             onClick={() => {
                                                 navigateToScheduleDate(currentDate);
                                                 setScreen('Schedule');
                                             }}
-                                            className="px-3 py-1.5 rounded-lg font-semibold text-xs bg-black/10 text-black hover:bg-black/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
+                                            className="p-2 rounded-full transition-colors"
+                                            style={{ 
+                                                backgroundColor: 'rgba(0,0,0,0.2)',
+                                                color: 'white'
+                                            }}
+                                            whileHover={{ 
+                                                scale: 1.1,
+                                                backgroundColor: 'rgba(0,0,0,0.3)'
+                                            }}
+                                            whileTap={{ scale: 0.9 }}
                                         >
                                             <ArrowRightIcon className="w-4 h-4" />
                                         </motion.button>
@@ -538,16 +631,16 @@ const TaskToggle: React.FC<{
                             ))
                         ) : (
                             <div className="text-center py-8">
-                                <CalendarIcon className="w-12 h-12 text-black/40 mx-auto mb-4" />
-                                <p className="text-sm text-black/70">
+                                <CalendarIcon className="w-12 h-12 text-white/60 mx-auto mb-4" />
+                                <p className="text-sm text-white/80">
                                     No tasks scheduled for {activeView === 'today' ? 'today' : 'tomorrow'}
                                 </p>
                             </div>
                         )}
                         
-                        {currentTasks.length > 5 && (
+                        {currentTasks.length > 4 && (
                             <div className="text-center pt-2">
-                                <p className="text-xs text-black/60">+{currentTasks.length - 5} more tasks</p>
+                                <p className="text-xs text-white/70">+{currentTasks.length - 4} more tasks</p>
                             </div>
                         )}
                     </motion.div>
@@ -558,184 +651,81 @@ const TaskToggle: React.FC<{
 };
 
 
-// Habit Data Interface
-interface Habit {
-    id: number;
-    name: string;
-    streak: number;
-    color: string;
-    icon: React.FC<React.SVGProps<SVGSVGElement>>;
-    completedDates: string[]; // ISO date strings
-    createdAt: string; // ISO date string
-}
-
-interface HabitCompletion {
-    habitId: number;
-    date: string; // ISO date string
-}
-
-// Habits Widget - Enhanced with 7/30 day views, editing, and visual calendar
+// Revolutionary Habit Widget with Individual Habit Management
 const HabitInsights: React.FC<{
     healthData: HealthData;
 }> = ({ healthData }) => {
-    // Helper function to calculate streak (defined before loadHabitsFromStorage)
-    const calculateStreakHelper = (habit: Habit): number => {
-        if (!habit.completedDates || habit.completedDates.length === 0) return 0;
-        
-        const sortedDates = [...habit.completedDates]
-            .map(d => {
-                const date = new Date(d);
-                date.setHours(0, 0, 0, 0);
-                return date;
-            })
-            .sort((a, b) => b.getTime() - a.getTime());
-        
-        let streak = 0;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        let currentDate = new Date(today);
-        
-        for (const date of sortedDates) {
-            const dateStr = date.toDateString();
-            const currentDateStr = currentDate.toDateString();
-            
-            if (dateStr === currentDateStr) {
-                streak++;
-                currentDate.setDate(currentDate.getDate() - 1);
-            } else if (date < currentDate) {
-                break;
-            }
+    const [habits, setHabits] = useState([
+        { 
+            id: 1, 
+            name: 'Morning Routine', 
+            streak: 7, 
+            color: '#10b981', 
+            icon: SunIcon, 
+            frequency: 'daily', 
+            selected: false,
+            editing: false,
+            viewMode: '7day' as '7day' | '30day',
+            completionData: Array.from({ length: 30 }, (_, i) => ({
+                day: i + 1,
+                completed: Math.random() > 0.3,
+                intensity: Math.random()
+            }))
+        },
+        { 
+            id: 2, 
+            name: 'Exercise', 
+            streak: 5, 
+            color: '#3b82f6', 
+            icon: ActivityIcon, 
+            frequency: 'daily', 
+            selected: false,
+            editing: false,
+            viewMode: '7day' as '7day' | '30day',
+            completionData: Array.from({ length: 30 }, (_, i) => ({
+                day: i + 1,
+                completed: Math.random() > 0.4,
+                intensity: Math.random()
+            }))
+        },
+        { 
+            id: 3, 
+            name: 'Meditation', 
+            streak: 3, 
+            color: '#f59e0b', 
+            icon: BrainCircuitIcon, 
+            frequency: 'daily', 
+            selected: false,
+            editing: false,
+            viewMode: '7day' as '7day' | '30day',
+            completionData: Array.from({ length: 30 }, (_, i) => ({
+                day: i + 1,
+                completed: Math.random() > 0.5,
+                intensity: Math.random()
+            }))
+        },
+        { 
+            id: 4, 
+            name: 'Reading', 
+            streak: 12, 
+            color: '#8b5cf6', 
+            icon: DocumentTextIcon, 
+            frequency: 'daily', 
+            selected: false,
+            editing: false,
+            viewMode: '7day' as '7day' | '30day',
+            completionData: Array.from({ length: 30 }, (_, i) => ({
+                day: i + 1,
+                completed: Math.random() > 0.2,
+                intensity: Math.random()
+            }))
         }
-        
-        return streak;
-    };
-
-    // Helper function to get icon for habit (defined before loadHabitsFromStorage)
-    const getIconForHabitHelper = (habitName: string) => {
-        const name = habitName.toLowerCase();
-        if (name.includes('meditation') || name.includes('mindfulness') || name.includes('breathing')) return BrainCircuitIcon;
-        if (name.includes('water') || name.includes('drink') || name.includes('hydration')) return HeartIcon;
-        if (name.includes('exercise') || name.includes('workout') || name.includes('push') || name.includes('walk') || name.includes('run')) return ActivityIcon;
-        if (name.includes('read') || name.includes('book') || name.includes('study') || name.includes('learn')) return DocumentTextIcon;
-        if (name.includes('morning') || name.includes('wake') || name.includes('sunrise')) return SunIcon;
-        if (name.includes('journal') || name.includes('write') || name.includes('note')) return DocumentTextIcon;
-        if (name.includes('call') || name.includes('phone') || name.includes('family') || name.includes('friend')) return HeartIcon;
-        if (name.includes('vitamin') || name.includes('medicine') || name.includes('health')) return HeartIcon;
-        if (name.includes('screen') || name.includes('phone') || name.includes('digital')) return ActivityIcon;
-        if (name.includes('vegetable') || name.includes('eat') || name.includes('food') || name.includes('meal')) return HeartIcon;
-        if (name.includes('yoga') || name.includes('stretch') || name.includes('flexibility')) return ActivityIcon;
-        if (name.includes('podcast') || name.includes('listen') || name.includes('audio')) return DocumentTextIcon;
-        if (name.includes('instrument') || name.includes('music') || name.includes('play')) return ActivityIcon;
-        if (name.includes('break') || name.includes('rest') || name.includes('pause')) return ClockIcon;
-        if (name.includes('declutter') || name.includes('clean') || name.includes('organize')) return ActivityIcon;
-        if (name.includes('affirmation') || name.includes('positive') || name.includes('gratitude')) return BrainCircuitIcon;
-        if (name.includes('bed') || name.includes('sleep') || name.includes('night')) return ClockIcon;
-        if (name.includes('stairs') || name.includes('elevator') || name.includes('walk')) return ActivityIcon;
-        if (name.includes('listening') || name.includes('patience') || name.includes('empathy')) return BrainCircuitIcon;
-        if (name.includes('chore') || name.includes('household') || name.includes('clean')) return ActivityIcon;
-        if (name.includes('caffeine') || name.includes('coffee') || name.includes('limit')) return HeartIcon;
-        if (name.includes('time') || name.includes('management') || name.includes('schedule')) return ClockIcon;
-        if (name.includes('creative') || name.includes('art') || name.includes('draw') || name.includes('paint')) return DocumentTextIcon;
-        if (name.includes('photo') || name.includes('nature') || name.includes('outdoor')) return SunIcon;
-        return FlagIcon;
-    };
-
-    // Load habits from localStorage or use defaults
-    const loadHabitsFromStorage = (): Habit[] => {
-        try {
-            const stored = localStorage.getItem('soen-habits');
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                // Convert icon strings back to icon components and recalculate streaks
-                return parsed.map((h: any) => {
-                    const habit: Habit = {
-                        ...h,
-                        icon: getIconForHabitHelper(h.name),
-                        completedDates: h.completedDates || [],
-                        streak: 0 // Will be recalculated
-                    };
-                    // Recalculate streak
-                    habit.streak = calculateStreakHelper(habit);
-                    return habit;
-                });
-            }
-        } catch (error) {
-            console.error('Failed to load habits from storage:', error);
-        }
-        // Default habits
-        return [
-            { 
-                id: 1, 
-                name: 'Morning Routine', 
-                streak: 7, 
-                color: '#10b981', 
-                icon: SunIcon,
-                completedDates: [],
-                createdAt: new Date().toISOString()
-            },
-            { 
-                id: 2, 
-                name: 'Exercise', 
-                streak: 5, 
-                color: '#3b82f6', 
-                icon: ActivityIcon,
-                completedDates: [],
-                createdAt: new Date().toISOString()
-            },
-            { 
-                id: 3, 
-                name: 'Meditation', 
-                streak: 3, 
-                color: '#f59e0b', 
-                icon: BrainCircuitIcon,
-                completedDates: [],
-                createdAt: new Date().toISOString()
-            },
-            { 
-                id: 4, 
-                name: 'Reading', 
-                streak: 12, 
-                color: '#8b5cf6', 
-                icon: DocumentTextIcon,
-                completedDates: [],
-                createdAt: new Date().toISOString()
-            }
-        ];
-    };
-
-    const saveHabitsToStorage = (habitsToSave: Habit[]) => {
-        try {
-            localStorage.setItem('soen-habits', JSON.stringify(habitsToSave));
-        } catch (error) {
-            console.error('Failed to save habits to storage:', error);
-        }
-    };
-
-    const [habits, setHabits] = useState<Habit[]>(loadHabitsFromStorage);
-    const [viewMode, setViewMode] = useState<'list' | '7day' | '30day'>('list');
-    const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
+    ]);
+    
     const [isAddingHabit, setIsAddingHabit] = useState(false);
-    const [isEditingHabit, setIsEditingHabit] = useState(false);
-    const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
     const [newHabitName, setNewHabitName] = useState('');
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    
-    // Recalculate streaks on mount and when habits change
-    useEffect(() => {
-        setHabits(prevHabits =>
-            prevHabits.map(habit => ({
-                ...habit,
-                streak: calculateStreakHelper(habit)
-            }))
-        );
-    }, []);
-
-    // Save habits to localStorage whenever they change
-    useEffect(() => {
-        saveHabitsToStorage(habits);
-    }, [habits]);
 
     const habitSuggestions = [
         'Morning meditation', 'Drink 8 glasses of water', 'Read for 30 minutes', 'Take a 10-minute walk',
@@ -825,91 +815,26 @@ const HabitInsights: React.FC<{
         return '#8b5cf6'; // Default color
     };
 
-
-    // Toggle habit completion for today
-    const toggleHabitCompletion = (habitId: number, date: Date) => {
-        const dateStr = date.toISOString().split('T')[0];
-        setHabits(prevHabits => {
-            return prevHabits.map(habit => {
-                if (habit.id === habitId) {
-                    const completedDates = [...(habit.completedDates || [])];
-                    const dateIndex = completedDates.indexOf(dateStr);
-                    
-                    if (dateIndex > -1) {
-                        completedDates.splice(dateIndex, 1);
-                    } else {
-                        completedDates.push(dateStr);
-                    }
-                    
-                    const updatedHabit = {
-                        ...habit,
-                        completedDates,
-                        streak: calculateStreakHelper({ ...habit, completedDates })
-                    };
-                    
-                    return updatedHabit;
-                }
-                return habit;
-            });
-        });
-    };
-
-    // Delete habit
-    const handleDeleteHabit = (habitId: number) => {
-        setHabits(prevHabits => prevHabits.filter(h => h.id !== habitId));
-        if (selectedHabit?.id === habitId) {
-            setSelectedHabit(null);
-        }
-    };
-
-    // Edit habit
-    const handleEditHabit = (habit: Habit) => {
-        setEditingHabit(habit);
-        setNewHabitName(habit.name);
-        setIsEditingHabit(true);
-        setIsAddingHabit(false);
-    };
-
-    // Save edited habit
-    const handleSaveEdit = () => {
-        if (editingHabit && newHabitName.trim()) {
-            const selectedIcon = getIconForHabit(newHabitName.trim());
-            const selectedColor = getColorForHabit(newHabitName.trim());
-            
-            setHabits(prevHabits =>
-                prevHabits.map(h =>
-                    h.id === editingHabit.id
-                        ? {
-                              ...h,
-                              name: newHabitName.trim(),
-                              icon: selectedIcon,
-                              color: selectedColor
-                          }
-                        : h
-                )
-            );
-            
-            setEditingHabit(null);
-            setNewHabitName('');
-            setIsEditingHabit(false);
-            setSuggestions([]);
-            setShowSuggestions(false);
-        }
-    };
-
     const handleAddHabit = () => {
         if (newHabitName.trim()) {
             const selectedIcon = getIconForHabit(newHabitName.trim());
             const selectedColor = getColorForHabit(newHabitName.trim());
             
-            const newHabit: Habit = {
+            const newHabit = {
                 id: Date.now(),
                 name: newHabitName.trim(),
                 streak: 0,
                 color: selectedColor,
                 icon: selectedIcon,
-                completedDates: [],
-                createdAt: new Date().toISOString()
+                frequency: 'flexible',
+                selected: false,
+                editing: false,
+                viewMode: '7day' as '7day' | '30day',
+                completionData: Array.from({ length: 30 }, (_, i) => ({
+                    day: i + 1,
+                    completed: false,
+                    intensity: 0
+                }))
             };
             setHabits([...habits, newHabit]);
             setNewHabitName('');
@@ -919,163 +844,201 @@ const HabitInsights: React.FC<{
         }
     };
 
-    // Generate dates for 7-day view
-    const get7DayDates = () => {
-        const dates = [];
-        const today = new Date();
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            dates.push(date);
+    const handleSelectHabit = (habitId: number) => {
+        setHabits(habits.map(h => {
+            if (h.id !== habitId) return h;
+            // When opening, default to 30-day view and exit editing mode
+            if (!h.selected) {
+                return { ...h, selected: true, viewMode: '30day', editing: false };
+            }
+            // When closing, just toggle selected
+            return { ...h, selected: false };
+        }));
+    };
+
+    const handleEditHabit = (habitId: number, newName: string) => {
+        setHabits(habits.map(h => h.id === habitId ? { ...h, name: newName, editing: false } : h));
+    };
+
+    const handleDeleteHabit = (habitId: number) => {
+        setHabits(habits.filter(h => h.id !== habitId));
+    };
+
+    const handleToggleEdit = (habitId: number) => {
+        setHabits(habits.map(h => h.id === habitId ? { ...h, editing: !h.editing } : h));
+    };
+
+    const handleViewModeChange = (habitId: number, mode: '7day' | '30day') => {
+        setHabits(habits.map(h => h.id === habitId ? { ...h, viewMode: mode } : h));
+    };
+
+    const handleToggleCompletion = (habitId: number, dayIndex: number) => {
+        setHabits(habits.map(h => {
+            if (h.id === habitId) {
+                const newData = [...h.completionData];
+                newData[dayIndex] = {
+                    ...newData[dayIndex],
+                    completed: !newData[dayIndex].completed,
+                    intensity: newData[dayIndex].completed ? 0 : Math.random()
+                };
+                return { ...h, completionData: newData };
+            }
+            return h;
+        }));
+    };
+
+    const getCompletionRate = (habit: any) => {
+        const days = habit.viewMode === '7day' ? 7 : 30;
+        const relevantData = habit.completionData.slice(0, days);
+        const completed = relevantData.filter(d => d.completed).length;
+        return Math.round((completed / days) * 100);
+    };
+
+    const getStreakCount = (habit: any) => {
+        const days = habit.viewMode === '7day' ? 7 : 30;
+        const relevantData = habit.completionData.slice(0, days);
+        let streak = 0;
+        for (let i = relevantData.length - 1; i >= 0; i--) {
+            if (relevantData[i].completed) {
+                streak++;
+            } else {
+                break;
+            }
         }
-        return dates;
+        return streak;
     };
 
-    // Generate dates for 30-day view
-    const get30DayDates = () => {
-        const dates = [];
-        const today = new Date();
-        for (let i = 29; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            dates.push(date);
-        }
-        return dates;
+    const isNegativeHabit = (name: string) => {
+        const n = name.trim().toLowerCase();
+        return n.startsWith('stop ') || n.startsWith("don't ") || n.startsWith('do not ') || n.startsWith('no ');
     };
 
-    // Check if date is completed for a habit
-    const isDateCompleted = (habit: Habit, date: Date): boolean => {
-        const dateStr = date.toISOString().split('T')[0];
-        return habit.completedDates?.includes(dateStr) || false;
-    };
-
-    // Get completion percentage for a period
-    const getCompletionPercentage = (habit: Habit, dates: Date[]): number => {
-        if (dates.length === 0) return 0;
-        const completed = dates.filter(d => isDateCompleted(habit, d)).length;
-        return Math.round((completed / dates.length) * 100);
-    };
+    // Enhanced magical color progression based on time (changes every 2 hours)
+    const widgetColors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#a8edea', '#fed6e3'];
+    const currentHour = new Date().getHours();
+    const colorIndex = Math.floor(currentHour / 2) % widgetColors.length;
+    const smartColor = widgetColors[colorIndex];
 
     return (
         <motion.div
-            className="rounded-3xl p-4 md:p-5 lg:p-6 relative overflow-hidden"
+            className="rounded-2xl p-4 relative overflow-hidden h-full min-h-[420px]"
             style={{ 
-                backgroundColor: '#F59E0B', // Vibrant orange - different from Tasks (yellow) and Flow (emerald)
-                color: '#0B0B0C' // Black text
+                backgroundColor: smartColor,
+                color: 'white'
             }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            variants={itemVariants}
         >
-            <div className="relative z-10">
-            {/* Header with View Mode Toggle */}
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                    <div className="flex items-center gap-2">
-                        <FlagIcon className="w-5 h-5 md:w-6 md:h-6 text-black" />
-                        <h3 className="text-base md:text-lg lg:text-xl font-bold text-black">Habits</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {/* View Mode Toggle */}
-                        <div className="flex items-center gap-1 bg-black/10 rounded-lg p-1">
-                            <motion.button
-                                onClick={() => setViewMode('list')}
-                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors min-h-[32px] ${
-                                    viewMode === 'list' 
-                                        ? 'bg-black text-white' 
-                                        : 'bg-transparent text-black/70 hover:bg-black/5'
-                                }`}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                List
-                            </motion.button>
-                            <motion.button
-                                onClick={() => setViewMode('7day')}
-                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors min-h-[32px] ${
-                                    viewMode === '7day' 
-                                        ? 'bg-black text-white' 
-                                        : 'bg-transparent text-black/70 hover:bg-black/5'
-                                }`}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                7 Day
-                            </motion.button>
-                            <motion.button
-                                onClick={() => setViewMode('30day')}
-                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors min-h-[32px] ${
-                                    viewMode === '30day' 
-                                        ? 'bg-black text-white' 
-                                        : 'bg-transparent text-black/70 hover:bg-black/5'
-                                }`}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                30 Day
-                            </motion.button>
-                        </div>
-                        <motion.button
-                            onClick={() => setIsAddingHabit(true)}
-                            className="p-2 rounded-full bg-black/10 hover:bg-black/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                        >
-                            <PlusIcon className="w-5 h-5 text-black" />
-                        </motion.button>
-                    </div>
-                </div>
-
-            {/* Add/Edit Habit Form */}
-            {(isAddingHabit || isEditingHabit) && (
+            {/* Animated Background Elements */}
+            <div className="absolute inset-0 pointer-events-none">
                 <motion.div
-                        className="mb-4 p-4 rounded-xl bg-black/5 border border-black/10"
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
+                    className="absolute -top-20 -left-20 w-60 h-60 rounded-full"
+                    style={{ background: 'radial-gradient(circle at 30% 30%, #10b98120, transparent 60%)' }}
+                    animate={{ 
+                        x: [0, 20, -15, 0], 
+                        y: [0, -15, 10, 0],
+                        scale: [1, 1.1, 0.9, 1]
+                    }}
+                    transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
+                />
+                <motion.div
+                    className="absolute bottom-0 right-0 w-80 h-80 rounded-full"
+                    style={{ background: 'radial-gradient(circle at 70% 70%, #3b82f620, transparent 60%)' }}
+                    animate={{ 
+                        x: [0, -25, 15, 0], 
+                        y: [0, 20, -12, 0],
+                        scale: [1, 0.9, 1.1, 1]
+                    }}
+                    transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+                />
+                <motion.div
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full"
+                    style={{ background: 'radial-gradient(circle, #8b5cf615, transparent 70%)' }}
+                    animate={{ 
+                        scale: [0.8, 1.2, 0.8],
+                        rotate: [0, 180, 360]
+                    }}
+                    transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
+                />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6 relative z-10">
+                <div className="flex items-center gap-3">
+                <motion.div
+                        animate={{ 
+                            scale: [1, 1.15, 1],
+                            rotate: [0, 5, -5, 0]
+                        }}
+                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                     >
-                        <div className="relative mb-3">
+                        <FlagIcon className="w-7 h-7 text-emerald-400 drop-shadow-lg" />
+                </motion.div>
+                    <h3 className="text-xl font-bold font-display text-white">
+                        Habits
+                    </h3>
+                </div>
+                <motion.button
+                    onClick={() => setIsAddingHabit(true)}
+                    className="p-2.5 rounded-full bg-gradient-to-r from-emerald-500/20 to-blue-500/20 backdrop-blur-sm border border-white/10"
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                >
+                    <PlusIcon className="w-5 h-5 text-emerald-400" />
+                </motion.button>
+            </div>
+
+            {/* Add Habit Form */}
+            {isAddingHabit && (
+                <motion.div
+                    className="mb-6 p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-blue-500/10 backdrop-blur-sm border border-white/10"
+                    initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                >
+                    <div className="relative">
                     <input
                         type="text"
                         value={newHabitName}
                             onChange={(e) => handleInputChange(e.target.value)}
-                                placeholder="Type a habit..."
-                                className="w-full p-3 rounded-lg bg-black/5 text-black placeholder-black/40 border border-black/10 outline-none focus:border-black/30 transition-colors min-h-[44px]"
+                            placeholder="Type a habit or choose from suggestions..."
+                            className="w-full p-3 rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20 outline-none focus:border-emerald-400/50 transition-colors"
                         onKeyPress={(e) => e.key === 'Enter' && handleAddHabit()}
                         autoFocus
                     />
                         {showSuggestions && suggestions.length > 0 && (
                             <motion.div
-                                    className="absolute top-full left-0 right-0 mt-1 bg-white border border-black/10 rounded-lg overflow-hidden z-50"
+                                className="absolute top-full left-0 right-0 mt-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg overflow-hidden z-50"
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -10 }}
                             >
                                 {suggestions.map((suggestion, index) => (
-                                        <button
+                                    <motion.button
                                         key={suggestion}
                                         onClick={() => handleSuggestionClick(suggestion)}
-                                            className="w-full p-3 text-left text-black hover:bg-black/5 transition-colors min-h-[44px]"
+                                        className="w-full p-3 text-left text-white hover:bg-white/10 transition-colors"
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.05 }}
                                     >
                                         {suggestion}
-                                        </button>
+                                    </motion.button>
                                 ))}
                             </motion.div>
                         )}
                     </div>
-                        <div className="flex gap-2">
+                    <div className="flex gap-3 mt-3">
                         <motion.button
-                            onClick={isEditingHabit ? handleSaveEdit : handleAddHabit}
-                            className="px-4 py-2 bg-black text-white rounded-lg font-semibold text-sm hover:bg-black/90 transition-colors min-h-[44px]"
+                            onClick={handleAddHabit}
+                            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm rounded-lg font-medium"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            {isEditingHabit ? 'Save' : 'Add'}
+                            Add Habit
                         </motion.button>
                         <motion.button
-                            onClick={() => {
-                                setIsAddingHabit(false);
-                                setIsEditingHabit(false);
-                                setEditingHabit(null);
-                                setNewHabitName('');
-                            }}
-                            className="px-4 py-2 bg-black/10 text-black rounded-lg font-semibold text-sm hover:bg-black/20 transition-colors min-h-[44px]"
+                            onClick={() => setIsAddingHabit(false)}
+                            className="px-4 py-2 bg-white/10 text-white text-sm rounded-lg font-medium"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
@@ -1085,383 +1048,303 @@ const HabitInsights: React.FC<{
                 </motion.div>
             )}
 
-                {/* Content based on view mode */}
-                <AnimatePresence mode="wait">
-                    {viewMode === 'list' && (
-                        <motion.div
-                            key="list-view"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            {/* Habit List View */}
-                            <div className="space-y-2">
-                                {habits.map((habit, index) => {
-                                    const today = new Date();
-                                    today.setHours(0, 0, 0, 0);
-                                    const isTodayCompleted = isDateCompleted(habit, today);
-                                    const IconComponent = habit.icon;
-                                    
-                                    return (
-                                        <motion.div
-                                            key={habit.id}
-                                            className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-black/5 hover:bg-black/10 transition-colors min-h-[44px]"
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.05 }}
-                                        >
-                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <motion.button
-                                                    onClick={() => toggleHabitCompletion(habit.id, today)}
-                                                    className={`flex items-center justify-center w-8 h-8 rounded-lg min-w-[32px] transition-all ${
-                                                        isTodayCompleted ? 'scale-110' : ''
-                                                    }`}
-                                                    style={{ 
-                                                        backgroundColor: (() => {
-                                                            const widgetColors = ['#FDE047', '#F59E0B', '#10B981'];
-                                                            if (widgetColors.includes(habit.color.toUpperCase())) {
-                                                                return habit.color === '#FDE047' ? '#FACC15' : 
-                                                                       habit.color === '#F59E0B' ? '#FB923C' : 
-                                                                       habit.color === '#10B981' ? '#34D399' : habit.color;
-                                                            }
-                                                            return habit.color;
-                                                        })()
-                                                    }}
-                                                    whileHover={{ scale: 1.1 }}
-                                                    whileTap={{ scale: 0.9 }}
-                                                >
-                                                    {isTodayCompleted ? (
-                                                        <CheckCircleIcon className="w-5 h-5 text-white" />
-                                                    ) : (
-                                                        <IconComponent className="w-4 h-4 text-white" />
-                                                    )}
-                                                </motion.button>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-base md:text-lg font-bold text-black truncate">{habit.name}</div>
-                                                    <div className="text-xs text-black/70">{habit.streak} day streak</div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <motion.button
-                                                    onClick={() => setSelectedHabit(habit)}
-                                                    className="px-3 py-1.5 rounded-lg bg-black/10 text-black font-semibold text-xs hover:bg-black/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    View
-                                                </motion.button>
-                                                <motion.button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleEditHabit(habit);
-                                                    }}
-                                                    className="p-2 rounded-lg bg-black/10 text-black hover:bg-black/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <PencilIcon className="w-4 h-4" />
-                                                </motion.button>
-                                                <motion.button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (confirm(`Delete "${habit.name}"?`)) {
-                                                            handleDeleteHabit(habit.id);
-                                                        }
-                                                    }}
-                                                    className="p-2 rounded-lg bg-black/10 text-black hover:bg-red-500/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <TrashIcon className="w-4 h-4" />
-                                                </motion.button>
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
-                                
-                                {habits.length === 0 && (
-                                    <div className="text-center py-8">
-                                        <FlagIcon className="w-12 h-12 text-black/40 mx-auto mb-4" />
-                                        <p className="text-sm text-black/70">No habits yet. Add one to get started!</p>
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {viewMode === '7day' && (
-                        <motion.div
-                            key="7day-view"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            {/* 7-Day Calendar View */}
-                            <div className="space-y-3">
-                                <div className="text-sm font-semibold text-black/70 mb-3">Last 7 Days</div>
-                                <div className="grid grid-cols-7 gap-1 mb-2">
-                                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
-                                        <div key={idx} className="text-center text-xs font-semibold text-black/60 py-2">
-                                            {day}
-                                        </div>
-                                    ))}
-                                </div>
-                                {habits.map((habit) => {
-                                    const dates = get7DayDates();
-                                    const IconComponent = habit.icon;
-                                    
-                                    return (
-                                        <motion.div
-                                            key={habit.id}
-                                            className="bg-black/5 rounded-xl p-3 mb-3"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                        >
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <IconComponent className="w-4 h-4" style={{ color: habit.color }} />
-                                                <div className="flex-1">
-                                                    <div className="text-sm font-bold text-black">{habit.name}</div>
-                                                    <div className="text-xs text-black/70">
-                                                        {getCompletionPercentage(habit, dates)}% complete
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-7 gap-1">
-                                                {dates.map((date, idx) => {
-                                                    const completed = isDateCompleted(habit, date);
-                                                    const isToday = date.toDateString() === new Date().toDateString();
-                                                    
-                                                    return (
-                                                        <motion.button
-                                                            key={idx}
-                                                            onClick={() => toggleHabitCompletion(habit.id, date)}
-                                                            className={`aspect-square rounded-lg text-xs font-semibold transition-all min-h-[32px] ${
-                                                                completed
-                                                                    ? 'bg-black text-white'
-                                                                    : 'bg-black/10 text-black/50 hover:bg-black/20'
-                                                            } ${isToday ? 'ring-2 ring-black/30' : ''}`}
-                                                            style={completed ? { backgroundColor: habit.color } : {}}
-                                                            whileHover={{ scale: 1.1 }}
-                                                            whileTap={{ scale: 0.9 }}
-                                                            title={date.toLocaleDateString()}
-                                                        >
-                                                            {date.getDate()}
-                                                        </motion.button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
-                                {habits.length === 0 && (
-                                    <div className="text-center py-8">
-                                        <FlagIcon className="w-12 h-12 text-black/40 mx-auto mb-4" />
-                                        <p className="text-sm text-black/70">No habits yet. Add one to get started!</p>
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {viewMode === '30day' && (
-                        <motion.div
-                            key="30day-view"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            {/* 30-Day Calendar View */}
-                            <div className="space-y-3">
-                                <div className="text-sm font-semibold text-black/70 mb-3">Last 30 Days</div>
-                                {habits.map((habit) => {
-                                    const dates = get30DayDates();
-                                    const IconComponent = habit.icon;
-                                    const completion = getCompletionPercentage(habit, dates);
-                                    
-                                    return (
-                                        <motion.div
-                                            key={habit.id}
-                                            className="bg-black/5 rounded-xl p-4 mb-3"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                        >
-                                            <div className="flex items-center justify-between mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <IconComponent className="w-4 h-4" style={{ color: habit.color }} />
-                                                    <div>
-                                                        <div className="text-sm font-bold text-black">{habit.name}</div>
-                                                        <div className="text-xs text-black/70">
-                                                            {completion}% complete • {habit.streak} day streak
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <motion.button
-                                                    onClick={() => setSelectedHabit(habit)}
-                                                    className="px-3 py-1.5 rounded-lg bg-black/10 text-black font-semibold text-xs hover:bg-black/20 transition-colors"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    Details
-                                                </motion.button>
-                                            </div>
-                                            <div className="grid grid-cols-10 gap-1">
-                                                {dates.map((date, idx) => {
-                                                    const completed = isDateCompleted(habit, date);
-                                                    const isToday = date.toDateString() === new Date().toDateString();
-                                                    
-                                                    return (
-                                                        <motion.button
-                                                            key={idx}
-                                                            onClick={() => toggleHabitCompletion(habit.id, date)}
-                                                            className={`aspect-square rounded text-[10px] font-semibold transition-all min-h-[24px] ${
-                                                                completed
-                                                                    ? 'bg-black text-white'
-                                                                    : 'bg-black/10 text-black/50 hover:bg-black/20'
-                                                            } ${isToday ? 'ring-2 ring-black/30' : ''}`}
-                                                            style={completed ? { backgroundColor: habit.color } : {}}
-                                                            whileHover={{ scale: 1.15 }}
-                                                            whileTap={{ scale: 0.9 }}
-                                                            title={date.toLocaleDateString()}
-                                                        >
-                                                            {date.getDate()}
-                                                        </motion.button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
-                                {habits.length === 0 && (
-                                    <div className="text-center py-8">
-                                        <FlagIcon className="w-12 h-12 text-black/40 mx-auto mb-4" />
-                                        <p className="text-sm text-black/70">No habits yet. Add one to get started!</p>
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Habit Detail Modal */}
-                <AnimatePresence>
-                    {selectedHabit && (
-                        <motion.div
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setSelectedHabit(null)}
-                        >
+            {/* Individual Habit Cards */}
+            <div className="space-y-4 relative z-10">
+                {habits.map((habit, index) => (
+                    <motion.div
+                        key={habit.id}
+                        className="group rounded-xl p-4 bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm border border-white/10 cursor-pointer"
+                        initial={{ opacity: 0, x: -30 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        onClick={() => handleSelectHabit(habit.id)}
+                    >
+                        {/* Habit Header */}
+                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
                             <motion.div
-                                className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto"
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.9, opacity: 0 }}
-                                onClick={(e) => e.stopPropagation()}
+                                    className="p-2 rounded-lg"
+                                    style={{ backgroundColor: `${habit.color}20` }}
+                                    whileHover={{ rotate: 15, scale: 1.1 }}
                             >
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className="w-10 h-10 rounded-lg flex items-center justify-center"
-                                            style={{ backgroundColor: selectedHabit.color }}
-                                        >
-                                            {(() => {
-                                                const IconComp = selectedHabit.icon;
-                                                return <IconComp className="w-5 h-5 text-white" />;
-                                            })()}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-bold text-black">{selectedHabit.name}</h3>
-                                            <p className="text-sm text-black/70">{selectedHabit.streak} day streak</p>
-                                        </div>
-                                    </div>
-                                    <motion.button
-                                        onClick={() => setSelectedHabit(null)}
-                                        className="p-2 rounded-lg bg-black/10 hover:bg-black/20 transition-colors"
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.9 }}
-                                    >
-                                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </motion.button>
-                                </div>
-                                
-                                <div className="space-y-4">
-                                    <div>
-                                        <h4 className="text-sm font-semibold text-black/70 mb-2">7-Day View</h4>
-                                        <div className="grid grid-cols-7 gap-1">
-                                            {get7DayDates().map((date, idx) => {
-                                                const completed = isDateCompleted(selectedHabit, date);
-                                                return (
-                                                    <div
-                                                        key={idx}
-                                                        className={`aspect-square rounded-lg text-xs font-semibold flex items-center justify-center ${
-                                                            completed ? 'bg-black text-white' : 'bg-black/10 text-black/50'
-                                                        }`}
-                                                        style={completed ? { backgroundColor: selectedHabit.color } : {}}
-                                                    >
-                                                        {date.getDate()}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                    
-                                    <div>
-                                        <h4 className="text-sm font-semibold text-black/70 mb-2">30-Day View</h4>
-                                        <div className="grid grid-cols-10 gap-1">
-                                            {get30DayDates().map((date, idx) => {
-                                                const completed = isDateCompleted(selectedHabit, date);
-                                                return (
-                                                    <div
-                                                        key={idx}
-                                                        className={`aspect-square rounded text-[10px] font-semibold flex items-center justify-center ${
-                                                            completed ? 'bg-black text-white' : 'bg-black/10 text-black/50'
-                                                        }`}
-                                                        style={completed ? { backgroundColor: selectedHabit.color } : {}}
-                                                    >
-                                                        {date.getDate()}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex gap-2 pt-4 border-t border-black/10">
-                                        <motion.button
-                                            onClick={() => {
-                                                handleEditHabit(selectedHabit);
-                                                setSelectedHabit(null);
-                                            }}
-                                            className="flex-1 px-4 py-2 bg-black text-white rounded-lg font-semibold text-sm hover:bg-black/90 transition-colors"
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                        >
-                                            Edit
-                                        </motion.button>
-                                        <motion.button
-                                            onClick={() => {
-                                                if (confirm(`Delete "${selectedHabit.name}"?`)) {
-                                                    handleDeleteHabit(selectedHabit.id);
-                                                    setSelectedHabit(null);
-                                                }
-                                            }}
-                                            className="px-4 py-2 bg-red-500/10 text-red-600 rounded-lg font-semibold text-sm hover:bg-red-500/20 transition-colors"
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                        >
-                                            Delete
-                                        </motion.button>
-                                    </div>
-                                </div>
+                                    <habit.icon className="w-5 h-5" style={{ color: habit.color }} />
                             </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                            <div>
+                                    {habit.editing ? (
+                                        <input
+                                            type="text"
+                                            value={habit.name}
+                                            onChange={(e) => setHabits(habits.map(h => h.id === habit.id ? { ...h, name: e.target.value } : h))}
+                                            className="bg-transparent border-none outline-none text-white font-semibold"
+                                            onBlur={() => handleEditHabit(habit.id, habit.name)}
+                                            onKeyPress={(e) => e.key === 'Enter' && handleEditHabit(habit.id, habit.name)}
+                                            autoFocus
+                                        />
+                                    ) : (
+                                        <span 
+                                            className="text-lg font-bold text-white cursor-pointer hover:text-emerald-200 transition-colors"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleToggleEdit(habit.id);
+                                            }}
+                                        >
+                                            {habit.name}
+                                        </span>
+                                    )}
+                                    <div className="text-sm text-white/80">
+                                        {habit.frequency} • {getStreakCount(habit)} day streak
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {/* View Mode Buttons - Always Visible */}
+                            <div className="flex gap-1">
+                                <motion.button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleViewModeChange(habit.id, '7day');
+                                    }}
+                                    className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
+                                        habit.viewMode === '7day' 
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white' 
+                                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                    }`}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    7D
+                                </motion.button>
+                                <motion.button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleViewModeChange(habit.id, '30day');
+                                    }}
+                                    className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
+                                        habit.viewMode === '30day' 
+                                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' 
+                                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                    }`}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    30D
+                                </motion.button>
+                        </div>
+                            
+                            {habit.selected && (
+                                <motion.button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteHabit(habit.id);
+                                    }}
+                                    className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 transition-colors"
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                >
+                                    <TrashIcon className="w-4 h-4 text-red-400" />
+                                </motion.button>
+                            )}
+                        </div>
+            </div>
+
+                        {/* Collapsible Content */}
+                        {habit.selected && (
+                <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                {/* Repeat Options - only visible in Edit mode */}
+                                {habit.editing && (
+                                    <div className="mb-4">
+                                        <h5 className="text-sm font-semibold text-white/90 mb-2">Repeat Frequency</h5>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['daily', 'weekly', 'monthly', 'flexible'].map((freq) => (
+                        <motion.button
+                                                    key={freq}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        setHabits(habits.map(h => h.id === habit.id ? { ...h, frequency: freq } : h));
+                                                    }}
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                                        habit.frequency === freq 
+                                                            ? 'bg-emerald-500 text-white' 
+                                                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                                    }`}
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    {freq.charAt(0).toUpperCase() + freq.slice(1)}
+                                                </motion.button>
+                                            ))}
+                                        </div>
+                                        {habit.frequency === 'flexible' && (
+                                            <div className="mt-3">
+                                                <label className="text-xs text-white/80 mb-1 block">Custom Repeat (times per day)</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="10"
+                                                    defaultValue="1"
+                                                    className="w-full px-3 py-2 rounded-lg bg-white/10 text-white placeholder-white/60 border border-white/20 outline-none focus:border-emerald-400/50 transition-colors text-sm"
+                                                    placeholder="Enter number of repeats"
+                                                    onChange={(e) => {
+                                                        const value = parseInt(e.target.value) || 1;
+                                                        setHabits(habits.map(h => h.id === habit.id ? { ...h, customRepeat: value } : h));
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* View Toggle Pills - only visible in Edit mode */}
+                                {habit.editing && (
+                                    <div className="flex gap-2 mb-3">
+                                        <motion.button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                handleViewModeChange(habit.id, '7day');
+                                            }}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                                habit.viewMode === '7day' 
+                                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white' 
+                                                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                            }`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            7 Days
+                        </motion.button>
+                        <motion.button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                handleViewModeChange(habit.id, '30day');
+                                            }}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                                habit.viewMode === '30day' 
+                                                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' 
+                                                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                            }`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            30 Days
+                        </motion.button>
+                    </div>
+                                )}
+
+                                {/* Progress Visualization - Premium Design */}
+                                <div className="mb-3">
+                                    <div className="grid gap-2 p-3 rounded-2xl bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm border border-white/10">
+                                        <div className={`grid gap-1.5 ${habit.viewMode === '7day' ? 'grid-cols-7' : 'grid-cols-6'}`}>
+                                            {habit.completionData.slice(0, habit.viewMode === '7day' ? 7 : 30).map((day, dayIndex) => (
+                            <motion.div
+                                                    key={dayIndex}
+                                                    className={`relative rounded-xl cursor-pointer transition-all duration-200 ${
+                                                        day.completed 
+                                                            ? 'shadow-lg ring-2 ring-white/20' 
+                                                            : 'hover:bg-white/5'
+                                                    }`}
+                                                    style={{
+                                                        backgroundColor: day.completed 
+                                                            ? (isNegativeHabit(habit.name) ? '#ef4444' : habit.color)
+                                                            : 'rgba(255,255,255,0.08)',
+                                                        width: habit.viewMode === '7day' ? 32 : 24,
+                                                        height: habit.viewMode === '7day' ? 32 : 24,
+                                                        minWidth: habit.viewMode === '7day' ? 32 : 24,
+                                                        minHeight: habit.viewMode === '7day' ? 32 : 24
+                                                    }}
+                                                    initial={{ scale: 0.8, opacity: 0 }}
+                                                    animate={{ scale: 1, opacity: 1 }}
+                                                    transition={{ delay: dayIndex * 0.02, duration: 0.3 }}
+                                                    whileHover={{ scale: 1.1, y: -2 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleToggleCompletion(habit.id, dayIndex);
+                                                    }}
+                                                >
+                                                    {day.completed && (
+                                                        <motion.div
+                                                            className="absolute inset-0 flex items-center justify-center"
+                                                            initial={{ opacity: 0, scale: 0.5 }}
+                                                            animate={{ opacity: 1, scale: 1 }}
+                                                            transition={{ delay: dayIndex * 0.02 + 0.1 }}
+                                                        >
+                                                            <CheckIcon className={`${habit.viewMode === '7day' ? 'w-4 h-4' : 'w-3 h-3'} text-white drop-shadow-lg`} />
+                                                        </motion.div>
+                                                    )}
+                                                    {!day.completed && (
+                                                        <motion.div
+                                                            className="absolute inset-0 flex items-center justify-center"
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 0.3 }}
+                                                        >
+                                                            <div className={`${habit.viewMode === '7day' ? 'w-2 h-2' : 'w-1.5 h-1.5'} rounded-full bg-white/40`} />
+                                                        </motion.div>
+                                                    )}
+                                                </motion.div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Edit Habit Toggle */}
+                                <div className="mt-4 flex justify-end">
+                                    <motion.button
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setHabits(habits.map(h => h.id === habit.id ? { ...h, editing: !h.editing } : h));
+                                        }}
+                                        className="px-3 py-2 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
+                                        whileHover={{ scale: 1.03 }}
+                                        whileTap={{ scale: 0.97 }}
+                                    >
+                                        {habit.editing ? 'Done' : 'Edit Habit'}
+                                    </motion.button>
+                    </div>
+
+                    {/* Habit Stats */}
+                                <div className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-4">
+                    <div className="text-center">
+                                            <div className="font-bold text-emerald-400">{getStreakCount(habit)}</div>
+                                            <div className="text-xs text-white/70">Streak</div>
+                        </div>
+                                        <div className="text-center">
+                                            <div className="font-bold text-blue-400">{getCompletionRate(habit)}%</div>
+                                            <div className="text-xs text-white/70">Complete</div>
+                        </div>
+                                    </div>
+                                    <motion.div
+                                        className="w-8 h-8 rounded-full flex items-center justify-center"
+                                        style={{ backgroundColor: `${habit.color}20` }}
+                                        animate={{ 
+                                            scale: [1, 1.1, 1],
+                                            rotate: [0, 5, -5, 0]
+                                        }}
+                                        transition={{ duration: 2, repeat: Infinity, delay: index * 0.3 }}
+                                    >
+                                        <div 
+                                            className="w-3 h-3 rounded-full"
+                                            style={{ backgroundColor: habit.color }}
+                                        />
+                                    </motion.div>
+            </div>
+                </motion.div>
+            )}
+                    </motion.div>
+                ))}
             </div>
         </motion.div>
     );
@@ -1785,28 +1668,8 @@ const FocusTimerWidget: React.FC<{
     const [pomodoroStreak, setPomodoroStreak] = useState(0);
     const [sessionPoints, setSessionPoints] = useState(0);
 
-    // Theme-based color functions (defined first to avoid hoisting issues)
-    const getThemeColors = (theme: string): string[] => {
-        const themeColorMap: Record<string, string[]> = {
-            'synthwave': ['#EC4899', '#7c3aed', '#f97316', '#ef4444'],
-            'solarpunk': ['#a3e635', '#16a34a', '#22c55e', '#10b981'],
-            'luxe': ['#fde047', '#eab308', '#f59e0b', '#d97706'],
-            'aurelian': ['#fbbf24', '#f59e0b', '#d97706', '#b45309'],
-            'crimson': ['#f87171', '#dc2626', '#b91c1c', '#991b1b'],
-            'oceanic': ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1'],
-            'obsidian': ['#667eea', '#764ba2', '#f093fb', '#f5576c']
-        };
-        return themeColorMap[theme] || themeColorMap['obsidian'];
-    };
-
-    const getBackgroundColors = (background: string): string[] => {
-        const backgroundMap: Record<string, string[]> = {
-            'synthwave': ['#EC4899', '#7c3aed', '#f97316', '#ef4444'],
-            'lofi': ['#4f46e5', '#1e293b', '#334155', '#475569'],
-            'solarpunk': ['#a3e635', '#16a34a', '#22c55e', '#10b981']
-        };
-        return backgroundMap[background] || backgroundMap['synthwave'];
-    };
+    // Use centralized theme color functions from constants
+    // Note: getThemeColors and getFocusBackgroundColors are imported from constants.ts
 
     // Enhanced Pomodoro session configurations with theme integration
     const getSessionConfig = () => {
@@ -1828,9 +1691,9 @@ const FocusTimerWidget: React.FC<{
         }
     };
 
-        // Apply theme-based colors
+        // Apply theme-based colors (using centralized functions from constants)
         const themeColors = getThemeColors(activeTheme);
-        const backgroundColors = getBackgroundColors(activeFocusBackground);
+        const backgroundColors = getFocusBackgroundColors(activeFocusBackground);
 
         return {
             focus: { 
@@ -1956,101 +1819,210 @@ const FocusTimerWidget: React.FC<{
 
     return (
         <motion.div
-            className="rounded-3xl p-5 md:p-6 lg:p-8 relative overflow-hidden"
+            className="rounded-2xl p-6 relative overflow-hidden min-h-[420px] h-full"
             style={{ 
-                backgroundColor: '#3B82F6', // Vibrant blue - different from Habits (orange)
-                color: '#FFFFFF' // White text on blue
+                background: `linear-gradient(135deg, ${currentSession.colors[0]} 0%, ${currentSession.colors[1]} 25%, ${currentSession.colors[2]} 50%, ${currentSession.colors[3]} 100%)`,
+                color: 'white'
             }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
+            {/* Surface Tension-inspired flowing animations */}
+            <div className="absolute inset-0">
+                {[...Array(25)].map((_, i) => (
+                    <motion.div
+                        key={i}
+                        className="absolute rounded-full opacity-40"
+                        style={{
+                            width: `${15 + Math.random() * 35}px`,
+                            height: `${15 + Math.random() * 35}px`,
+                            background: `radial-gradient(circle, ${currentSession.colors[i % currentSession.colors.length]}80, transparent)`,
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                        }}
+                        animate={{
+                            x: [0, Math.random() * 80 - 40, 0],
+                            y: [0, Math.random() * 80 - 40, 0],
+                            scale: [1, 1.8 + Math.random(), 1],
+                            rotate: [0, 360, 0],
+                        }}
+                        transition={{
+                            duration: 8 + Math.random() * 6,
+                            repeat: Infinity,
+                            delay: Math.random() * 3,
+                            ease: "easeInOut"
+                        }}
+                    />
+                ))}
+                
+                {/* Flowing gradient orbs like paint in water */}
+                {[...Array(12)].map((_, i) => (
+                    <motion.div
+                        key={`orb-${i}`}
+                        className="absolute rounded-full blur-sm"
+                        style={{
+                            width: `${50 + i * 8}px`,
+                            height: `${50 + i * 8}px`,
+                            background: `radial-gradient(circle, ${currentSession.colors[i % currentSession.colors.length]}50, transparent)`,
+                            left: `${8 + i * 8}%`,
+                            top: `${15 + i * 7}%`,
+                        }}
+                        animate={{
+                            x: [0, 25, -15, 0],
+                            y: [0, -15, 25, 0],
+                            scale: [1, 1.3, 0.7, 1],
+                        }}
+                        transition={{
+                            duration: 7 + i * 0.4,
+                            repeat: Infinity,
+                            delay: i * 0.4,
+                            ease: "easeInOut"
+                        }}
+                    />
+                ))}
+            </div>
+
             <div className="relative z-10">
-                {/* Header - Match "Engagement" card style */}
                 <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2">
-                        <ClockIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                        <h3 className="text-lg md:text-xl font-bold text-white">Focus Timer</h3>
+                    <div className="flex items-center gap-3">
+                    <motion.div
+                            animate={{ 
+                                rotate: [0, 360],
+                                scale: [1, 1.1, 1]
+                            }}
+                            transition={{ 
+                                duration: 8, 
+                                repeat: Infinity, 
+                                ease: 'linear' 
+                            }}
+                        >
+                            <ClockIcon className="w-6 h-6 text-white drop-shadow-lg" />
+                        </motion.div>
+                        <h3 className="text-2xl font-bold font-display text-white drop-shadow-lg">Focus Timer</h3>
                             </div>
                     <div className="text-right">
-                        <div className="text-xs text-white/80">Sessions</div>
-                        <div className="text-xl md:text-2xl font-bold text-white">{completedSessions}</div>
+                        <div className="text-sm opacity-80 text-white">Sessions Completed</div>
+                        <div className="text-2xl font-bold text-white drop-shadow-lg">{completedSessions}</div>
                         </div>
                 </div>
 
-                {/* Large Timer Display - Match "Engagement" card style with large percentage */}
+                {/* Enhanced Timer Display */}
                 <div className="text-center mb-6">
-                    <div className="mb-4">
+                    <div className="relative w-48 h-48 mx-auto mb-4">
+                        {/* Animated background circle */}
                             <motion.div
-                            className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-2"
-                            animate={{ scale: [1, 1.01, 1] }}
+                            className="absolute inset-0 rounded-full"
+                            style={{
+                                background: `conic-gradient(from 0deg, ${currentSession.colors[0]}, ${currentSession.colors[1]}, ${currentSession.colors[2]}, ${currentSession.colors[3]}, ${currentSession.colors[0]})`,
+                                opacity: 0.3
+                            }}
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                        />
+                        
+                        {/* Progress Circle */}
+                        <svg className="w-full h-full transform -rotate-90 relative z-10" viewBox="0 0 100 100">
+                            <circle
+                                cx="50"
+                                cy="50"
+                                r="45"
+                                stroke="rgba(255,255,255,0.3)"
+                                strokeWidth="8"
+                                fill="none"
+                            />
+                            <motion.circle
+                                cx="50"
+                                cy="50"
+                                r="45"
+                                stroke="white"
+                                strokeWidth="8"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeDasharray={`${2 * Math.PI * 45}`}
+                                strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
+                                initial={{ strokeDashoffset: 2 * Math.PI * 45 }}
+                                animate={{ strokeDashoffset: 2 * Math.PI * 45 * (1 - progress / 100) }}
+                                transition={{ duration: 0.5 }}
+                                style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.5))' }}
+                            />
+                        </svg>
+                        
+                        {/* Timer Text */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                            <motion.div 
+                                className="text-4xl font-bold font-mono text-white drop-shadow-lg"
+                                animate={{ scale: [1, 1.02, 1] }}
                                 transition={{ duration: 2, repeat: Infinity }}
                             >
                                 {formatTime(timeLeft)}
                     </motion.div>
-                        <div className="text-sm md:text-base text-white/80">{currentSession.label}</div>
-                        </div>
-
-                    {/* Progress Bar - Match "Engagement" card progress bar */}
-                    <div className="mt-6">
-                        <div className="flex justify-between text-xs text-white/80 mb-2">
-                            <span>Progress</span>
-                            <span>{Math.round(progress)}%</span>
-                        </div>
-                        <div className="h-3 bg-white/20 rounded-full overflow-hidden">
-                            <motion.div
-                                className="h-full bg-white rounded-full"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${progress}%` }}
-                                transition={{ duration: 0.8, ease: 'easeOut' }}
-                            />
+                            <div className="text-sm opacity-90 mt-1 text-white drop-shadow-lg">{currentSession.label}</div>
                         </div>
                     </div>
                 </div>
 
-                {/* Stats - Compact, matching reference style */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                    <div className="text-center bg-white/10 rounded-xl p-3">
-                        <div className="text-2xl md:text-3xl font-extrabold text-white mb-1">{pomodoroStreak}</div>
-                        <div className="text-xs text-white/80">Day Streak</div>
+                {/* Pomodoro Stats */}
+                <div className="flex justify-center gap-6 mb-6">
+                    <div className="text-center">
+                        <div className="text-lg font-bold text-yellow-400">{pomodoroStreak}</div>
+                        <div className="text-xs text-white/60">Day Streak</div>
                     </div>
-                    <div className="text-center bg-white/10 rounded-xl p-3">
-                        <div className="text-2xl md:text-3xl font-extrabold text-white mb-1">{completedSessions}</div>
-                        <div className="text-xs text-white/80">Sessions</div>
+                    <div className="text-center">
+                        <div className="text-lg font-bold text-green-400">{completedSessions}</div>
+                        <div className="text-xs text-white/60">Sessions</div>
                     </div>
-                    <div className="text-center bg-white/10 rounded-xl p-3">
-                        <div className="text-2xl md:text-3xl font-extrabold text-white mb-1">+{sessionPoints}</div>
-                        <div className="text-xs text-white/80">Points</div>
+                    <div className="text-center">
+                        <div className="text-lg font-bold text-blue-400">+{sessionPoints}</div>
+                        <div className="text-xs text-white/60">Points Today</div>
                     </div>
                 </div>
 
-                {/* Controls */}
-                <div className="flex justify-center gap-3">
+                {/* Enhanced Controls */}
+                <div className="flex justify-center gap-4 mb-4">
                     <motion.button
                         onClick={isRunning ? pauseTimer : startTimer}
-                               className="px-6 py-3 rounded-xl font-bold text-sm bg-white text-blue-600 hover:bg-white/90 transition-colors min-h-[44px]"
-                        whileHover={{ scale: 1.05 }}
+                        className="px-8 py-4 rounded-full font-semibold transition-all duration-300 text-white"
+                        style={{ 
+                            background: 'rgba(255,255,255,0.25)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.3)'
+                        }}
+                        whileHover={{ 
+                            scale: 1.05,
+                            background: 'rgba(255,255,255,0.35)'
+                        }}
                         whileTap={{ scale: 0.95 }}
                     >
                         {isRunning ? (isPaused ? 'Resume' : 'Pause') : 'Start Focus'}
                     </motion.button>
-                    {isRunning && (
                     <motion.button
                         onClick={resetTimer}
-                                   className="px-4 py-3 rounded-xl font-bold text-sm bg-white/10 text-white hover:bg-white/20 transition-colors min-h-[44px]"
-                            whileHover={{ scale: 1.05 }}
+                        className="px-6 py-4 rounded-full font-semibold transition-all duration-300 text-white"
+                        style={{ 
+                            background: 'rgba(255,255,255,0.15)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.2)'
+                        }}
+                        whileHover={{ 
+                            scale: 1.05,
+                            background: 'rgba(255,255,255,0.25)'
+                        }}
                         whileTap={{ scale: 0.95 }}
                     >
                         Reset
                     </motion.button>
-                    )}
                 </div>
 
                 {/* Motivational Message */}
-                <div className="text-center mt-4">
-                           <p className="text-xs text-white/80 italic">
+                <div className="text-center">
+                    <motion.p 
+                        className="text-sm opacity-90 italic text-white drop-shadow-lg"
+                        animate={{ opacity: [0.7, 1, 0.7] }}
+                        transition={{ duration: 3, repeat: Infinity }}
+                    >
                         {getMotivationalMessage()}
-                           </p>
+                    </motion.p>
                 </div>
             </div>
         </motion.div>
@@ -2060,7 +2032,7 @@ const FocusTimerWidget: React.FC<{
 
 
 
-// Daily Greeting - Redesigned to match reference image (dark mode with date, weather, summary, mood buttons, task list)
+// Hollywood-Level Daily Greeting with Integrated Weather, Health, and SOEN Rewards
 const DailyGreeting: React.FC<{
     tasks: Task[];
     categoryColors: Record<Category, string>;
@@ -2068,1479 +2040,425 @@ const DailyGreeting: React.FC<{
     briefing: MissionBriefing;
     isBriefingLoading: boolean;
     notes: Note[];
-    goals: Goal[];
-    allTasks: Task[];
     onCompleteTask: (taskId: number) => void;
-    navigateToScheduleDate: (date: Date, taskId?: number) => void;
+    navigateToScheduleDate: (date: Date) => void;
     setScreen: (screen: Screen) => void;
     canCompleteTasks: boolean;
-    insightExpanded?: boolean;
-    setInsightExpanded?: (expanded: boolean) => void;
-    userName?: string;
-    onMoodSelected?: (mood: string, date: Date) => void; // Callback to save mood data
-    addTask?: (task: Partial<Task> & { title: string }) => void;
-    projects?: Project[];
-    categories?: Category[];
-    onAddNewCategory?: (name: string) => boolean;
-    showToast?: (message: string) => void;
-}> = ({ tasks, categoryColors, healthData, briefing, isBriefingLoading, notes, goals, allTasks, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks, insightExpanded: externalInsightExpanded, setInsightExpanded: externalSetInsightExpanded, userName, onMoodSelected, addTask, projects = [], categories = [], onAddNewCategory, showToast }) => {
-    const [internalInsightExpanded, setInternalInsightExpanded] = useState(false);
-    const [fullScreenInsight, setFullScreenInsight] = useState(false);
-    const [undoTaskId, setUndoTaskId] = useState<number | null>(null);
-    const [recentlyCompleted, setRecentlyCompleted] = useState<Set<number>>(new Set());
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null); // Track clicked date
-    // Weather state
-    const [weatherData, setWeatherData] = useState<{ temperature: number; condition: string; location: string; loading: boolean }>({
-        temperature: 0,
-        condition: 'sunny',
-        location: '',
-        loading: true
-    });
-    // Task modal state
-    const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
-    const [prefillDateForModal, setPrefillDateForModal] = useState<Date>(new Date());
-    
-    // Use external state if provided, otherwise use internal
-    const insightExpanded = externalInsightExpanded !== undefined ? externalInsightExpanded : internalInsightExpanded;
-    const setInsightExpanded = externalSetInsightExpanded || setInternalInsightExpanded;
-    // Load today's mood from localStorage
-    const loadTodayMood = (): string | null => {
-        try {
-            const moodHistory = localStorage.getItem('soen-mood-history');
-            if (!moodHistory) return null;
-            const history = JSON.parse(moodHistory) as Array<{ date: string; mood: string }>;
-            const todayStr = today.toDateString();
-            const todayEntry = history.find(h => new Date(h.date).toDateString() === todayStr);
-            return todayEntry?.mood || null;
-        } catch {
-            return null;
-        }
-    };
-
-    const [selectedMood, setSelectedMood] = useState<string | null>(() => loadTodayMood());
-    const [taskFilter, setTaskFilter] = useState<'all' | 'events' | 'meetings' | 'tasks'>('all');
+    soenFlow?: number;
+    purchasedRewards?: string[];
+    activeTheme?: string;
+    activeFocusBackground?: string;
+}> = ({ tasks, categoryColors, healthData, briefing, isBriefingLoading, notes, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' }) => {
     const today = new Date();
-
-    // Fetch weather data (real-time, updating every 10 minutes)
-    useEffect(() => {
-        // Check if geolocation is available
-        if (!navigator.geolocation) {
-            console.warn('Geolocation not available in this browser');
-            setWeatherData(prev => ({
-                ...prev,
-                loading: false,
-                temperature: 0,
-                condition: 'sunny',
-                location: 'Location unavailable'
-            }));
-            return;
-        }
-
-        const fetchWeather = async () => {
-            try {
-                setWeatherData(prev => ({ ...prev, loading: true }));
-                
-                // Helper function to fetch weather by coordinates
-                const fetchWeatherByCoords = async (lat: number, lon: number, locationName: string = '') => {
-                    try {
-                        const weatherResponse = await fetch(
-                            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`
-                        );
-
-                        if (!weatherResponse.ok) {
-                            throw new Error('Weather API request failed');
-                        }
-
-                        const weatherResult = await weatherResponse.json();
-                        const weatherCode = weatherResult.current?.weather_code || 0;
-                        const temperature = Math.round(weatherResult.current?.temperature_2m || 0);
-
-                        const getWeatherCondition = (code: number): string => {
-                            if (code === 0) return 'sunny';
-                            if (code <= 3) return 'partly-cloudy';
-                            if (code <= 48) return 'cloudy';
-                            if (code <= 67) return 'rainy';
-                            if (code <= 77) return 'snowy';
-                            if (code <= 82) return 'rainy';
-                            if (code <= 86) return 'snowy';
-                            return 'sunny';
-                        };
-
-                        // If location name not provided, try to get it via reverse geocoding
-                        let finalLocationName = locationName;
-                        if (!finalLocationName) {
-                            try {
-                                const geoResponse = await fetch(
-                                    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
-                                );
-                                if (geoResponse.ok) {
-                                    const geoResult = await geoResponse.json();
-                                    finalLocationName = geoResult.city || geoResult.locality || 'Unknown Location';
-                                }
-                            } catch (geoError) {
-                                console.warn('Geocoding failed:', geoError);
-                            }
-                        }
-
-                        setWeatherData({
-                            temperature,
-                            condition: getWeatherCondition(weatherCode),
-                            location: finalLocationName || 'Unknown Location',
-                            loading: false
-                        });
-                        return true;
-                    } catch (error) {
-                        console.error('Failed to fetch weather:', error);
-                        return false;
-                    }
-                };
-
-                // Try geolocation first (with timeout)
-                let position: GeolocationPosition | null = null;
-                try {
-                    position = await Promise.race([
-                        new Promise<GeolocationPosition>((resolve, reject) => {
-                            navigator.geolocation.getCurrentPosition(
-                                (pos) => {
-                                    console.log('Geolocation successful:', pos.coords.latitude, pos.coords.longitude);
-                                    resolve(pos);
-                                }, 
-                                (error) => {
-                                    console.error('Geolocation error:', error.code, error.message);
-                                    reject(error);
-                                }, 
-                                {
-                                    maximumAge: 600000, // 10 minutes
-                                    timeout: 10000,
-                                    enableHighAccuracy: false
-                                }
-                            );
-                        }),
-                        new Promise<null>((resolve) => {
-                            setTimeout(() => {
-                                console.log('Geolocation timeout - using fallback');
-                                resolve(null);
-                            }, 10000);
-                        })
-                    ]) as GeolocationPosition | null;
-                } catch (error) {
-                    console.error('Geolocation failed:', error);
-                    position = null;
-                }
-
-                // If geolocation succeeded, use it
-                if (position && position.coords) {
-                    const { latitude, longitude } = position.coords;
-                    const success = await fetchWeatherByCoords(latitude, longitude);
-                    if (success) return;
-                }
-
-                // Fallback: Try IP-based location
-                console.log('Trying IP-based location fallback...');
-                try {
-                    // Try multiple IP geolocation APIs for better reliability
-                    const ipApis: Array<{ url: string; parser: (data: any) => { lat: number | null; lon: number | null; city: string } | null }> = [
-                        {
-                            url: 'https://ipapi.co/json/',
-                            parser: (data) => {
-                                if (data.latitude && data.longitude) {
-                                    return {
-                                        lat: data.latitude,
-                                        lon: data.longitude,
-                                        city: data.city || data.region || ''
-                                    };
-                                }
-                                return null;
-                            }
-                        },
-                        {
-                            url: 'https://ip-api.com/json/',
-                            parser: (data) => {
-                                if (data.lat && data.lon) {
-                                    return {
-                                        lat: data.lat,
-                                        lon: data.lon,
-                                        city: data.city || data.regionName || ''
-                                    };
-                                }
-                                return null;
-                            }
-                        }
-                    ];
-
-                    for (const api of ipApis) {
-                        try {
-                            console.log(`Trying ${api.url}...`);
-                            const ipResponse = await fetch(api.url);
-                            if (!ipResponse.ok) {
-                                console.warn(`${api.url} returned status ${ipResponse.status}`);
-                                continue;
-                            }
-                            
-                            const ipData = await ipResponse.json();
-                            const location = api.parser(ipData);
-
-                            if (location && location.lat !== null && location.lon !== null) {
-                                console.log('Using IP-based location:', location.lat, location.lon, location.city);
-                                const success = await fetchWeatherByCoords(location.lat, location.lon, location.city);
-                                if (success) return;
-                            } else {
-                                console.warn(`${api.url} returned invalid data:`, ipData);
-                            }
-                        } catch (apiError) {
-                            console.warn(`IP API ${api.url} failed:`, apiError);
-                            continue;
-                        }
-                    }
-                } catch (ipError) {
-                    console.error('All IP geolocation fallbacks failed:', ipError);
-                }
-                
-                // If all else fails, use default
-                setWeatherData(prev => ({
-                    ...prev,
-                    loading: false,
-                    temperature: 0,
-                    condition: 'sunny',
-                    location: 'Location unavailable'
-                }));
-
-            } catch (error) {
-                console.error('Weather fetch error:', error);
-                setWeatherData(prev => ({
-                    ...prev,
-                    loading: false,
-                    temperature: prev.temperature || 0,
-                    condition: prev.condition || 'sunny',
-                    location: prev.location || 'Location unavailable'
-                }));
-            }
-        };
-
-        fetchWeather();
-        // Update weather every 10 minutes
-        const interval = setInterval(fetchWeather, 600000);
-        return () => clearInterval(interval);
-    }, []);
-    
-    // Save mood to localStorage and notify parent
-    const handleMoodSelect = (mood: string) => {
-        const newMood = selectedMood === mood ? null : mood;
-        setSelectedMood(newMood);
-        
-        if (newMood) {
-            // Save to localStorage
-            try {
-                const moodHistory = localStorage.getItem('soen-mood-history');
-                const history: Array<{ date: string; mood: string }> = moodHistory ? JSON.parse(moodHistory) : [];
-                const todayStr = today.toISOString();
-                
-                // Remove existing entry for today if any
-                const filteredHistory = history.filter(h => new Date(h.date).toDateString() !== today.toDateString());
-                
-                // Add new entry
-                filteredHistory.push({ date: todayStr, mood: newMood });
-                
-                // Keep only last 90 days
-                const ninetyDaysAgo = new Date();
-                ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-                const recentHistory = filteredHistory.filter(h => new Date(h.date) >= ninetyDaysAgo);
-                
-                localStorage.setItem('soen-mood-history', JSON.stringify(recentHistory));
-                
-                // Notify parent component if callback provided
-                if (onMoodSelected) {
-                    onMoodSelected(newMood, today);
-                }
-            } catch (error) {
-                console.error('Failed to save mood:', error);
-            }
-        }
-    };
     const todayTasks = tasks.filter(t => 
         new Date(t.startTime).toDateString() === today.toDateString()
     );
     
     const completedToday = todayTasks.filter(t => t.status === 'Completed').length;
-    
-    // Categorize tasks into events, meetings, and regular tasks
-    const todayEvents = todayTasks.filter(t => 
-        t.category.toLowerCase() === 'event' || t.category.toLowerCase().includes('event')
-    );
-    const todayMeetings = todayTasks.filter(t => 
-        t.category.toLowerCase() === 'meeting' || t.category.toLowerCase().includes('meeting')
-    );
-    const todayRegularTasks = todayTasks.filter(t => 
-        !todayEvents.includes(t) && !todayMeetings.includes(t)
-    );
-    
-    // Get tasks for selected date or today
-    const displayDate = selectedDate || today;
-    const displayDateTasks = tasks.filter(t => 
-        new Date(t.startTime).toDateString() === displayDate.toDateString()
-    );
-    
-    const displayEvents = displayDateTasks.filter(t => t.category.toLowerCase() === 'event' || t.category.toLowerCase().includes('event'));
-    const displayMeetings = displayDateTasks.filter(t => t.category.toLowerCase() === 'meeting' || t.category.toLowerCase().includes('meeting'));
-    const displayRegularTasks = displayDateTasks.filter(t => 
-        !displayEvents.includes(t) && !displayMeetings.includes(t)
-    );
-    
-    const eventsCount = displayEvents.length;
-    const meetingsCount = displayMeetings.length;
-    const tasksCount = displayRegularTasks.length;
-    
-    // Generate suggested schedule for empty days (similar to EmptyDaySuggestions)
-    const generateSuggestedSchedule = useMemo(() => {
-        if (displayDateTasks.length > 0 || !selectedDate) return [];
-        
-        const isWeekend = displayDate.getDay() === 0 || displayDate.getDay() === 6;
-        const suggestions: Array<{ title: string; category: string; time?: string; description: string }> = [];
-        
-        // Analyze goals for suggestions
-        const activeGoals = goals.filter(g => g.status === 'active');
-        if (activeGoals.length > 0) {
-            activeGoals.slice(0, 2).forEach(goal => {
-                suggestions.push({
-                    title: `Work on ${goal.text}`,
-                    category: 'Goal',
-                    time: isWeekend ? '10:00' : '18:00',
-                    description: `Make progress toward your "${goal.text}" goal`
-                });
-            });
-        }
-        
-        // Analyze recent task patterns
-        const recentTasks = allTasks
-            .filter(t => new Date(t.startTime) < new Date() && new Date(t.startTime) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-            .slice(0, 5);
-        
-        const commonCategories = recentTasks.reduce((acc, t) => {
-            acc[t.category] = (acc[t.category] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
-        
-        const topCategory = Object.entries(commonCategories).sort((a, b) => b[1] - a[1])[0];
-        if (topCategory) {
-            suggestions.push({
-                title: `Continue ${topCategory[0]} work`,
-                category: topCategory[0] as Category,
-                time: '09:00',
-                description: `Based on your recent schedule, this seems important`
-            });
-        }
-        
-        // Default suggestions if not enough context
-        if (suggestions.length < 3) {
-            if (isWeekend) {
-                suggestions.push(
-                    { title: 'Plan next week', category: 'Planning', time: '10:00', description: 'Review and prepare for the week ahead' },
-                    { title: 'Personal project time', category: 'Personal', time: '14:00', description: 'Dedicate time to personal interests' },
-                    { title: 'Relaxation activity', category: 'Wellness', time: '16:00', description: 'Rest and recharge for the week ahead' }
-                );
-            } else {
-                suggestions.push(
-                    { title: 'Morning routine', category: 'Wellness', time: '08:00', description: 'Start your day with intention' },
-                    { title: 'Deep work session', category: 'Work', time: '10:00', description: 'Focus on your most important task' },
-                    { title: 'Reflection and planning', category: 'Planning', time: '17:00', description: 'Review the day and plan tomorrow' }
-                );
-            }
-        }
-        
-        return suggestions.slice(0, 4);
-    }, [selectedDate, displayDateTasks.length, goals, allTasks, displayDate]);
-    
-    // Get filtered tasks based on selection
-    const getFilteredTasks = () => {
-        if (taskFilter === 'events') return displayEvents;
-        if (taskFilter === 'meetings') return displayMeetings;
-        if (taskFilter === 'tasks') return displayRegularTasks;
-        return displayDateTasks;
-    };
-    
-    // Check if it's evening (9pm or later)
-    const isEvening = new Date().getHours() >= 21;
+    const completionRate = todayTasks.length > 0 ? (completedToday / todayTasks.length) * 100 : 0;
 
-    // Extract first name and capitalize properly (first letter uppercase, rest lowercase)
-    const getFirstName = (): string => {
-        const fullName = userName || localStorage.getItem('soen-user-name') || '';
-        if (!fullName) return '';
-        // Split by space and take first part, then capitalize first letter only
-        const firstName = fullName.trim().split(' ')[0];
-        if (!firstName) return '';
-        return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-    };
-
+    // Dynamic greeting based on time (changes every 6 hours) and task completion
     const getGreeting = () => {
-        const hour = new Date().getHours();
-        const firstName = getFirstName();
-        const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
-        return firstName ? `${greeting}, ${firstName}` : greeting;
-    };
-
-    const getDayName = () => {
-        return today.toLocaleDateString('en-US', { weekday: 'long' });
-    };
-
-    const getShortDate = () => {
-        return today.toLocaleDateString('en-US', { day: 'numeric', weekday: 'short' });
-    };
-
-    // AI icon mapping for tasks/events/meetings
-    const getAiIconForItem = (title: string, category: string, isCompleted?: boolean) => {
-        if (isCompleted) {
-            return <CheckCircleIcon className="w-5 h-5 text-white" />;
-        }
-        const t = `${title} ${category}`.toLowerCase();
-        if (t.includes('meet') || t.includes('call') || t.includes('zoom') || t.includes('google')) return (
-            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M4 7a3 3 0 013-3h5a3 3 0 013 3v10a3 3 0 01-3 3H7a3 3 0 01-3-3V7z" />
-                <path d="M15.5 9.5l4.5-3v11l-4.5-3v-5z" />
-            </svg>
-        );
-        if (t.includes('run') || t.includes('gym') || t.includes('workout') || t.includes('yoga')) return (
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        );
-        if (t.includes('read') || t.includes('study') || t.includes('learn')) return (
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6l-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h3l2-2h5a2 2 0 002-2V8a2 2 0 00-2-2h-5z"/></svg>
-        );
-        if (t.includes('eat') || t.includes('meal') || t.includes('lunch') || t.includes('dinner')) return (
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 3h16M4 8h16M4 13h16M4 18h16"/></svg>
-        );
-        return (
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7"/></svg>
-        );
-    };
-
-    // Get week dates for calendar strip - supports week start day (default Sunday)
-    const getWeekDates = () => {
-        const week = [];
-        // Get week start day from settings (0 = Sunday, 1 = Monday, etc.)
-        const weekStartDay = parseInt(localStorage.getItem('soen-week-start-day') || '0', 10);
-        const startOfWeek = new Date(today);
-        const day = startOfWeek.getDay();
-        // Calculate offset to get to the start of the week (based on user's preference)
-        const diff = (day - weekStartDay + 7) % 7;
-        startOfWeek.setDate(startOfWeek.getDate() - diff);
+        const now = new Date();
+        const hour = now.getHours();
         
-        for (let i = 0; i < 7; i++) {
-            const date = new Date(startOfWeek);
-            date.setDate(startOfWeek.getDate() + i);
-            // Count tasks for each day
-            const dayTasks = tasks.filter(t => 
-                new Date(t.startTime).toDateString() === date.toDateString()
-            );
-            week.push({
-                date: date.getDate(),
-                day: date.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0),
-                isToday: date.toDateString() === today.toDateString(),
-                dateObj: date,
-                taskCount: dayTasks.length
-            });
+        // Check task completion status
+        const completionRate = todayTasks.length > 0 ? (completedToday / todayTasks.length) * 100 : 0;
+        const allCompleted = completedToday === todayTasks.length && todayTasks.length > 0;
+        const hasTasks = todayTasks.length > 0;
+        
+        // Time-based greetings
+        let timeGreeting = '';
+        if (hour >= 0 && hour < 12) timeGreeting = 'Good Morning'; // 0-11 (midnight to noon)
+        else if (hour >= 12 && hour < 18) timeGreeting = 'Good Afternoon'; // 12-17 (noon to 5pm)
+        else timeGreeting = 'Good Evening'; // 18-23 (6pm to midnight)
+        
+        // Task-based modifications
+        if (allCompleted) {
+            return `${timeGreeting}, Mission Complete!`;
+        } else if (completionRate >= 80 && hasTasks) {
+            return `${timeGreeting}, Almost There!`;
+        } else if (completionRate >= 50 && hasTasks) {
+            return `${timeGreeting}, Great Progress!`;
+        } else if (completedToday > 0 && hasTasks) {
+            return `${timeGreeting}, Keep Going!`;
         }
-        return week;
+        
+        return timeGreeting;
     };
 
-    // Find related notes for today's tasks (used in expanded insight)
-    const relatedNotes = notes.filter(note => 
-        todayTasks.some(task => 
-            note.title?.toLowerCase().includes(task.title.toLowerCase()) ||
-            note.content?.toLowerCase().includes(task.title.toLowerCase()) ||
-            note.content?.toLowerCase().includes(task.category.toLowerCase())
-        )
+    const getMotivationalMessage = () => {
+        if (completionRate >= 80) return "You're on fire today! Keep up the amazing work!";
+        if (completionRate >= 50) return "Great progress! You're building momentum!";
+        if (completionRate > 0) return "Every step counts. You've got this!";
+        return "Ready to make today count? Let's start strong!";
+    };
+
+    const dailyQuotes = [
+        "The best way to find yourself is to lose yourself in the service of others.",
+        "No act of kindness, no matter how small, is ever wasted.",
+        "Love and kindness are never wasted. They always make a difference.",
+        "Be yourself; everyone else is already taken. But make sure that self is kind.",
+        "The meaning of life is to find your gift. The purpose of life is to give it away.",
+        "In a world where you can be anything, be kind. It costs nothing but means everything."
+    ];
+
+    const todayQuote = dailyQuotes[new Date().getDate() % dailyQuotes.length];
+
+    // Health metrics for condensed display
+    const steps = (healthData as any).steps || 0;
+    const sleep = (healthData as any).sleep || 0;
+    const water = (healthData as any).water || 0;
+
+    // SOEN Rewards Integration - Use REWARDS_CATALOG as single source of truth
+    const [currentPoints, setCurrentPoints] = useState(0);
+    const [level, setLevel] = useState(1);
+    const [showRewardsDetail, setShowRewardsDetail] = useState(false);
+
+    // Derive themes and focus backgrounds from REWARDS_CATALOG
+    const themes = useMemo(() => 
+        REWARDS_CATALOG
+            .filter(r => r.type === 'theme')
+            .map(theme => ({
+                id: theme.id,
+                name: theme.name,
+                cost: theme.cost,
+                unlocked: theme.cost === 0 || purchasedRewards.includes(theme.id),
+                colors: theme.colors || getThemeColors(theme.value)
+            })),
+        [purchasedRewards]
     );
-    
-    // Get user context: lifestyle profile, travel mode, sick mode
-    const getUserContext = () => {
-        try {
-            const lifestyle = localStorage.getItem('soen-lifestyle-profile') || 'general';
-            const travelMode = localStorage.getItem('soen-travel-mode') === 'true';
-            const sickMode = localStorage.getItem('soen-sick-mode') === 'true';
-            const moodHistory = localStorage.getItem('soen-mood-history');
-            let recentMoods: string[] = [];
-            if (moodHistory) {
-                try {
-                    const history = JSON.parse(moodHistory) as Array<{ date: string; mood: string }>;
-                    const sevenDaysAgo = new Date();
-                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                    recentMoods = history
-                        .filter(h => new Date(h.date) >= sevenDaysAgo)
-                        .map(h => h.mood);
-                } catch {}
-            }
-            return { lifestyle, travelMode, sickMode, recentMoods };
-        } catch {
-            return { lifestyle: 'general', travelMode: false, sickMode: false, recentMoods: [] };
-        }
-    };
 
-    // Check for injury/accommodation patterns (skipped workouts, sick mode, etc.)
-    const detectInjuryAccommodation = (context: ReturnType<typeof getUserContext>) => {
-        if (context.sickMode) return 'sick';
-        // Check for skipped workout patterns (could be expanded with historical data)
-        const hasScheduledWorkout = todayTasks.some(t => 
-            t.category.toLowerCase().includes('workout') || 
-            t.category.toLowerCase().includes('exercise') || 
-            t.category.toLowerCase().includes('gym')
-        );
-        // If user typically has workouts but today doesn't, might be accommodating
-        // This is simplified - could be enhanced with pattern detection
-        return null;
-    };
+    const focusBackgrounds = useMemo(() =>
+        REWARDS_CATALOG
+            .filter(r => r.type === 'focus_background')
+            .map(bg => ({
+                id: bg.id,
+                name: bg.name,
+                cost: bg.cost,
+                unlocked: purchasedRewards.includes(bg.id),
+                colors: bg.colors || getFocusBackgroundColors(bg.value)
+            })),
+        [purchasedRewards]
+    );
 
-    // Enhanced AI insight based on schedule with meeting research, lifestyle, and accommodations
-    const generateDailyInsight = () => {
-        const userContext = getUserContext();
-        const accommodation = detectInjuryAccommodation(userContext);
-        const hasWorkout = todayTasks.some(t => t.category.toLowerCase().includes('workout') || t.category.toLowerCase().includes('exercise') || t.category.toLowerCase().includes('gym'));
-        const hasMeetings = meetingsCount > 0;
-        const hasWork = todayTasks.some(t => t.category.toLowerCase().includes('work'));
-        
-        // Get meeting-related notes for research
-        const meetingNotes = notes.filter(note => 
-            note.title?.toLowerCase().includes('meeting') || 
-            note.content?.toLowerCase().includes('meeting') ||
-            todayMeetings.some(meeting => note.title?.toLowerCase().includes(meeting.title.toLowerCase()) || note.content?.toLowerCase().includes(meeting.title.toLowerCase()))
-        );
-        
-        // Injury/Sick accommodation insights
-        if (accommodation === 'sick' || userContext.sickMode) {
-            return {
-                preview: "Sick Day Mode active. Focus on rest and recovery. All expectations adjusted.",
-                expanded: {
-                    recovery: "Prioritize rest and hydration. Your body needs time to heal.",
-                    tasks: "Lighten your workload today. Postpone non-essential tasks.",
-                    expectations: "All productivity expectations are adjusted. Take it easy.",
-                    support: "Mira is here to help you recover. Ask for gentle activity suggestions.",
-                    return: "Focus on getting better. We'll help you ease back into your routine when you're ready."
-                },
-                links: relatedNotes.slice(0, 1).map(note => ({ label: note.title || 'Note', type: 'note', id: note.id }))
-            };
-        }
-        
-        // Travel mode insights
-        if (userContext.travelMode) {
-            return {
-                preview: "Travel Mode active. Your schedule has been adjusted for time zone changes.",
-                expanded: {
-                    timezone: "Schedule adjusted for your current timezone. All times display in local time.",
-                    flexibility: "Today's schedule is flexible to accommodate travel adjustments.",
-                    connectivity: "Consider connectivity needs for meetings and tasks while traveling.",
-                    energy: "Travel can be draining. Prioritize rest and hydration.",
-                    work: hasWork ? "Work tasks adjusted for travel context. Focus on essentials only." : "Enjoy your travel time. Minimal tasks scheduled."
-                },
-                links: relatedNotes.slice(0, 1).map(note => ({ label: note.title || 'Note', type: 'note', id: note.id }))
-            };
-        }
-        
-        // Lifestyle-aware insights
-        const getLifestyleInsight = (lifestyle: string) => {
-            switch (lifestyle.toLowerCase()) {
-                case 'white-collar':
-                case 'whitecollar':
-                case 'office':
-                    return {
-                        focus: "Deadline management and meeting prep",
-                        balance: "Work-life balance optimization",
-                        energy: "Peak focus: 9-11am for deep work"
+    // Use shared points calculation utility
+    useEffect(() => {
+        const { totalPoints, level: calculatedLevel } = calculateFlowPoints(tasks, healthData);
+        setCurrentPoints(totalPoints);
+        setLevel(calculatedLevel);
+    }, [tasks, healthData]);
+
+    const nextLevelPoints = level * 500;
+    const insights = useMemo(() => ({
+        unlockedThemes: themes.filter(t => t.unlocked).length,
+        unlockedBackgrounds: focusBackgrounds.filter(b => b.unlocked).length
+    }), [themes, focusBackgrounds]);
+
+    // Geolocation state
+    const [location, setLocation] = useState<{ city: string; temp: number; condition: string } | null>(null);
+    const [weatherLoading, setWeatherLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchWeather = async () => {
+            try {
+                const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        maximumAge: 600000,
+                        timeout: 8000,
+                        enableHighAccuracy: false
+                    });
+                });
+
+                const { latitude, longitude } = position.coords;
+
+                // Fetch weather
+                const weatherResponse = await fetch(
+                    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`
+                );
+
+                if (weatherResponse.ok) {
+                    const weatherResult = await weatherResponse.json();
+                    const weatherCode = weatherResult.current?.weather_code || 0;
+                    const temperature = Math.round(weatherResult.current?.temperature_2m || 0);
+
+                    // Get location name
+                    let cityName = 'Unknown Location';
+                    try {
+                        const geoResponse = await fetch(
+                            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+                        );
+                        if (geoResponse.ok) {
+                            const geoResult = await geoResponse.json();
+                            cityName = geoResult.city || geoResult.locality || 'Unknown Location';
+                        }
+                    } catch (e) {
+                        console.warn('Geocoding failed:', e);
+                    }
+
+                    const getCondition = (code: number): string => {
+                        if (code === 0) return 'Sunny';
+                        if (code <= 3) return 'Partly Cloudy';
+                        if (code <= 48) return 'Cloudy';
+                        if (code <= 67) return 'Rainy';
+                        if (code <= 77) return 'Snowy';
+                        return 'Sunny';
                     };
-                case 'retail':
-                case 'service':
-                    return {
-                        focus: "Shift scheduling and energy management",
-                        balance: "Customer interaction strategies",
-                        energy: "Post-shift recovery and meal timing"
-                    };
-                case 'student':
-                    return {
-                        focus: "Study schedules and exam prep",
-                        balance: "Assignment deadlines and learning optimization",
-                        energy: "Peak study hours: morning for memorization, evening for creative work"
-                    };
-                case 'freelancer':
-                case 'self-employed':
-                    return {
-                        focus: "Project management and client communication",
-                        balance: "Income optimization and workflow efficiency",
-                        energy: "Client calls: morning, deep work: afternoon"
-                    };
-                case 'homemaker':
-                    return {
-                        focus: "Household management and family scheduling",
-                        balance: "Personal time optimization",
-                        energy: "Peak productivity: early morning, personal time: evening"
-                    };
-                case 'law enforcement':
-                case 'officer':
-                    return {
-                        focus: "Shift work and stress management",
-                        balance: "Recovery strategies between shifts",
-                        energy: "Post-shift recovery critical for next shift performance"
-                    };
-                default:
-                    return {
-                        focus: "Productivity and goal achievement",
-                        balance: "Work-life harmony",
-                        energy: "Peak hours: 9-11am"
-                    };
+
+                    setLocation({
+                        city: cityName,
+                        temp: temperature,
+                        condition: getCondition(weatherCode)
+                    });
+                }
+            } catch (error) {
+                console.error('Weather fetch error:', error);
+                setLocation({ city: 'Unknown', temp: 0, condition: 'Sunny' });
+            } finally {
+                setWeatherLoading(false);
             }
         };
-        const lifestyleInsight = getLifestyleInsight(userContext.lifestyle);
-        
-        // Workout-specific guidance (enhanced)
-        if (hasWorkout && !hasMeetings) {
-            const workoutTasks = todayTasks.filter(t => 
-                t.category.toLowerCase().includes('workout') || 
-                t.category.toLowerCase().includes('exercise') || 
-                t.category.toLowerCase().includes('gym')
-            );
-            const workoutCount = workoutTasks.length;
-            const totalWorkoutDuration = workoutTasks.reduce((sum, t) => sum + (t.plannedDuration || 30), 0);
-            
-            // Calculate optimal hydration based on activity level
-            const hydrationTarget = totalWorkoutDuration > 90 ? '3-3.5L' : totalWorkoutDuration > 60 ? '2.5-3L' : '2-2.5L';
-            
-            // Determine best workout time based on schedule
-            const workoutTimes = workoutTasks.map(t => new Date(t.startTime).getHours());
-            const avgWorkoutTime = workoutTimes.reduce((sum, h) => sum + h, 0) / workoutTimes.length;
-            const bestTime = avgWorkoutTime < 12 ? 'Morning workouts boost energy all day' : 
-                           avgWorkoutTime < 17 ? 'Midday workouts break up the day nicely' : 
-                           'Evening workouts help you decompress';
-            
-            return {
-                preview: `Workout day! Focus on hydration - aim for ${hydrationTarget}. ${bestTime}.`,
-                expanded: {
-                    hydration: `Your ${totalWorkoutDuration}min of activity suggests ${hydrationTarget} water today. Track in Apple Health.`,
-                    workoutTime: bestTime,
-                    recovery: "Plan 8+ hours sleep tonight for proper recovery. Your body needs rest after today's activities.",
-                    nutrition: "Refuel with protein and carbs within 30min post-workout. Your body will recover faster.",
-                    goals: workoutCount > 1 ? `Great job with ${workoutCount} workouts today! You're building serious momentum.` : "You're building consistency. Keep it up!",
-                    progression: "Track your performance in Apple Health. Monitor heart rate zones and energy levels.",
-                    rest: "Active recovery tomorrow - light movement like walking or stretching will help."
-                },
-                links: relatedNotes.slice(0, 2).map(note => ({ label: note.title || 'Note', type: 'note', id: note.id }))
-            };
-        } else if (hasMeetings && hasWorkout) {
-            // Hybrid day: Work + Workout with lifestyle awareness
-            const meetingInsights = todayMeetings.map((meeting, idx) => {
-                const relatedNote = meetingNotes.find(n => 
-                    n.title?.toLowerCase().includes(meeting.title.toLowerCase()) ||
-                    n.content?.toLowerCase().includes(meeting.title.toLowerCase())
-                );
-                return {
-                    meeting: `${idx + 1}. ${meeting.title}`,
-                    time: new Date(meeting.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    prep: relatedNote ? "Prep notes available" : "No prep notes found",
-                    link: relatedNote ? { label: relatedNote.title || 'Prep Note', type: 'note', id: relatedNote.id } : null
-                };
-            });
-        
-        return {
-                preview: `${meetingsCount} meetings today. Prep notes ready. Best workout time: 6-7pm after meetings end.`,
-                expanded: {
-                    meetings: `Review meeting agendas 15min before each. ${meetingNotes.length > 0 ? `${meetingNotes.length} prep notes available.` : 'No prep notes found.'}`,
-                    meetingDetails: meetingInsights.length > 0 ? meetingInsights.map(m => `${m.meeting} at ${m.time} - ${m.prep}`).join(' | ') : '',
-                    workoutTime: "Schedule workout for 6-7pm - perfect timing after your last meeting ends. Exercise helps clear your mind.",
-                    energy: `Take 5min breaks between meetings. ${lifestyleInsight.energy}. Your energy typically dips around 2-3pm.`,
-                    balance: "You're balancing work and fitness well today. Keep this rhythm!",
-                    lifestyle: userContext.lifestyle !== 'general' ? `${lifestyleInsight.focus} for ${userContext.lifestyle.replace(/-/g, ' ')} lifestyle.` : ""
-                },
-                links: [
-                    ...meetingNotes.slice(0, 2).map(note => ({ label: note.title || 'Meeting Note', type: 'note', id: note.id })),
-                    ...relatedNotes.slice(0, 1).map(note => ({ label: note.title || 'Related Note', type: 'note', id: note.id }))
-                ]
-            };
-        } else if (hasMeetings) {
-            const meetingInsights = todayMeetings.map((meeting, idx) => {
-                const relatedNote = meetingNotes.find(n => 
-                    n.title?.toLowerCase().includes(meeting.title.toLowerCase()) ||
-                    n.content?.toLowerCase().includes(meeting.title.toLowerCase())
-                );
-                return {
-                    meeting: `${idx + 1}. ${meeting.title}`,
-                    time: new Date(meeting.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    agenda: relatedNote ? "Agenda & prep notes available" : "Research agenda and prepare talking points",
-                    participants: "Research participants and topics",
-                    link: relatedNote ? { label: relatedNote.title || 'Meeting Prep', type: 'note', id: relatedNote.id } : null
-                };
-            });
-            
-            return {
-                preview: `${meetingsCount} meetings today. Key prep notes ready. Block 15min between meetings for mental reset.`,
-                expanded: {
-                    meetings: `Your meeting prep notes are ready. ${meetingNotes.length > 0 ? `${meetingNotes.length} prep notes found.` : 'Research meeting topics and prepare agendas.'}`,
-                    meetingBreakdown: meetingInsights.map(m => `${m.meeting} at ${m.time} - ${m.agenda}`).join(' | '),
-                    breaks: "Schedule 5-10min breaks between meetings. Your focus drops after 90min of back-to-backs.",
-                    priority: `${todayMeetings[0]?.title || 'First meeting'} is your highest priority today. Prepare talking points in advance.`,
-                    energy: "Your peak focus time is 9-11am. Schedule critical discussions then.",
-                    communication: "Research participants, prepare agendas, and outline key discussion points for each meeting."
-                },
-                links: [
-                    ...meetingNotes.slice(0, 3).map(note => ({ label: note.title || 'Meeting Prep', type: 'note', id: note.id })),
-                    ...todayMeetings.slice(0, 2).map(meeting => ({ label: meeting.title, type: 'task', id: meeting.id }))
-                ]
-            };
-        }
-        
-        // Default insights with lifestyle awareness
-        const recentMoodTrend = userContext.recentMoods.length > 0 
-            ? userContext.recentMoods.filter(m => ['Awful', 'Bad'].includes(m)).length / userContext.recentMoods.length
-            : 0;
-        
-        const moodInsight = recentMoodTrend > 0.4 
-            ? "I notice you've had some challenging days recently. Let's focus on achievable goals today and build positive momentum."
-            : recentMoodTrend < 0.2 && userContext.recentMoods.length >= 3
-            ? "You've been in great spirits! Keep the momentum going with today's tasks."
-            : "";
-        
-        return {
-            preview: `Today looks balanced. ${lifestyleInsight.focus}. ${moodInsight || `Focus on your top 3 tasks during ${lifestyleInsight.energy.split(':')[1]?.trim() || 'peak hours'}.`}`,
-            expanded: {
-                productivity: `Your energy peaks ${lifestyleInsight.energy}. Schedule your most important tasks during this window.`,
-                focus: lifestyleInsight.focus,
-                balance: lifestyleInsight.balance,
-                momentum: todayTasks.length > 5 ? "You have a full day ahead. Pace yourself and take breaks." : "Today's schedule is manageable. You've got this!",
-                insights: moodInsight || "Based on your habits, you work best with 25min focus blocks. Try Pomodoro for deep work.",
-                lifestyle: userContext.lifestyle !== 'general' ? `Insights tailored for ${userContext.lifestyle.replace(/-/g, ' ')} lifestyle.` : ""
-            },
-            links: relatedNotes.slice(0, 2).map(note => ({ label: note.title || 'Note', type: 'note', id: note.id }))
-        };
-    };
 
-    const dailyInsight = generateDailyInsight();
-
-    const weekDates = getWeekDates();
+        fetchWeather();
+    }, []);
 
     return (
-        <>
-        <div className="space-y-4 lg:space-y-6">
-            {/* Main Daily Greeting Card - Dark mode style matching reference */}
-                        <motion.div
-                className="relative overflow-hidden rounded-3xl p-5 md:p-8 lg:p-12"
+        <motion.div
+            className="relative overflow-hidden rounded-2xl p-4 md:p-6"
             style={{ 
-                    backgroundColor: '#0B0B0C', // Dark background matching reference
-                color: 'white'
+                // Dark background with high contrast for white text readability
+                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#ffffff' // Explicit white text for maximum contrast
             }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8 }}
         >
-                <div className="relative z-10">
-                    {/* 1. Greeting */}
-                    <div className="mb-4 md:mb-5">
-                        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white">
-                            {getGreeting()}
-                        </h2>
-                        </div>
-                        
-                    {/* 2. Day and Date on Same Line with Temperature and Location */}
-                    <div className="flex items-center justify-between mb-4 md:mb-6 flex-wrap gap-2">
-                        <div className="text-lg md:text-xl lg:text-2xl font-bold text-white">
-                            {today.toLocaleDateString('en-US', { weekday: 'long' })}, {(() => {
-                                const date = today.getDate();
-                                const suffix = date === 1 || date === 21 || date === 31 ? 'st' : 
-                                              date === 2 || date === 22 ? 'nd' : 
-                                              date === 3 || date === 23 ? 'rd' : 'th';
-                                return `${today.toLocaleDateString('en-US', { month: 'long' })} ${date}${suffix}, ${today.getFullYear()}`;
-                            })()}
-                            </div>
-                        {/* Real-time Weather with Location - Animated */}
-                        <motion.div 
-                            className="flex items-center gap-2 text-base md:text-lg"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.5 }}
-                        >
-                            {weatherData.loading ? (
-                                <motion.div
-                                    className="w-5 h-5 md:w-6 md:h-6 border-2 border-white/30 border-t-white rounded-full"
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                />
-                            ) : (
-                                <motion.div
-                                    animate={{ 
-                                        rotate: weatherData.condition === 'sunny' ? [0, 5, -5, 0] : 0,
-                                        scale: [1, 1.05, 1]
-                                    }}
-                                    transition={{ 
-                                        duration: 2, 
-                                        repeat: Infinity, 
-                                        ease: 'easeInOut' 
-                                    }}
-                                >
-                                    {weatherData.condition === 'sunny' && <SunIcon className="w-5 h-5 md:w-6 md:h-6 text-yellow-400" />}
-                                    {weatherData.condition === 'partly-cloudy' && (
-                                        <>
-                                            <SunIcon className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 absolute" />
-                                            <CloudIcon className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
-                                        </>
-                                    )}
-                                    {weatherData.condition === 'cloudy' && <CloudIcon className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />}
-                                    {weatherData.condition === 'rainy' && <RainIcon className="w-5 h-5 md:w-6 md:h-6 text-blue-400" />}
-                                    {weatherData.condition === 'snowy' && <SnowIcon className="w-5 h-5 md:w-6 md:h-6 text-blue-200" />}
-                                </motion.div>
-                            )}
-                            <span className="font-semibold text-white">
-                                {weatherData.loading ? '--' : (() => {
-                                    const tempUnit = localStorage.getItem('soen-temperature-unit') || 'c';
-                                    const displayTemp = tempUnit === 'f' 
-                                        ? Math.round((weatherData.temperature * 9/5) + 32) 
-                                        : weatherData.temperature;
-                                    return `${displayTemp}°${tempUnit.toUpperCase()}`;
-                                })()}
-                            </span>
-                            {weatherData.location && !weatherData.loading && (
-                                <span className="text-sm md:text-base text-white/70">
-                                    {weatherData.location}
-                                </span>
-                            )}
-                        </motion.div>
-                </div>
-
-                    {/* 4. Calendar Strip - Week dates - Clickable */}
-                    <div className="flex items-center justify-between mb-4 md:mb-6 px-2">
-                        {weekDates.map((day, index) => {
-                            const isSelected = selectedDate && new Date(selectedDate).toDateString() === day.dateObj.toDateString();
-                            return (
-                            <motion.button
-                                key={index}
-                                    onClick={() => {
-                                        // Set selected date instead of navigating
-                                        if (isSelected) {
-                                            setSelectedDate(null); // Toggle off if clicking same date
-                                    } else {
-                                            setSelectedDate(day.dateObj);
-                                    }
-                                }}
-                                className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-colors min-h-[44px] min-w-[44px] justify-center relative ${
-                                        isSelected ? 'bg-emerald-400' : 
-                                        day.isToday && !selectedDate ? 'bg-emerald-500' : 
-                                        'bg-white/5 hover:bg-white/10'
-                                }`}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                    <div className={`text-xs font-semibold ${isSelected || (day.isToday && !selectedDate) ? 'text-white' : 'text-white/70'}`}>{day.day}</div>
-                                    <div className={`text-sm font-bold ${isSelected || (day.isToday && !selectedDate) ? 'text-white' : 'text-white'}`}>{day.date}</div>
-                                {day.taskCount > 0 && (
-                                        <div className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isSelected || (day.isToday && !selectedDate) ? 'bg-white' : 'bg-emerald-400'}`} />
-                                )}
-                            </motion.button>
-                            );
-                            })}
+            {/* Subtle floating particles - reduced opacity for better text readability */}
+            <div className="absolute inset-0">
+                {[...Array(15)].map((_, i) => (
+                    <motion.div
+                        key={i}
+                        className="absolute w-1 h-1 bg-white/10 rounded-full"
+                        style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                        }}
+                        animate={{
+                            y: [0, -20, 0],
+                            opacity: [0, 0.3, 0],
+                            scale: [0.5, 1, 0.5],
+                        }}
+                        transition={{
+                            duration: 4 + Math.random() * 3,
+                            repeat: Infinity,
+                            delay: Math.random() * 3,
+                            ease: "easeInOut"
+                        }}
+                    />
+                ))}
             </div>
             
-                    {/* 5. Daily Summary - "You have 2 tasks today and 2 meetings" - Large text */}
-                    <div className="mb-4 md:mb-6">
-                        <div className="flex flex-wrap items-center gap-2 text-lg md:text-xl lg:text-2xl font-semibold text-white">
-                            <span>You have</span>
-                            {eventsCount > 0 && (
-                                <>
-                                    <motion.button
-                                        onClick={() => setTaskFilter(taskFilter === 'events' ? 'all' : 'events')}
-                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
-                                            taskFilter === 'events' ? 'bg-emerald-500/30' : 'hover:bg-white/5'
-                                        }`}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <CalendarIcon className="w-4 h-4 text-emerald-400" />
-                                        <span className="font-semibold">{eventsCount} events</span>
-                                    </motion.button>
-                                    {tasksCount > 0 || meetingsCount > 0 ? <span>,</span> : <span> today.</span>}
-                                </>
-                            )}
-                            {tasksCount > 0 && (
-                                <>
-                                    <motion.button
-                                        onClick={() => setTaskFilter(taskFilter === 'tasks' ? 'all' : 'tasks')}
-                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
-                                            taskFilter === 'tasks' ? 'bg-emerald-500/30' : 'hover:bg-white/5'
-                                        }`}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <svg className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                        </svg>
-                                        <span className="font-semibold">{tasksCount} tasks</span>
-                                    </motion.button>
-                                    {meetingsCount > 0 ? <span> and</span> : <span> today.</span>}
-                                </>
-                            )}
-                            {meetingsCount > 0 && (
-                                <>
-                                    <motion.button
-                                        onClick={() => setTaskFilter(taskFilter === 'meetings' ? 'all' : 'meetings')}
-                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
-                                            taskFilter === 'meetings' ? 'bg-emerald-500/30' : 'hover:bg-white/5'
-                                        }`}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <svg className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                        </svg>
-                                        <span className="font-semibold">{meetingsCount} meetings</span>
-                                    </motion.button>
-                                    <span> today.</span>
-                                </>
-                            )}
-                            {eventsCount === 0 && tasksCount === 0 && meetingsCount === 0 && (
-                                <span>no scheduled items today.</span>
-                            )}
-            </div>
-                    </div>
-
-                    {/* Mood/Activity Buttons - Only show in evening (9pm+) */}
-                    {isEvening && (
-                        <div className="flex flex-wrap gap-2 md:gap-3 mb-4 md:mb-6">
-                            {['Awful', 'Bad', 'Okay', 'Good', 'Great'].map((mood, index) => {
-                            const icons = [
-                                // Awful - Sad face (frown)
-                                <svg key="awful" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                                    <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" />
-                                    <circle cx="15.5" cy="9.5" r="1.5" fill="currentColor" />
-                                    <path d="M8 15.5c1 1.5 3 1.5 4 0" strokeWidth="2" strokeLinecap="round" />
-                                </svg>,
-                                // Bad - Neutral face (straight line)
-                                <svg key="bad" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                                    <circle cx="9" cy="9" r="1" fill="currentColor" />
-                                    <circle cx="15" cy="9" r="1" fill="currentColor" />
-                                    <line x1="9" y1="16" x2="15" y2="16" strokeWidth="2" strokeLinecap="round" />
-                                </svg>,
-                                // Okay - Slight smile
-                                <svg key="okay" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                                    <circle cx="9" cy="9" r="1" fill="currentColor" />
-                                    <circle cx="15" cy="9" r="1" fill="currentColor" />
-                                    <path d="M9 15.5c0.5 0.5 2 1 3 0" strokeWidth="2" strokeLinecap="round" />
-                                </svg>,
-                                // Good - Smile
-                                <svg key="good" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                                    <circle cx="9" cy="9" r="1" fill="currentColor" />
-                                    <circle cx="15" cy="9" r="1" fill="currentColor" />
-                                    <path d="M9 14.5c1 1 3 1 4 0" strokeWidth="2" strokeLinecap="round" />
-                                </svg>,
-                                // Great - Big smile with star
-                                <svg key="great" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                                    <circle cx="9" cy="9" r="1" fill="currentColor" />
-                                    <circle cx="15" cy="9" r="1" fill="currentColor" />
-                                    <path d="M8 13.5c1.5 2 4.5 2 6 0" strokeWidth="2" strokeLinecap="round" />
-                                </svg>
-                            ];
-                            
-                            return (
-                                <motion.button
-                                    key={mood}
-                                    onClick={() => handleMoodSelect(mood)}
-                                    className={`flex-1 min-w-[80px] flex items-center justify-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3 rounded-xl font-semibold text-xs md:text-sm transition-all min-h-[44px] ${
-                                        selectedMood === mood 
-                                            ? 'bg-emerald-500 text-white' 
-                                            : 'bg-white/5 text-white hover:bg-white/10'
-                                    }`}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                >
-                                    {icons[index]}
-                                    {mood}
-                                </motion.button>
-                            );
-                        })}
-                    </div>
-                    )}
-
-                    {/* Next Up Insight - Mobile: inline, Desktop: popup on right */}
-                    <div className="mb-4 md:mb-6">
-                        {/* Mobile: Inline expansion */}
-                        <div className="md:hidden">
-                            <motion.button
-                                onClick={() => setInsightExpanded(!insightExpanded)}
-                                className="w-full text-left"
-                                whileHover={{ scale: 1.01 }}
-                                whileTap={{ scale: 0.99 }}
-                            >
-                                <div className={`rounded-2xl p-4 transition-all duration-300 ${
-                                    insightExpanded ? 'bg-white/10' : 'bg-white/5'
-                                }`}>
-                                    <div className="flex items-start justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <SparklesIcon className="w-5 h-5 text-emerald-400" />
-                                            <h3 className="text-base font-bold text-white">Mira Daily</h3>
-                                        </div>
-                                        <motion.button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setInsightExpanded(!insightExpanded);
-                                            }}
-                                            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center min-h-[28px] min-w-[28px]"
-                                            whileHover={{ scale: 1.1 }}
-                                            whileTap={{ scale: 0.9 }}
-                                        >
-                                            {insightExpanded ? (
-                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                                </svg>
-                                            ) : (
-                                                <PlusIcon className="w-4 h-4 text-white" />
-                                            )}
-                                        </motion.button>
-                                    </div>
-                                    
-                                    <p className="text-sm text-white/90 mb-2">{dailyInsight.preview}</p>
-
-                                    <AnimatePresence>
-                                        {insightExpanded && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: 'auto', opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.3 }}
-                                                className="overflow-hidden space-y-3 mt-4 pt-4 border-t border-white/10"
-                                            >
-                                                {Object.entries(dailyInsight.expanded).map(([key, value], i) => (
-                                                    <div key={key}>
-                                                        <h4 className="text-xs font-semibold text-white/80 mb-1 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
-                                                        <p className="text-sm text-white/90">{value}</p>
-                                                    </div>
-                                                ))}
-                                                {dailyInsight.links && dailyInsight.links.length > 0 && (
-                                                    <div className="mt-4 pt-4 border-t border-white/10">
-                                                        <h4 className="text-xs font-semibold text-white/80 mb-2">Related Links</h4>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {dailyInsight.links.map((link, i) => (
-                                                                <motion.button
-                                                                    key={i}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (link.type === 'note') {
-                                                                            setScreen('Notes');
-                                                                        } else if (link.type === 'task') {
-                                                                            navigateToScheduleDate(today);
-                                                                            setScreen('Schedule');
-                                                                            setTimeout(() => {
-                                                                                const eventElement = document.querySelector(`[data-task-id='${link.id}']`);
-                                                                                if (eventElement && eventElement instanceof HTMLElement) {
-                                                                                    eventElement.click();
-                                                                                }
-                                                                            }, 100);
-                                                                        }
-                                                                    }}
-                                                                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 text-white transition-colors min-h-[44px]"
-                                                                    whileHover={{ scale: 1.05 }}
-                                                                    whileTap={{ scale: 0.95 }}
-                                                                >
-                                                                    {link.label}
-                                                                </motion.button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            </motion.button>
-                        </div>
-                        
-                        {/* Desktop: Clickable button that triggers popup on right */}
-                        <div className="hidden md:block">
-                            <motion.button
-                                onClick={() => setInsightExpanded(!insightExpanded)}
-                                className="w-full text-left"
-                                whileHover={{ scale: 1.01 }}
-                                whileTap={{ scale: 0.99 }}
-                            >
-                                <div className={`rounded-2xl p-4 transition-all duration-300 ${
-                                    insightExpanded ? 'bg-white/10' : 'bg-white/5'
-                                }`}>
-                                    <div className="flex items-start justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <SparklesIcon className="w-5 h-5 text-emerald-400" />
-                                            <h3 className="text-lg font-bold text-white">Mira Daily</h3>
-                                        </div>
-                                        <motion.button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setInsightExpanded(!insightExpanded);
-                                            }}
-                                            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center min-h-[28px] min-w-[28px]"
-                                            whileHover={{ scale: 1.1 }}
-                                            whileTap={{ scale: 0.9 }}
-                                        >
-                                            {insightExpanded ? (
-                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                                </svg>
-                                            ) : (
-                                                <PlusIcon className="w-4 h-4 text-white" />
-                                            )}
-                                        </motion.button>
-                                    </div>
-                                    <p className="text-sm text-white/90 mb-2">{dailyInsight.preview}</p>
-                                </div>
-                            </motion.button>
-                        </div>
-                    </div>
-                    
-                    {/* Desktop Mira Daily Popup removed from DailyGreeting. Overlay is rendered at grid column level. */}
-
-                    {/* Task List or Suggested Schedule - Show selected date's tasks or suggestions for empty days */}
-                    {(selectedDate && displayDateTasks.length === 0 && generateSuggestedSchedule.length > 0) ? (
-                        // Show suggested schedule for empty selected day
-                        <div className="space-y-2">
-                            <h3 className="text-base md:text-lg font-bold text-white mb-3">
-                                Suggested Schedule for {displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                            </h3>
-                            <div className="space-y-3">
-                                {generateSuggestedSchedule.map((suggestion, index) => (
-                                    <motion.div
-                                        key={index}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.1 }}
-                                        className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left"
-                                        onClick={() => {
-                                            const [hour, minute] = suggestion.time?.split(':').map(Number) || [9, 0];
-                                            const dateWithTime = new Date(displayDate);
-                                            dateWithTime.setHours(hour, minute, 0, 0);
-                                            navigateToScheduleDate(dateWithTime);
-                                            setScreen('Schedule');
-                                        }}
-                                    >
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-xs opacity-60 text-white/70">{suggestion.time}</span>
-                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white">{suggestion.category}</span>
-                                                </div>
-                                                <h4 className="font-semibold mb-1 text-white">{suggestion.title}</h4>
-                                                <p className="text-sm opacity-70 text-white/80">{suggestion.description}</p>
-                                            </div>
-                                            <button className="ml-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-                                                <PlusIcon className="w-5 h-5 text-white" />
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : getFilteredTasks().length > 0 ? (
-                        // Show tasks for selected date or today
-                        <div className="space-y-2">
-                            <h3 className="text-base md:text-lg font-bold text-white mb-3">
-                                {selectedDate ? (
-                                    `${displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`
-                                ) : (
-                                    taskFilter === 'events' ? `${eventsCount} Events` :
-                                    taskFilter === 'meetings' ? `${meetingsCount} Meetings` :
-                                    taskFilter === 'tasks' ? `${tasksCount} Tasks` :
-                                    'Up Next'
-                                )}
-                            </h3>
-                            {getFilteredTasks()
-                                .filter(task => {
-                                    // Hide completed tasks that are past undo period (more than 5 seconds ago)
-                                    if (task.status === 'Completed' && !recentlyCompleted.has(task.id) && undoTaskId !== task.id) {
-                                        return false; // Hide completed tasks after 5 seconds
-                                    }
-                                    return true;
-                                })
-                                .slice(0, 5)
-                                .map((task, index) => (
-                                <motion.div
-                                    key={task.id}
-                                    onClick={() => {
-                                    navigateToScheduleDate(new Date(task.startTime), task.id);
-                                    setScreen('Schedule');
-                                    }}
-                                    className="flex items-start gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors min-h-[44px] cursor-pointer"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                >
-                                    <div 
-                                        className="flex items-center justify-center w-10 h-10 rounded-lg min-w-[40px] mt-0.5"
-                                        style={{
-                                            backgroundColor: (() => {
-                                                const catColor = categoryColors[task.category] || '#10b981';
-                                                // Ensure category color doesn't overlap with widget backgrounds
-                                                // Widget backgrounds: Tasks #FDE047 (yellow), Habits #F59E0B (orange), Flow #10B981 (emerald)
-                                                const widgetColors = ['#FDE047', '#F59E0B', '#10B981'];
-                                                if (widgetColors.includes(catColor.toUpperCase())) {
-                                                    // Use a slight variation if there's overlap
-                                                    return catColor === '#FDE047' ? '#FACC15' : 
-                                                           catColor === '#F59E0B' ? '#FB923C' : 
-                                                           catColor === '#10B981' ? '#34D399' : catColor;
-                                                }
-                                                return catColor;
-                                            })()
-                                        }}
-                                    >
-                                        {getAiIconForItem(task.title, task.category, task.status === 'Completed')}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className={`text-base md:text-lg font-bold text-white mb-1 ${task.status === 'Completed' ? 'line-through opacity-60' : ''}`}>
-                                            {task.title}
-                                            </div>
-                                        {task.status === 'Pending' && new Date(task.startTime) < today && (
-                                            <div className="text-xs text-white/70">was overdue and rescheduled from yesterday</div>
-                                        )}
-                                        {task.status === 'Pending' && (
-                                            <div className="text-xs text-white/70">
-                                                {new Date(task.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </div>
-                                        )}
-                                    </div>
-                                    {(() => {
-                                        // Show completed tasks with undo option for 5 seconds
-                                        if (task.status === 'Completed') {
-                                            // Show undo option for recently completed tasks (within 5 seconds)
-                                            if (undoTaskId === task.id || recentlyCompleted.has(task.id)) {
-                                                return (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, scale: 0.8 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        className="flex flex-col items-center gap-1"
-                                                    >
-                                                        <motion.button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                // Undo completion - would need to call undo handler from parent
-                                                                setUndoTaskId(null);
-                                                                setRecentlyCompleted(prev => {
-                                                                    const next = new Set(prev);
-                                                                    next.delete(task.id);
-                                                                    return next;
-                                                                });
-                                                            }}
-                                                            className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-semibold transition-colors min-h-[44px]"
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                        >
-                                                            Undo
-                                                        </motion.button>
-                                                    </motion.div>
-                                                );
-                                            }
-                                            return null; // Completed tasks without undo show nothing
-                                        }
-                                        
-                                        // Show complete button for pending tasks
-                                        return (
-                                            <motion.button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (canCompleteTasks) {
-                                                        onCompleteTask(task.id);
-                                                        // Start 5-second undo timer
-                                                        setUndoTaskId(task.id);
-                                                        setRecentlyCompleted(prev => new Set(prev).add(task.id));
-                                                        
-                                                        // Auto-hide after 5 seconds
-                                                        setTimeout(() => {
-                                                            setUndoTaskId(null);
-                                                            setRecentlyCompleted(prev => {
-                                                                const next = new Set(prev);
-                                                                next.delete(task.id);
-                                                                return next;
-                                                            });
-                                                        }, 5000);
-                                                    }
-                                                }}
-                                                className={`p-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                                                    canCompleteTasks ? 'bg-emerald-500/20 hover:bg-emerald-500/30' : 'bg-white/5 opacity-50 cursor-not-allowed'
-                                                }`}
-                                                whileHover={canCompleteTasks ? { scale: 1.05 } : {}}
-                                                whileTap={canCompleteTasks ? { scale: 0.95 } : {}}
-                                                disabled={!canCompleteTasks}
-                                            >
-                                                <CheckCircleIcon className="w-5 h-5 text-emerald-400" />
-                                            </motion.button>
-                                        );
-                                    })()}
-                                </motion.div>
-                            ))}
-                            
-                            {getFilteredTasks().length > 5 && (
-                                <motion.button
-                                    onClick={() => {
-                                        setScreen('Schedule');
-                                        navigateToScheduleDate(displayDate);
-                                    }}
-                                    className="w-full py-3 rounded-xl bg-white/5 text-white font-semibold hover:bg-white/10 transition-colors min-h-[44px]"
-                                    whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                    >
-                                    View all {getFilteredTasks().length} {taskFilter === 'all' ? 'items' : taskFilter}
-                                </motion.button>
-                            )}
-                                            </div>
-                    ) : selectedDate ? (
-                        // Empty selected day - show message
-                        <div className="space-y-2">
-                            <h3 className="text-base md:text-lg font-bold text-white mb-3">
-                                {displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                            </h3>
-                            <div className="p-6 rounded-xl bg-white/5 text-center">
-                                <p className="text-white/70 mb-2">No tasks scheduled for this day</p>
-                                <motion.button
-                                    onClick={() => {
-                                        if (addTask) {
-                                            setPrefillDateForModal(displayDate);
-                                            setIsNewTaskModalOpen(true);
-                                        } else {
-                                            navigateToScheduleDate(displayDate);
-                                            setScreen('Schedule');
-                                        }
-                                    }}
-                                    className="px-4 py-2 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition-colors"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    Add Task
-                                </motion.button>
-                            </div>
-                        </div>
-                    ) : null}
-                                        </div>
-                                    </motion.div>
-                            </div>
-
-        {/* New Task Modal */}
-        <AnimatePresence>
-            {isNewTaskModalOpen && addTask && (
-                <NewTaskModal
-                    onClose={() => setIsNewTaskModalOpen(false)}
-                    addTask={(task) => {
-                        addTask(task);
-                        setIsNewTaskModalOpen(false);
-                        // Task will appear automatically if it matches the selected date
-                    }}
-                    selectedDate={prefillDateForModal}
-                    projects={projects}
-                    notes={notes}
-                    categories={categories}
-                    categoryColors={categoryColors}
-                    onAddNewCategory={onAddNewCategory || (() => false)}
-                    allTasks={allTasks}
-                    showToast={showToast || (() => {})}
-                />
-            )}
-        </AnimatePresence>
-        </>
-    );
-};
-
-// Recent Notes Widget - Small widget with looping animation showing recent notes
-const RecentNotesWidget: React.FC<{
-    notes: Note[];
-    onOpenNote?: (noteId: number) => void;
-}> = ({ notes, onOpenNote }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-    
-    const recentNotes = notes
-        .sort((a, b) => new Date(b.createdAt || b.updatedAt || 0).getTime() - new Date(a.createdAt || a.updatedAt || 0).getTime())
-        .slice(0, 5);
-    
-    useEffect(() => {
-        if (recentNotes.length === 0) return;
-        const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % recentNotes.length);
-        }, 4000); // Change note every 4 seconds
-        return () => clearInterval(interval);
-    }, [recentNotes.length]);
-    
-    if (recentNotes.length === 0) {
-        return (
-        <motion.div
-                className="rounded-3xl p-4 md:p-5 relative overflow-hidden"
-                style={{ 
-                    backgroundColor: '#8B5CF6', // Vibrant purple - different from all other widgets
-                    color: '#FFFFFF'
-                }}
-                initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-            >
-                <div className="flex items-center gap-2 mb-2">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    <h3 className="text-base font-bold text-white">Recent Notes</h3>
-                </div>
-                <p className="text-sm text-white/70">No notes yet</p>
+            {/* Dark overlay to ensure text readability */}
+            <div className="absolute inset-0 bg-gradient-to-br from-black/20 to-transparent pointer-events-none" />
+            
+            <div className="relative z-10">
+                {/* Top Section: Greeting, Weather, Rewards, and Health */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                    {/* Left: Greeting and Quote */}
+                    <div className="lg:col-span-2 text-center lg:text-left">
+                    <motion.h1 
+                            className="text-2xl md:text-4xl lg:text-5xl font-bold mb-3 leading-tight"
+                            style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)' }}
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.2 }}
+                    >
+                            {getGreeting()}, <span className="text-emerald-400" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)' }}>Pratt</span>
+                    </motion.h1>
+                    <motion.div
+                            className="text-sm md:text-base italic max-w-2xl leading-relaxed mb-4"
+                            style={{ color: '#f0f0f0', textShadow: '0 1px 4px rgba(0, 0, 0, 0.5)' }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.4 }}
+                    >
+                        "{todayQuote}"
                     </motion.div>
-        );
-    }
-
-    const currentNote = recentNotes[currentIndex];
-    
-    return (
-            <motion.div
-            className="rounded-3xl p-4 md:p-5 relative overflow-hidden"
-            style={{ 
-                backgroundColor: '#8B5CF6', // Vibrant purple - different from all other widgets
-                color: '#FFFFFF'
-            }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-        >
-            <div className="flex items-center gap-2 mb-3">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                <h3 className="text-base font-bold text-white">Recent Notes</h3>
-                <div className="ml-auto flex gap-1">
-                    {recentNotes.map((_, i) => (
-                        <div
-                                key={i}
-                            className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                                i === currentIndex ? 'bg-white' : 'bg-white/30'
-                            }`}
-                            />
-                        ))}
                 </div>
-            </div>
-            
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={currentNote.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.5 }}
-                    className="space-y-2 cursor-pointer"
-                    onClick={() => {
-                        try { localStorage.setItem('soen-selected-note-id', String(currentNote.id)); } catch {}
-                        if (onOpenNote) onOpenNote(currentNote.id);
-                    }}
-                >
-                    <h4 className="text-sm font-bold text-white line-clamp-1">{currentNote.title || 'Untitled Note'}</h4>
-                    <p className="text-xs text-white/80 line-clamp-2">
-                        {currentNote.content?.substring(0, 100) || 'No content'}
-                    </p>
-                    <div className="text-[10px] text-white/60">
-                        {new Date(currentNote.createdAt || currentNote.updatedAt || 0).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric' 
-                        })}
+
+                    {/* Right: Weather, Rewards, and Health */}
+                    <div className="flex flex-col gap-3">
+                        {/* Weather */}
+                        <motion.div
+                            className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20"
+                            style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)' }}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.8, delay: 0.6 }}
+                        >
+                            <motion.div
+                                animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }}
+                                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                            >
+                                <SunIcon className="w-6 h-6 text-yellow-400" />
+                            </motion.div>
+                            <div>
+                                {weatherLoading ? (
+                                    <>
+                                        <div className="text-lg font-bold" style={{ color: '#ffffff', textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}>...</div>
+                                        <div className="text-xs" style={{ color: '#e0e0e0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Loading...</div>
+                                    </>
+                                ) : location ? (
+                                    <>
+                                        <div className="text-lg font-bold" style={{ color: '#ffffff', textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}>{location.temp}°C</div>
+                                        <div className="text-xs" style={{ color: '#e0e0e0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{location.city}</div>
+                                        <div className="text-xs" style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{location.condition}</div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-lg font-bold" style={{ color: '#ffffff', textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}>--°C</div>
+                                        <div className="text-xs" style={{ color: '#e0e0e0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Location unavailable</div>
+                                    </>
+                                )}
+                            </div>
+                        </motion.div>
+
+                        {/* SOEN Rewards - Clickable */}
+                        <motion.button
+                            onClick={(e) => { e.stopPropagation(); setScreen('Profile'); }}
+                            className="backdrop-blur-sm rounded-xl p-3 border transition-all text-left cursor-pointer"
+                            style={{ 
+                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                borderColor: 'rgba(255, 255, 255, 0.2)'
+                            }}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.8, delay: 0.8 }}
+                            whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-6 h-6 flex-shrink-0">
+                                    <GhibliPenguin />
                     </div>
-                </motion.div>
-            </AnimatePresence>
+                                <div className="flex-1">
+                                    <div className="text-xs font-semibold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>SOEN Rewards</div>
+                                    <div className="flex items-center gap-1.5 text-xs" style={{ color: '#e0e0e0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
+                                        <span>Lv {level}</span>
+                                        <span>•</span>
+                                        <span>{currentPoints} pts</span>
+                </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
+                                <div className="flex items-center gap-1.5">
+                                    <SparklesIcon className="w-3.5 h-3.5 text-yellow-400" />
+                                    <span className="text-yellow-400 font-bold text-xs" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{soenFlow}</span>
+                                </div>
+                                <div className="text-xs" style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
+                                    {insights.unlockedThemes + insights.unlockedBackgrounds} Unlocked
+                                </div>
+                            </div>
+                        </motion.button>
+
+                        {/* Minimal Health Data View */}
+                        <motion.div
+                            className="backdrop-blur-sm rounded-xl p-3 border"
+                            style={{ 
+                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                borderColor: 'rgba(255, 255, 255, 0.2)'
+                            }}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.8, delay: 1.0 }}
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <HeartIcon className="w-4 h-4 text-red-400" />
+                                <div className="text-xs font-semibold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Health</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="flex items-center gap-1.5">
+                                    <BoltIcon className="w-3.5 h-3.5 text-yellow-400" />
+                                    <div className="flex-1">
+                                        <div style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Energy</div>
+                                        <div className="font-bold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{healthData.energyLevel?.charAt(0).toUpperCase() + healthData.energyLevel?.slice(1) || 'Medium'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <ClockIcon className="w-3.5 h-3.5 text-blue-400" />
+                                    <div className="flex-1">
+                                        <div style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Sleep</div>
+                                        <div className="font-bold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{healthData.avgSleepHours || 0}h</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <ActivityIcon className="w-3.5 h-3.5 text-green-400" />
+                                    <div className="flex-1">
+                                        <div style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Activity</div>
+                                        <div className="font-bold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{healthData.stepsToday ? (healthData.stepsToday >= 10000 ? 'Excellent' : healthData.stepsToday >= 5000 ? 'Good' : 'Low') : 'Good'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <HeartIcon className="w-3.5 h-3.5 text-red-400" />
+                                    <div className="flex-1">
+                                        <div style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Stress</div>
+                                        <div className="font-bold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{healthData.sleepQuality === 'poor' ? 'High' : healthData.sleepQuality === 'good' ? 'Low' : 'Medium'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+
+                {/* Next Up Section or Mission Complete - Full Width */}
+                {completedToday === todayTasks.length && todayTasks.length > 0 ? (
+                    <motion.div
+                        className="rounded-2xl p-6 md:p-8 mt-4"
+                        style={{ 
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+                            color: 'white'
+                        }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <div className="text-center">
+                            <motion.div
+                                animate={{ scale: [1, 1.1, 1] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                className="mb-4"
+                            >
+                                <CheckCircleIcon className="w-16 h-16 mx-auto text-white" />
+                            </motion.div>
+                            <h2 className="text-3xl md:text-4xl font-bold mb-2">Mission Complete!</h2>
+                            <p className="text-xl md:text-2xl mb-1">All Tasks Completed</p>
+                            <p className="text-lg opacity-90">Goal Achieved</p>
+                            <div className="mt-6 text-sm opacity-80">
+                                <p>You've completed all {todayTasks.length} task{todayTasks.length !== 1 ? 's' : ''} for today!</p>
+                                <p className="mt-2">Take a moment to celebrate this achievement. 🎉</p>
+                    </div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <div className="mt-4">
+                        <NextUpWidget
+                            tasks={tasks}
+                            categoryColors={categoryColors}
+                            onCompleteTask={onCompleteTask}
+                            navigateToScheduleDate={navigateToScheduleDate}
+                            setScreen={setScreen}
+                            canCompleteTasks={canCompleteTasks}
+                        />
+                    </div>
+                )}
+            </div>
         </motion.div>
     );
 };
 
-// Your Flow (Rewards) Widget - Minimal, small, long rectangular on mobile, colorful but cohesive, no Mira, different color from Tasks/Habits
+// Enhanced Gamified Soen Rewards Widget with Flow Points Integration
 const SoenRewardsWidget: React.FC<{
     tasks: Task[];
     healthData: HealthData;
@@ -3548,146 +2466,270 @@ const SoenRewardsWidget: React.FC<{
     purchasedRewards?: string[];
     activeTheme?: string;
     activeFocusBackground?: string;
-    onOpenRewards?: () => void;
-}> = ({ tasks, healthData, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave', onOpenRewards }) => {
+}> = ({ tasks, healthData, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' }) => {
     const [currentPoints, setCurrentPoints] = useState(0);
     const [level, setLevel] = useState(1);
-    const [streakDays, setStreakDays] = useState(14);
+    const [showTooltip, setShowTooltip] = useState<string | null>(null);
+    const [showRewardsDetail, setShowRewardsDetail] = useState(false);
 
-    // Simplified point calculation
+    // Use REWARDS_CATALOG as single source of truth
+    const themes = useMemo(() => 
+        REWARDS_CATALOG
+            .filter(r => r.type === 'theme')
+            .map(theme => ({
+                id: theme.id,
+                name: theme.name,
+                cost: theme.cost,
+                unlocked: theme.cost === 0 || purchasedRewards.includes(theme.id),
+                colors: theme.colors || getThemeColors(theme.value)
+            })),
+        [purchasedRewards]
+    );
+
+    const focusBackgrounds = useMemo(() =>
+        REWARDS_CATALOG
+            .filter(r => r.type === 'focus_background')
+            .map(bg => ({
+                id: bg.id,
+                name: bg.name,
+                cost: bg.cost,
+                unlocked: purchasedRewards.includes(bg.id),
+                colors: bg.colors || getFocusBackgroundColors(bg.value)
+            })),
+        [purchasedRewards]
+    );
+
+    // Use shared points calculation utility
     useEffect(() => {
-        const today = new Date().toDateString();
-        const todayTasks = tasks.filter(t => new Date(t.startTime).toDateString() === today);
-        const completedTasks = todayTasks.filter(t => t.status === 'Completed');
-        
-        const basePoints = completedTasks.length * 10;
-        const streakBonus = streakDays >= 7 ? 50 : streakDays >= 14 ? 100 : 0;
-        const totalPoints = basePoints + streakBonus;
-            
-            setCurrentPoints(totalPoints);
-        setLevel(Math.floor(totalPoints / 500) + 1);
-    }, [tasks, streakDays]);
+        const { totalPoints, level: calculatedLevel } = calculateFlowPoints(tasks, healthData);
+        setCurrentPoints(totalPoints);
+        setLevel(calculatedLevel);
+    }, [tasks, healthData]);
 
-    const today = new Date().toDateString();
-    const todayTasks = tasks.filter(t => new Date(t.startTime).toDateString() === today);
-    const completedToday = todayTasks.filter(t => t.status === 'Completed').length;
-
+    const nextLevelPoints = level * 500;
     const progressToNext = ((currentPoints % 500) / 500) * 100;
 
-    // Use different color from Tasks (#FDE047 - yellow) and Habits (#FDE047 - yellow)
-    // Flow uses #10B981 (emerald) to be different and colorful
-    const flowColor = '#10B981'; // Emerald - different from Tasks/Habits yellow
+    // Smart insights and recommendations
+    const getSmartInsights = () => {
+        const unlockedThemes = themes.filter(t => t.unlocked).length;
+        const unlockedBackgrounds = focusBackgrounds.filter(b => b.unlocked).length;
+        const nextAffordableTheme = themes.find(t => !t.unlocked && soenFlow >= t.cost);
+        const nextAffordableBackground = focusBackgrounds.find(b => !b.unlocked && soenFlow >= b.cost);
+        
+        return {
+            unlockedThemes,
+            unlockedBackgrounds,
+            nextAffordableTheme,
+            nextAffordableBackground,
+            totalUnlocked: unlockedThemes + unlockedBackgrounds,
+            totalAvailable: themes.length + focusBackgrounds.length
+        };
+    };
+
+    const insights = getSmartInsights();
+
+    const getMotivationMessage = () => {
+        if (progressToNext > 80) {
+            return "Almost there! Keep going!";
+        } else if (progressToNext > 50) {
+            return "Great progress! You're on fire!";
+        } else {
+            return "Every point counts! Stay consistent!";
+        }
+    };
+
+    const getNextUnlockRecommendation = () => {
+        if (insights.nextAffordableBackground) {
+            return `Unlock "${insights.nextAffordableBackground.name}" focus background for ${insights.nextAffordableBackground.cost} Flow Points`;
+        }
+        if (insights.nextAffordableTheme) {
+            return `Unlock "${insights.nextAffordableTheme.name}" theme for ${insights.nextAffordableTheme.cost} Flow Points`;
+        }
+        return "Complete more tasks to earn Flow Points for unlocks!";
+    };
+
+    const tooltips = {
+        level: "Your current achievement level. Level up by earning 500 points!",
+        points: "Points earned from completing tasks, maintaining streaks, and staying healthy.",
+        progress: "Progress toward your next level. Complete more tasks to advance!",
+        themes: `You've unlocked ${insights.unlockedThemes}/${themes.length} themes`,
+        backgrounds: `You've unlocked ${insights.unlockedBackgrounds}/${focusBackgrounds.length} focus backgrounds`
+    };
 
     return (
-                            <motion.div
-            className="rounded-3xl p-4 md:p-5 lg:p-6 relative overflow-hidden"
-                                style={{
-                backgroundColor: flowColor, // Emerald - different from Tasks/Habits yellow
-                color: '#FFFFFF' // White text on emerald
+                        <motion.div
+            className="rounded-2xl p-3 sm:p-4 relative overflow-hidden h-full min-h-[320px]"
+            style={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%)',
+                color: 'white'
             }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            {/* Mobile: Small, long rectangular layout */}
-            <div className="md:hidden" onClick={() => onOpenRewards && onOpenRewards()}>
-                <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <SparklesIcon className="w-5 h-5 text-white flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                                   <h3 className="text-base font-bold text-white truncate">Flow Rewards</h3>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-extrabold text-white">{soenFlow}</span>
-                                <span className="text-xs text-white/80">Flow Points</span>
+            {/* Simplified Background */}
+            <div className="absolute inset-0">
+                {[...Array(4)].map((_, i) => (
+                <motion.div
+                        key={i}
+                        className="absolute opacity-15"
+                        style={{
+                            width: `${4 + Math.random() * 4}px`,
+                            height: `${4 + Math.random() * 4}px`,
+                                background: `rgba(255,255,255,0.3)`,
+                                borderRadius: '50%',
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                        }}
+                        animate={{
+                            y: [0, Math.random() * 10 - 5, 0],
+                            opacity: [0.1, 0.2, 0.1],
+                        }}
+                        transition={{
+                            duration: 3 + Math.random() * 2,
+                            repeat: Infinity,
+                            delay: Math.random() * 2,
+                            ease: "easeInOut"
+                        }}
+                    />
+                ))}
                             </div>
-                                </div>
-                                </div>
-                    <div className="flex-shrink-0 text-right">
-                        <div className="text-xs text-white/80">Level</div>
-                        <div className="text-xl font-bold text-white">{level}</div>
-                    </div>
-                </div>
 
-                {/* Progress Bar - Thin, horizontal */}
-                       <div className="mt-3">
-                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                        <motion.div
-                            className="h-full bg-white rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progressToNext}%` }}
-                            transition={{ duration: 0.8, ease: 'easeOut' }}
-                        />
-                                </div>
-                    <div className="flex justify-between text-xs text-white/80 mt-1">
-                        <span>Progress</span>
-                        <span>{Math.round(progressToNext)}%</span>
-            </div>
-                           {/* Minimized health insights */}
-                           <div className="mt-3 flex items-center gap-2 text-[10px] text-white/80">
-                               <span>Sleep {healthData.avgSleepHours?.toFixed(0) || '7'}h</span>
-                               <span>•</span>
-                               <span>Energy {healthData.energyLevel || 'High'}</span>
-                           </div>
-                    </div>
-                    </div>
-                    
-            {/* Desktop: Compact layout - removed stats to reduce negative space */}
-            <div className="hidden md:block">
-                <div className="relative z-10">
-                    {/* Header with Level */}
-                    <div className="flex items-center justify-between mb-3">
+            <div className="relative z-10">
+                {/* Condensed Header */}
+                <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                            <SparklesIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                            <h3 className="text-lg md:text-xl font-bold text-white">Your Flow</h3>
+                        {/* Mira Penguin Icon - Exact same as dashboard header */}
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                            <GhibliPenguin />
+                                </div>
+                        <div>
+                            <h3 className="text-lg sm:text-xl font-bold font-display tracking-tight">Soen Rewards</h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-white/80 text-xs font-semibold">Lv {level}</span>
+                                <div className="w-0.5 h-0.5 bg-white/40 rounded-full"></div>
+                                <span className="text-white/80 text-xs font-semibold">{currentPoints} pts</span>
+                                </div>
+                            </div>
                         </div>
-                        <div className="text-right">
-                            <div className="text-xs text-white/80">Level</div>
-                            <div className="text-xl md:text-2xl font-bold text-white">{level}</div>
-                        </div>
-                </div>
-
-                    {/* Compact Value Display */}
-                    <div className="mb-3">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-3xl md:text-4xl font-extrabold text-white">{soenFlow}</span>
-                            <span className="text-sm md:text-base text-white/80">Flow Points</span>
-                        </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="mb-2">
-                        <div className="flex justify-between text-xs text-white/80 mb-1.5">
-                            <span>Progress to next level</span>
-                            <span>{Math.round(progressToNext)}%</span>
-                        </div>
-                        <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                            <motion.div
-                                className="h-full bg-white rounded-full"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${progressToNext}%` }}
-                                transition={{ duration: 0.8, ease: 'easeOut' }}
-                            />
+                    <div className="text-right">
+                        <div className="text-xs text-white/60">Next</div>
+                        <div className="text-white font-bold text-sm">{nextLevelPoints - currentPoints} pts</div>
                     </div>
                 </div>
 
-                    {/* Compact Stats Row */}
-                    <div className="grid grid-cols-4 gap-2 mt-3">
-                        <div className="bg-white/10 rounded-lg p-2 text-center">
-                            <div className="text-lg font-bold text-white">{streakDays}</div>
-                            <div className="text-[10px] text-white/70">Streak</div>
+                {/* Health Data Checkpoints - Critical for understanding user behavior */}
+                <div className="mb-3 p-2.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
+                    <div className="flex items-center gap-2 mb-2.5">
+                        <HeartIcon className="w-4 h-4 text-red-400" />
+                        <h4 className="text-white font-semibold text-xs">Health Checkpoints</h4>
                     </div>
-                        <div className="bg-white/10 rounded-lg p-2 text-center">
-                            <div className="text-lg font-bold text-white">{completedToday}</div>
-                            <div className="text-[10px] text-white/70">Tasks</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                            { 
+                                name: 'Energy', 
+                                value: healthData.energyLevel?.charAt(0).toUpperCase() + healthData.energyLevel?.slice(1) || 'Medium', 
+                                icon: ZapIcon, 
+                                color: healthData.energyLevel === 'high' ? '#10b981' : healthData.energyLevel === 'low' ? '#ef4444' : '#f59e0b' 
+                            },
+                            { 
+                                name: 'Sleep', 
+                                value: `${healthData.avgSleepHours || 0}h`, 
+                                icon: ClockIcon, 
+                                color: (healthData.avgSleepHours || 0) >= 8 ? '#10b981' : (healthData.avgSleepHours || 0) >= 6 ? '#f59e0b' : '#ef4444' 
+                            },
+                            { 
+                                name: 'Activity', 
+                                value: healthData.stepsToday ? (healthData.stepsToday >= 10000 ? 'Excellent' : healthData.stepsToday >= 5000 ? 'Good' : 'Low') : 'Good', 
+                                icon: ActivityIcon, 
+                                color: healthData.stepsToday && healthData.stepsToday >= 10000 ? '#10b981' : healthData.stepsToday && healthData.stepsToday >= 5000 ? '#f59e0b' : '#10b981' 
+                            },
+                            { 
+                                name: 'Stress', 
+                                value: healthData.sleepQuality === 'poor' ? 'High' : healthData.sleepQuality === 'good' ? 'Low' : 'Medium', 
+                                icon: HeartIcon, 
+                                color: healthData.sleepQuality === 'poor' ? '#ef4444' : healthData.sleepQuality === 'good' ? '#10b981' : '#f59e0b' 
+                            }
+                        ].map((metric, index) => (
+                        <motion.div
+                                key={metric.name}
+                                className="text-center"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                            >
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg mx-auto mb-1 flex items-center justify-center bg-white/15">
+                                    <metric.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: metric.color }} />
+                                </div>
+                                <p className="text-xs text-white/80 font-semibold">{metric.name}</p>
+                                <p className="text-xs text-white font-bold">{metric.value}</p>
+                        </motion.div>
+                        ))}
+            </div>
                     </div>
-                        <div className="bg-white/10 rounded-lg p-2 text-center">
-                            <div className="text-lg font-bold text-white">{healthData.avgSleepHours?.toFixed(0) || '7'}</div>
-                            <div className="text-[10px] text-white/70">Sleep</div>
+
+                {/* Condensed Stats and Flow Points */}
+                <div className="flex items-center justify-between mb-3 p-2 bg-white/10 rounded-lg">
+                    <div className="flex items-center gap-2">
+                        <SparklesIcon className="w-4 h-4 text-yellow-400" />
+                        <span className="text-yellow-400 font-bold text-sm">{soenFlow}</span>
+                        <span className="text-white/60 text-xs">Flow Points</span>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-xs text-white/60">{insights.unlockedThemes + insights.unlockedBackgrounds} Unlocked</div>
+                    </div>
+                </div>
+
+                {/* Compact Unlock Progress */}
+                <div className="mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-white/80 text-xs font-semibold">Progress</span>
+                        <button 
+                            onClick={() => setShowRewardsDetail(!showRewardsDetail)}
+                            className="text-white/60 hover:text-white text-xs transition-colors"
+                        >
+                            {showRewardsDetail ? '−' : '+'}
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="text-center p-2 bg-white/10 rounded-lg">
+                            <div className="text-white font-bold text-xs">{insights.unlockedThemes}/{themes.length}</div>
+                            <div className="text-white/60 text-xs">Themes</div>
                         </div>
-                        <div className="bg-white/10 rounded-lg p-2 text-center">
-                            <div className="text-lg font-bold text-white capitalize">{healthData.energyLevel?.charAt(0) || 'H'}</div>
-                            <div className="text-[10px] text-white/70">Energy</div>
+                        <div className="text-center p-2 bg-white/10 rounded-lg">
+                            <div className="text-white font-bold text-xs">{insights.unlockedBackgrounds}/{focusBackgrounds.length}</div>
+                            <div className="text-white/60 text-xs">Focus BGs</div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Collapsible Theme Preview */}
+                {showRewardsDetail && (
+                    <motion.div
+                        className="mb-3 p-2 bg-white/5 rounded-lg border border-white/10"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                            {themes.slice(0, 3).map((theme) => (
+                                <div key={theme.id} className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${theme.unlocked ? 'bg-green-400' : 'bg-gray-400'}`} />
+                                        <span className="text-white/90 truncate">{theme.name}</span>
+                                    </div>
+                                    <span className="text-yellow-400 font-bold">{theme.cost}</span>
+                                            </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Motivation Message */}
+                <div className="text-center pt-2 border-t border-white/10">
+                    <div className="text-xs text-white/70">
+                        {getMotivationMessage()}
                     </div>
                 </div>
             </div>
@@ -3698,9 +2740,7 @@ const SoenRewardsWidget: React.FC<{
 
 // Main Dashboard Component
 const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
-    const [insightExpanded, setInsightExpanded] = useState(false);
-    const [miraChatOpen, setMiraChatOpen] = useState(false);
-    const { tasks, notes, healthData, briefing, isBriefingLoading, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave', addTask, projects = [], categories = [], onAddNewCategory, showToast } = props;
+    const { tasks, notes, healthData, briefing, isBriefingLoading, categoryColors, onCompleteTask, navigateToScheduleDate, setScreen, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' } = props;
     
     // Focus mode state
     const [isFocusMode, setIsFocusMode] = useState(false);
@@ -3943,31 +2983,30 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
     }
 
     return (
+        <>
+            {/* Soen Header - Fixed outside main container */}
+            <SoenHeader />
+            
         <motion.div
             className="min-h-screen relative overflow-x-hidden"
-            style={{ backgroundColor: '#0B0B0C', width: '100%', margin: 0, padding: 0 }}
+            style={{ backgroundColor: 'var(--color-bg)' }}
             variants={containerVariants}
             initial="hidden"
             animate="visible"
         >
-            {/* Global dark background to eliminate any white line near the sidebar */}
-            <div className="fixed inset-0 bg-[#0B0B0C] -z-10" style={{ left: 0, right: 0, top: 0, bottom: 0, width: '100%', backgroundColor: '#0B0B0C' }} />
             {/* Floating particles background */}
             <FloatingParticles count={50} />
 
             {/* Main Content - Mobile-first responsive design with proper touch targets */}
-            <div className="app-container py-1 md:py-2 lg:py-4 px-0 sm:px-0 lg:px-0 mx-0">
+            <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 pt-16 sm:pt-20">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
-                    className="space-y-6 lg:space-y-8"
+                    className="space-y-6"
                 >
-                    {/* Mobile tiles removed per user request */}
-                    {/* Top Row - Mobile-first responsive layout */}
-                    <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
-                        {/* Daily Greeting - Mobile: full width, Desktop: 2/3 */}
-                        <div className="lg:col-span-8 order-1 relative">
+                    {/* Top Row - Daily Greeting with Integrated SOEN Rewards */}
+                    <div className="w-full">
                             <DailyGreeting 
                                 tasks={tasks} 
                                 categoryColors={categoryColors} 
@@ -3975,460 +3014,52 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                                 briefing={briefing}
                                 isBriefingLoading={isBriefingLoading}
                                 notes={notes}
-                                goals={props.goals}
-                                allTasks={tasks}
                                 onCompleteTask={onCompleteTask}
                                 navigateToScheduleDate={navigateToScheduleDate}
                                 setScreen={setScreen}
                                 canCompleteTasks={canCompleteTasks}
-                                insightExpanded={insightExpanded}
-                                setInsightExpanded={setInsightExpanded}
-                                userName={props.userName}
-                                addTask={addTask}
-                                projects={projects}
-                                categories={categories}
-                                onAddNewCategory={onAddNewCategory}
-                                showToast={showToast}
+                                soenFlow={soenFlow}
+                                purchasedRewards={purchasedRewards}
+                                activeTheme={activeTheme}
+                                activeFocusBackground={activeFocusBackground}
+                            />
+                    </div>
+
+
+
+                    {/* Main Content Grid - Mobile-first responsive layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                        {/* Task Toggle - Mobile: full width, Desktop: 1/2 */}
+                        <div className="lg:col-span-1 order-1 h-full">
+                            <TaskToggle
+                                tasks={tasks}
+                                categoryColors={categoryColors}
+                                onCompleteTask={onCompleteTask}
+                                navigateToScheduleDate={navigateToScheduleDate}
+                                setScreen={setScreen}
+                                canCompleteTasks={canCompleteTasks}
                             />
                         </div>
-                        
-                        {/* Right Column: Mira Daily (if expanded) then Flow + Notes */}
-                        <div className="lg:col-span-4 order-2 pr-4 md:pr-6 lg:pr-8 flex flex-col">
-                            {/* Mira Daily Panel - When expanded, starts at top (where Flow currently is), ends where "Up Next" ends */}
-                            {insightExpanded && (
-                                <div className="mb-4 sm:mb-6 rounded-3xl overflow-hidden" style={{ 
-                                    height: '600px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    backgroundColor: '#06B6D4'
-                                }}>
-                                    <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ 
-                                        scrollBehavior: 'smooth'
-                                    }}>
-                                        <MiraDailyPanel
-                                            tasks={tasks}
-                                            notes={notes}
-                                            healthData={healthData}
-                                            onClose={() => setInsightExpanded(false)}
-                                            setScreen={setScreen}
-                                            navigateToScheduleDate={navigateToScheduleDate}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                            
-                            {/* Flow and Notes - Start where calendar dates are positioned in DailyGreeting */}
-                            {/* Align to match calendar strip vertical position (~180px from top) */}
-                            <div className={`space-y-4 sm:space-y-6 ${insightExpanded ? 'lg:mt-auto' : 'lg:pt-[180px]'} mt-0`}>
-                                <SoenRewardsWidget
-                                    tasks={tasks}
-                                    healthData={healthData}
-                                    soenFlow={soenFlow}
-                                    purchasedRewards={purchasedRewards}
-                                    activeTheme={activeTheme}
-                                    activeFocusBackground={activeFocusBackground}
-                                    onOpenRewards={() => setScreen('Rewards')}
-                                />
-                                
-                                {/* Recent Notes Widget - Small, looping animation */}
-                                <RecentNotesWidget 
-                                    notes={notes}
-                                    onOpenNote={() => setScreen('Notes')}
-                                />
-                            </div>
-                        </div>
 
-                    </div>
-
-
-
-                    {/* Main Content Grid - Tasks removed; Habits spans full width */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 px-4 md:px-6 lg:px-8">
-                        <div className="lg:col-span-12 order-1">
-                            <HabitInsights healthData={healthData} />
+                        {/* Focus Timer - Mobile: full width, Desktop: 1/2 */}
+                        {/* Habit Insights section hidden for future iterations */}
+                        <div className="lg:col-span-1 order-2 h-full">
+                            <FocusTimerWidget
+                                tasks={tasks}
+                                healthData={healthData}
+                                onStartFocusMode={handleStartFocusMode}
+                                activeTheme={activeTheme}
+                                activeFocusBackground={activeFocusBackground}
+                                purchasedRewards={purchasedRewards}
+                            />
                         </div>
                     </div>
-
-                    {/* Focus Timer - Only show during overlapping task time */}
-                    {(() => {
-                        const now = new Date();
-                        const active = tasks.some(t => {
-                            const start = new Date(t.startTime);
-                            const end = new Date(start.getTime() + (t.plannedDuration || 25) * 60000);
-                            return now >= start && now <= end && t.status !== 'Completed';
-                        });
-                        if (!active) return null;
-                        return (
-                            <div className="w-full">
-                                <FocusTimerWidget
-                                    tasks={tasks}
-                                    healthData={healthData}
-                                    onStartFocusMode={handleStartFocusMode}
-                                    activeTheme={activeTheme}
-                                    activeFocusBackground={activeFocusBackground}
-                                    purchasedRewards={purchasedRewards}
-                                />
-                            </div>
-                        );
-                    })()}
 
                 </motion.div>
             </div>
-
-            {/* Mira Chat Overlay - floating pop-up (does not shift layout) */}
-            <AnimatePresence>
-                {miraChatOpen && (
-                    <motion.div
-                        key="mira-chat-overlay"
-                        className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                    >
-                        <div className="absolute inset-0 bg-black/60" onClick={() => setMiraChatOpen(false)} />
-                        <motion.div
-                            className="relative w-full max-w-2xl rounded-2xl overflow-hidden"
-                            initial={{ scale: 0.95, y: 10, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.95, y: 10, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            style={{ backgroundColor: '#0B0B0C', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
-                        >
-                            <div className="flex items-center justify-between p-3 border-b border-white/10">
-                                <div className="flex items-center gap-2">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h8m-8 4h6" /></svg>
-                                    <h4 className="font-semibold text-sm">Mira Chat</h4>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => setScreen('Mira')} className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-xs">Open Full</button>
-                                    <button onClick={() => setMiraChatOpen(false)} className="p-2 rounded-md bg-white/10 hover:bg-white/20" aria-label="Close">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="p-4 text-sm text-white/80">
-                                <p>This is a compact Mira chat pop-up. Type in the full chat for richer features.</p>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </motion.div>
+        </>
     );
 };
 
 export default SoenDashboard;
-
-// Separate right-column widget for Mira Daily with outside-click collapse
-function MiraDailyPanel({ tasks, notes, healthData, onClose, setScreen, navigateToScheduleDate }: {
-    tasks: Task[];
-    notes: Note[];
-    healthData: HealthData;
-    onClose: () => void;
-    setScreen: (s: Screen) => void;
-    navigateToScheduleDate: (d: Date, taskId?: number) => void;
-}) {
-    const panelRef = useRef<HTMLDivElement | null>(null);
-    const [showDetailed, setShowDetailed] = useState(false);
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-                onClose();
-            }
-        };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [onClose]);
-
-    const today = new Date();
-    const todayTasks = tasks.filter(t => new Date(t.startTime).toDateString() === today.toDateString());
-    const todayMeetings = todayTasks.filter(t => 
-        t.category.toLowerCase().includes('meeting') || 
-        t.title.toLowerCase().includes('meeting') ||
-        t.title.toLowerCase().includes('call') ||
-        t.title.toLowerCase().includes('zoom') ||
-        t.title.toLowerCase().includes('conference')
-    );
-
-    // Find related notes for meetings
-    const getMeetingNotes = (meeting: Task) => {
-        return notes.filter(n => {
-            const title = (n.title || '').toLowerCase();
-            const content = (n.content || '').toLowerCase();
-            const meetingTitle = meeting.title.toLowerCase();
-            return title.includes(meetingTitle) || 
-                   content.includes(meetingTitle) ||
-                   title.includes('meeting') && meetingTitle.includes(title.split(' ')[0]);
-        });
-    };
-
-    const openMira = () => {
-        const context = {
-            date: today.toISOString(),
-            counts: { tasks: todayTasks.length, meetings: todayMeetings.length },
-            sampleTitles: todayTasks.slice(0, 5).map(t => t.title),
-            meetings: todayMeetings.map(m => ({
-                title: m.title,
-                time: new Date(m.startTime).toISOString(),
-                hasNotes: getMeetingNotes(m).length > 0
-            }))
-        };
-        try { localStorage.setItem('soen-mira-transfer-context', JSON.stringify(context)); } catch {}
-        setScreen('Mira');
-    };
-
-    const openMeetingPrep = (meeting: Task) => {
-        const meetingNotes = getMeetingNotes(meeting);
-        const context = {
-            meeting: {
-                title: meeting.title,
-                time: new Date(meeting.startTime).toISOString(),
-                duration: meeting.plannedDuration
-            },
-            notes: meetingNotes.map(n => ({
-                title: n.title,
-                content: n.content?.substring(0, 500)
-            })),
-            hasPrepNotes: meetingNotes.length > 0
-        };
-        try { localStorage.setItem('soen-mira-transfer-context', JSON.stringify(context)); } catch {}
-        setScreen('Mira');
-    };
-
-    return (
-        <div ref={panelRef} className="p-6 flex flex-col min-h-0" style={{ color: '#fff' }}>
-            <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                    <StarIcon className="w-5 h-5 text-white" />
-                    <h3 className="text-lg font-bold">Mira Daily</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={openMira} className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold">Chat with Mira</button>
-                    {/* Minimal expand/collapse icon button */}
-                    <button onClick={() => setShowDetailed(!showDetailed)} className="p-2 rounded-lg bg-white/10 hover:bg-white/20" aria-label="Toggle details">
-                        {showDetailed ? (
-                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 14h6v6M20 10h-6V4M4 10h6V4M20 14h-6v6"/></svg>
-                        ) : (
-                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h6V2M20 16h-6v6M4 16h6v6M20 8h-6V2"/></svg>
-                        )}
-                    </button>
-                    <button onClick={onClose} className="p-2 rounded-lg bg-white/10 hover:bg-white/20" aria-label="Close Mira Daily">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </div>
-            </div>
-
-            {/* KPIs and chips only; no date duplication */}
-            <div className="mb-2">
-                <div className="mt-1 flex flex-wrap gap-2">
-                    <span className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs">Energy: {healthData.energyLevel || 'High'}</span>
-                    <span className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs">Sleep: {healthData.avgSleepHours?.toFixed(0) || '7'}h</span>
-                    <span className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs">Tasks: {todayTasks.length}</span>
-                </div>
-            </div>
-
-            {/* Dynamic KPI Bars - Context-aware */}
-            {(() => {
-                const userContext = (() => {
-                    try {
-                        const lifestyle = localStorage.getItem('soen-lifestyle-profile') || 'general';
-                        const travelMode = localStorage.getItem('soen-travel-mode') === 'true';
-                        const sickMode = localStorage.getItem('soen-sick-mode') === 'true';
-                        return { lifestyle, travelMode, sickMode };
-                    } catch {
-                        return { lifestyle: 'general', travelMode: false, sickMode: false };
-                    }
-                })();
-                
-                const hasWorkout = todayTasks.some(t => 
-                    t.category.toLowerCase().includes('workout') || 
-                    t.category.toLowerCase().includes('exercise') || 
-                    t.category.toLowerCase().includes('gym')
-                );
-                const hasMeetings = todayMeetings.length > 0;
-                
-                // Calculate dynamic KPIs based on context
-                let focusLevel = 75;
-                let recoveryLevel = 60;
-                let focusLabel = 'Focus';
-                let recoveryLabel = 'Recovery';
-                
-                if (userContext.sickMode) {
-                    focusLevel = 30; // Lower focus when sick
-                    recoveryLevel = 90; // High recovery priority
-                    recoveryLabel = 'Recovery Priority';
-                } else if (userContext.travelMode) {
-                    focusLevel = 50; // Lower focus during travel
-                    recoveryLevel = 70;
-                    focusLabel = 'Travel Energy';
-                } else if (hasWorkout && !hasMeetings) {
-                    focusLevel = 85; // High focus on workout days
-                    recoveryLevel = 40; // Lower recovery (needs post-workout recovery)
-                    recoveryLabel = 'Pre-Workout Energy';
-                } else if (hasMeetings && hasWorkout) {
-                    focusLevel = 70; // Balanced for hybrid days
-                    recoveryLevel = 55;
-                } else if (hasMeetings) {
-                    focusLevel = 65; // Meetings can drain focus
-                    recoveryLevel = 60;
-                }
-                
-                return (
-            <div className="mb-4 space-y-3">
-                <div>
-                            <div className="flex items-center justify-between text-xs text-white/70 mb-1">
-                                <span>{focusLabel}</span>
-                                <span>{focusLevel}%</span>
-                            </div>
-                            <div className="h-2 bg-white/10 rounded-full">
-                                <div className="h-full bg-emerald-400 rounded-full transition-all duration-500" style={{width:`${focusLevel}%`}}/>
-                            </div>
-                </div>
-                <div>
-                            <div className="flex items-center justify-between text-xs text-white/70 mb-1">
-                                <span>{recoveryLabel}</span>
-                                <span>{recoveryLevel}%</span>
-                </div>
-                            <div className="h-2 bg-white/10 rounded-full">
-                                <div className="h-full bg-blue-400 rounded-full transition-all duration-500" style={{width:`${recoveryLevel}%`}}/>
-            </div>
-                        </div>
-                    </div>
-                );
-            })()}
-
-            {/* Meetings Today - Enhanced with note linking and prep */}
-            {todayMeetings.length > 0 && (
-                <div className="mt-4 mb-4">
-                    <h4 className="text-xs font-semibold text-white/80 mb-2 flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Meetings Today ({todayMeetings.length})
-                    </h4>
-                <div className="space-y-2">
-                        {todayMeetings.map(meeting => {
-                            const meetingNotes = getMeetingNotes(meeting);
-                            const url = (meeting.linkedUrl || meeting.referenceUrl || '').toString();
-                            let domain = '';
-                            try { domain = url ? new URL(url).hostname : ''; } catch {}
-                            const isUpcoming = new Date(meeting.startTime) > new Date();
-                            const minutesUntil = isUpcoming ? Math.round((new Date(meeting.startTime).getTime() - new Date().getTime()) / 60000) : null;
-                            
-                            return (
-                                <div key={`meet-${meeting.id}`} className="p-3 rounded-xl bg-white/5 border border-white/10">
-                                    <div className="flex items-start justify-between mb-2">
-                                        <div className="flex items-start gap-2 flex-1 min-w-0">
-                                            <div className="w-6 h-6 rounded-md bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 mt-0.5">
-                                                {domain ? (
-                                                    <img alt="logo" src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`} className="w-5 h-5"/>
-                                                ) : (
-                                                    <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                                        <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
-                                                    </svg>
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-semibold text-sm truncate">{meeting.title}</div>
-                                                <div className="text-xs text-white/70 mt-0.5">
-                                                    {new Date(meeting.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    {minutesUntil !== null && minutesUntil > 0 && (
-                                                        <span className="ml-2 text-emerald-400">in {minutesUntil}m</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Meeting prep indicators */}
-                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                        {meetingNotes.length > 0 && (
-                                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs">
-                                                <DocumentTextIcon className="w-3 h-3" />
-                                                <span>{meetingNotes.length} prep note{meetingNotes.length > 1 ? 's' : ''}</span>
-                                            </div>
-                                        )}
-                                        {!meetingNotes.length && (
-                                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs">
-                                                <SparklesIcon className="w-3 h-3" />
-                                                <span>Needs prep</span>
-                                            </div>
-                                        )}
-                                        {url && (
-                                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs">
-                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                                </svg>
-                                                <span>Link</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Quick actions */}
-                                    <div className="flex gap-2 mt-2">
-                            <button
-                                onClick={() => {
-                                                navigateToScheduleDate(new Date(meeting.startTime), meeting.id);
-                                    setScreen('Schedule');
-                                }}
-                                            className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs flex-1"
-                                        >
-                                            Open Meeting
-                                        </button>
-                                        {meetingNotes.length > 0 && (
-                                            <button
-                                                onClick={() => {
-                                                    setScreen('Notes');
-                                                    // Could set selected note here if we had that prop
-                                                }}
-                                                className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs"
-                                            >
-                                                View Notes
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => openMeetingPrep(meeting)}
-                                className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs"
-                                        >
-                                            Prep with Mira
-                                        </button>
-                        </div>
-                </div>
-                            );
-                        })}
-            </div>
-                </div>
-            )}
-
-            {/* Other Tasks - Non-meeting tasks */}
-            {/* Remove suggested actions and task repetition from Mira Daily */}
-
-            {showDetailed && (
-                <div className="mt-6 space-y-3 border-t border-white/10 pt-4">
-                    <h4 className="text-xs font-semibold text-white/80">Detailed Insights</h4>
-                    {todayTasks.slice(0, 5).map(t => {
-                        const matchingNote = notes.find(n => (n.title || '').toLowerCase().includes(t.title.toLowerCase()) || (n.content || '').toLowerCase().includes(t.title.toLowerCase()));
-                        return (
-                            <div key={`det-${t.id}`} className="p-3 rounded-xl bg-white/5">
-                                <div className="flex items-center justify-between text-sm">
-                                    <div className="font-semibold truncate mr-2">{t.title}</div>
-                                    <div className="text-white/60 text-xs">{new Date(t.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                </div>
-                                {matchingNote && (
-                                    <div className="mt-1 text-xs text-white/80 line-clamp-2">{matchingNote.content?.substring(0, 140) || ''}</div>
-                                )}
-                                {!matchingNote && (
-                                    <div className="mt-1 text-xs text-white/60">No linked notes found. Ask Mira to prepare notes.</div>
-                                )}
-                                <div className="mt-2 flex gap-2">
-                                    <button onClick={() => { navigateToScheduleDate(new Date(t.startTime)); setScreen('Schedule'); }} className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs">Open task</button>
-                                    <button onClick={openMira} className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs">Refine with Mira</button>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-}

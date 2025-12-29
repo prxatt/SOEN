@@ -42,7 +42,8 @@ export const REWARDS_CATALOG: RewardItem[] = [
         description: 'A dark, sleek theme inspired by deep focus and minimal aesthetics.',
         cost: 0,
         type: 'theme',
-        value: 'obsidian'
+        value: 'obsidian',
+        colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c']
     },
     {
         id: 'theme-synthwave',
@@ -50,7 +51,8 @@ export const REWARDS_CATALOG: RewardItem[] = [
         description: 'Ride the retro-futuristic wave with neon glows and dusky gradients.',
         cost: 150,
         type: 'theme',
-        value: 'synthwave'
+        value: 'synthwave',
+        colors: ['#EC4899', '#7c3aed', '#f97316', '#ef4444']
     },
     {
         id: 'theme-solarpunk',
@@ -58,7 +60,8 @@ export const REWARDS_CATALOG: RewardItem[] = [
         description: 'An optimistic, bright theme with natural colors and clean lines.',
         cost: 150,
         type: 'theme',
-        value: 'solarpunk'
+        value: 'solarpunk',
+        colors: ['#a3e635', '#16a34a', '#22c55e', '#10b981']
     },
     {
         id: 'theme-luxe',
@@ -66,7 +69,8 @@ export const REWARDS_CATALOG: RewardItem[] = [
         description: 'An elegant, high-contrast theme with gold accents and a touch of class.',
         cost: 250,
         type: 'theme',
-        value: 'luxe'
+        value: 'luxe',
+        colors: ['#fde047', '#eab308', '#f59e0b', '#d97706']
     },
     {
         id: 'theme-aurelian',
@@ -74,7 +78,8 @@ export const REWARDS_CATALOG: RewardItem[] = [
         description: 'A luxurious theme with a rich, golden accent for a premium feel.',
         cost: 300,
         type: 'theme',
-        value: 'aurelian'
+        value: 'aurelian',
+        colors: ['#fbbf24', '#f59e0b', '#d97706', '#b45309']
     },
     {
         id: 'theme-crimson',
@@ -82,7 +87,8 @@ export const REWARDS_CATALOG: RewardItem[] = [
         description: 'A bold, energetic theme with a powerful red accent for high-impact focus.',
         cost: 200,
         type: 'theme',
-        value: 'crimson'
+        value: 'crimson',
+        colors: ['#f87171', '#dc2626', '#b91c1c', '#991b1b']
     },
     {
         id: 'theme-oceanic',
@@ -90,7 +96,8 @@ export const REWARDS_CATALOG: RewardItem[] = [
         description: 'A calm, cool theme with a deep blue accent, perfect for focused work.',
         cost: 200,
         type: 'theme',
-        value: 'oceanic'
+        value: 'oceanic',
+        colors: ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1']
     },
     // New Focus Backgrounds
     {
@@ -99,7 +106,8 @@ export const REWARDS_CATALOG: RewardItem[] = [
         description: 'A vibrant, retro-futuristic animated background for deep focus sessions.',
         cost: 100,
         type: 'focus_background',
-        value: 'synthwave'
+        value: 'synthwave',
+        colors: ['#EC4899', '#7c3aed', '#f97316', '#ef4444']
     },
     {
         id: 'focus-lofi',
@@ -107,7 +115,8 @@ export const REWARDS_CATALOG: RewardItem[] = [
         description: 'A calming, atmospheric background for relaxed and steady work.',
         cost: 100,
         type: 'focus_background',
-        value: 'lofi'
+        value: 'lofi',
+        colors: ['#4f46e5', '#1e293b', '#334155', '#475569']
     },
     {
         id: 'focus-solarpunk',
@@ -115,9 +124,26 @@ export const REWARDS_CATALOG: RewardItem[] = [
         description: 'An optimistic and bright animated background for creative work.',
         cost: 150,
         type: 'focus_background',
-        value: 'solarpunk'
+        value: 'solarpunk',
+        colors: ['#a3e635', '#16a34a', '#22c55e', '#10b981']
     }
 ];
+
+/**
+ * Get theme colors from REWARDS_CATALOG
+ */
+export const getThemeColors = (themeValue: string): string[] => {
+    const theme = REWARDS_CATALOG.find(r => r.type === 'theme' && r.value === themeValue);
+    return theme?.colors || ['#667eea', '#764ba2', '#f093fb', '#f5576c']; // Default obsidian colors
+};
+
+/**
+ * Get focus background colors from REWARDS_CATALOG
+ */
+export const getFocusBackgroundColors = (bgValue: string): string[] => {
+    const bg = REWARDS_CATALOG.find(r => r.type === 'focus_background' && r.value === bgValue);
+    return bg?.colors || ['#EC4899', '#7c3aed', '#f97316', '#ef4444']; // Default synthwave colors
+};
 
 
 export const MOCKED_BRIEFING: MissionBriefing = {

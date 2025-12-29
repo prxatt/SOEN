@@ -10,22 +10,37 @@ if (!rootElement) {
 
 // Only register the Service Worker in production builds.
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    if (import.meta.env && import.meta.env.PROD) {
+  // In development, immediately unregister any service workers
+  if (import.meta.env && import.meta.env.DEV) {
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      registrations.forEach(reg => {
+        reg.unregister().then(() => {
+          console.log('Unregistered stale SW in dev');
+          // Clear all caches
+          caches.keys().then(cacheNames => {
+            return Promise.all(
+              cacheNames.map(cacheName => caches.delete(cacheName))
+            );
+          }).then(() => {
+            console.log('All caches cleared');
+            // Force reload if we're in a service worker controlled page
+            if (navigator.serviceWorker.controller) {
+              window.location.reload();
+            }
+          });
+        });
+      });
+    }).catch(() => {});
+  } else {
+    // In production, register service worker on load
+    window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').then(registration => {
         console.log('SW registered: ', registration);
       }).catch(registrationError => {
         console.log('SW registration failed: ', registrationError);
       });
-    } else {
-      // In development, ensure any previously installed SWs are unregistered
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        registrations.forEach(reg => {
-          reg.unregister().then(() => console.log('Unregistered stale SW in dev'));
-        });
-      }).catch(() => {});
-    }
-  });
+    });
+  }
 }
 
 

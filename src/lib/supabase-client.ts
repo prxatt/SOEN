@@ -21,11 +21,20 @@ if (isSupabaseConfigured) {
     console.log('✅ Supabase client initialized successfully');
   } catch (error) {
     console.error('❌ Failed to initialize Supabase client:', error);
+    // Fallback to mock client even if real initialization fails
+    supabase = null;
   }
 }
 
 if (!supabase) {
-  console.warn('⚠️ Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable backend features. Running in degraded mode.');
+  if (import.meta.env.DEV) {
+    console.warn(
+      '[Supabase] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are not set. ' +
+      'Using a mock Supabase client in development. Auth and DB calls will be no-ops.'
+    );
+  } else {
+    console.warn('⚠️ Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable backend features. Running in degraded mode.');
+  }
 
   const resolve = () => ({ data: null, error: { message: 'Supabase not configured' } });
 
@@ -426,7 +435,6 @@ export const db = {
       .order('created_at', { ascending: false })
 
     if (unreadOnly) {
-      // @ts-expect-error mock supports eq chaining
       query = query.eq('is_read', false)
     }
 

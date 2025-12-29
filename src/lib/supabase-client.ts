@@ -435,7 +435,6 @@ export const db = {
       .order('created_at', { ascending: false })
 
     if (unreadOnly) {
-      // @ts-expect-error mock supports eq chaining
       query = query.eq('is_read', false)
     }
 

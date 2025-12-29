@@ -346,7 +346,7 @@ export const MiraIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
 
 export const BabyPenguinIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     <svg 
-        viewBox="0 0 24 24" 
+		viewBox="0 0 24 24" 
         fill="none" 
         xmlns="http://www.w3.org/2000/svg"
         width={size}
@@ -354,55 +354,42 @@ export const BabyPenguinIcon: React.FC<IconProps> = ({ size = 24, ...props }) =>
         {...props}
     >
         <defs>
-            <linearGradient id="penguinBody" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#1a1a1a" />
-                <stop offset="50%" stopColor="#2d2d2d" />
-                <stop offset="100%" stopColor="#1a1a1a" />
+            <linearGradient id="miraBodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#3b3b3b" />
+                <stop offset="100%" stopColor="#2a2a2a" />
             </linearGradient>
-            <linearGradient id="penguinBelly" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f8f8f8" />
-                <stop offset="100%" stopColor="#e8e8e8" />
-            </linearGradient>
-            <linearGradient id="penguinBeak" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#ff8c00" />
-                <stop offset="100%" stopColor="#ff6b00" />
-            </linearGradient>
-            <filter id="penguinShadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="1" dy="2" stdDeviation="1" floodColor="#000000" floodOpacity="0.3"/>
-            </filter>
         </defs>
+		<g transform="scale(0.24, 0.2)">
+        {/* Body - Soft, rounded ellipse */}
+        <ellipse cx="50" cy="70" rx="35" ry="40" fill="url(#miraBodyGradient)" />
         
-        {/* Main body with 3D effect */}
-        <ellipse cx="12" cy="14" rx="8" ry="10" fill="url(#penguinBody)" filter="url(#penguinShadow)" />
+        {/* Belly - Soft white/cream */}
+        <ellipse cx="50" cy="75" rx="22" ry="28" fill="#fef3c7" />
         
-        {/* White belly */}
-        <ellipse cx="12" cy="14" rx="5" ry="7" fill="url(#penguinBelly)" />
+        {/* Head - Soft, rounded circle */}
+        <circle cx="50" cy="35" r="28" fill="url(#miraBodyGradient)" />
         
-        {/* Head */}
-        <circle cx="12" cy="6" r="4" fill="url(#penguinBody)" filter="url(#penguinShadow)" />
+        {/* Left Eye - Large, friendly, dark */}
+        <circle cx="42" cy="32" r="7" fill="#1f2937" />
+        <circle cx="43.5" cy="30.5" r="3" fill="#ffffff" />
         
-        {/* Eyes - cute and expressive */}
-        <circle cx="10" cy="5" r="1.5" fill="#000000" />
-        <circle cx="14" cy="5" r="1.5" fill="#000000" />
+        {/* Right Eye - Large, friendly, dark */}
+        <circle cx="58" cy="32" r="7" fill="#1f2937" />
+        <circle cx="59.5" cy="30.5" r="3" fill="#ffffff" />
         
-        {/* Eye highlights for cuteness */}
-        <circle cx="10.3" cy="4.7" r="0.6" fill="#ffffff" />
-        <circle cx="14.3" cy="4.7" r="0.6" fill="#ffffff" />
+        {/* Beak - Soft orange/yellow */}
+        <polygon points="50,40 46,44 54,44" fill="#fbbf24" />
         
-        {/* Beak - 3D triangular */}
-        <path d="M12 7.5L10.5 9L13.5 9L12 7.5Z" fill="url(#penguinBeak)" />
+        {/* Cheek blush - Soft pink */}
+        <circle cx="35" cy="38" r="4" fill="#fbcfe8" opacity="0.6" />
+        <circle cx="65" cy="38" r="4" fill="#fbcfe8" opacity="0.6" />
         
-        {/* Wings - positioned naturally */}
-        <ellipse cx="7" cy="12" rx="2" ry="4" fill="url(#penguinBody)" transform="rotate(-20 7 12)" />
-        <ellipse cx="17" cy="12" rx="2" ry="4" fill="url(#penguinBody)" transform="rotate(20 17 12)" />
+        {/* Left Foot - Soft orange */}
+        <ellipse cx="40" cy="108" rx="8" ry="5" fill="#f59e0b" />
         
-        {/* Feet - cute webbed feet */}
-        <ellipse cx="10" cy="20" rx="1.5" ry="1" fill="#ff8c00" />
-        <ellipse cx="14" cy="20" rx="1.5" ry="1" fill="#ff8c00" />
-        
-        {/* Cheek blush for extra cuteness */}
-        <circle cx="8.5" cy="6.5" r="0.8" fill="#ffb3ba" opacity="0.6" />
-        <circle cx="15.5" cy="6.5" r="0.8" fill="#ffb3ba" opacity="0.6" />
+        {/* Right Foot - Soft orange */}
+        <ellipse cx="60" cy="108" rx="8" ry="5" fill="#f59e0b" />
+		</g>
     </svg>
 );
 
@@ -1653,6 +1640,51 @@ export const EyeIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
     </svg>
 );
 
+// Travel Mode Icon (lock/suitcase)
+export const TravelIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path d="M12 2a7 7 0 00-7 7v2H4a2 2 0 00-2 2v7h20v-7a2 2 0 00-2-2h-1V9a7 7 0 00-7-7zm0 2a5 5 0 015 5v2H7V9a5 5 0 015-5z"/>
+    </svg>
+);
+
+// Sick Day Mode Icon (bell/notification)
+export const SickDayIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <path d="M12 22a2 2 0 01-2-2h4a2 2 0 01-2 2zM5 17h14a1 1 0 001-1v-4a7 7 0 00-5-6.708V4a2 2 0 10-4 0v1.292A7 7 0 004 12v4a1 1 0 001 1z"/>
+    </svg>
+);
+
+// Temperature Unit Icon (thermometer/sun)
+export const TemperatureUnitIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+        width={size}
+        height={size}
+        {...props}
+    >
+        <circle cx="12" cy="12" r="5"/>
+        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+    </svg>
+);
+
 // Layout Components Export
 export default {
     // Core brand
@@ -1788,5 +1820,8 @@ export default {
 
     // Additional missing icons
     ArrowTrendingUpIcon,
-    EyeIcon
+    EyeIcon,
+    TravelIcon,
+    SickDayIcon,
+    TemperatureUnitIcon
 };

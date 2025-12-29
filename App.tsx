@@ -36,7 +36,7 @@
  * NEVER REMOVE THESE SAFETY MEASURES - THEY PREVENT APP CRASHES!
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Import types
@@ -185,6 +185,7 @@ function App() {
     const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
     const [previousScreen, setPreviousScreen] = useState<Screen>('Dashboard');
     const [uiMode, setUiMode] = useState<'dark' | 'glass'>('glass');
     const [activeTheme, setActiveTheme] = useState('obsidian');
@@ -228,6 +229,7 @@ function App() {
         }
     ]);
     const [browserPushEnabled, setBrowserPushEnabled] = useState<boolean>(false);
+    const [userName, setUserName] = useState<string | null>(localStorage.getItem('soen-user-name'));
 
 
     // Derived/Generated states - AI/LLM NOTE: Always use createSafeHealthData to prevent crashes
@@ -907,16 +909,53 @@ function App() {
         }
     }, [tasks, notes, goals, healthData]);
 
-    const navigateToScheduleDate = (date: Date) => {
+    const [scheduleInitialTaskId, setScheduleInitialTaskId] = useState<number | undefined>(undefined);
+    const clearTaskIdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    
+    const handleTaskConsumed = useCallback(() => {
+        // Clear any pending timeout
+        if (clearTaskIdTimeoutRef.current) {
+            clearTimeout(clearTaskIdTimeoutRef.current);
+            clearTaskIdTimeoutRef.current = null;
+        }
+        // Clear the taskId now that Schedule has consumed it
+        setScheduleInitialTaskId(undefined);
+    }, []);
+    
+    const navigateToScheduleDate = useCallback((date: Date, taskId?: number) => {
+        // Clear any pending timeout from previous navigation
+        if (clearTaskIdTimeoutRef.current) {
+            clearTimeout(clearTaskIdTimeoutRef.current);
+            clearTaskIdTimeoutRef.current = null;
+        }
+        
         setScheduleInitialDate(date);
+        setScheduleInitialTaskId(taskId);
         navigateTo('Schedule');
-    };
+        
+        // Fallback timeout as safety net (shouldn't be needed if callback works)
+        if (taskId) {
+            clearTaskIdTimeoutRef.current = setTimeout(() => {
+                setScheduleInitialTaskId(undefined);
+                clearTaskIdTimeoutRef.current = null;
+            }, 2000); // Longer timeout as fallback only
+        }
+    }, [navigateTo]);
+    
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (clearTaskIdTimeoutRef.current) {
+                clearTimeout(clearTaskIdTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // --- RENDER LOGIC ---
     const renderScreen = () => {
         switch (activeScreen) {
-            case 'Dashboard': return <SoenDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} />;
-            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToMiraAIWithChat={redirectToMiraAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} />;
+            case 'Dashboard': return <SoenDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} userName={userName} addTask={addTask} projects={projects} categories={categories} onAddNewCategory={handleAddNewCategory} showToast={showToast} />;
+            case 'Schedule': return <Schedule tasks={tasks} setTasks={setTasks} projects={projects} notes={notes} notebooks={notebooks} goals={goals} categories={categories} categoryColors={categoryColors} showToast={showToast} onCompleteTask={handleCompleteTask} onUndoCompleteTask={handleUndoCompleteTask} triggerInsightGeneration={triggerInsightGeneration} redirectToMiraAIWithChat={redirectToMiraAIWithChat} addNote={addNote} deleteTask={deleteTask} addTask={addTask} onTaskSwap={handleTaskSwap} onAddNewCategory={handleAddNewCategory} initialDate={scheduleInitialDate} initialTaskId={scheduleInitialTaskId} onTaskConsumed={handleTaskConsumed} />;
             case 'Notes': return <Notes notes={notes} notebooks={notebooks} updateNote={updateNote} addNote={addNote} startChatWithContext={startChatWithContext} selectedNote={selectedNote} setSelectedNote={setSelectedNote} activeNotebookId={activeNotebookId} setActiveNotebookId={setActiveNotebookId} deleteNote={deleteNote} showToast={showToast} lastDeletedNote={lastDeletedNote} restoreNote={restoreNote} permanentlyDeleteNote={permanentlyDeleteNote} tasks={tasks} addNotebook={addNotebook} updateNotebook={updateNotebook} deleteNotebook={deleteNotebook} restoreNotebook={restoreNotebook} navigateToScheduleDate={navigateToScheduleDate} categoryColors={categoryColors} />;
             case 'Profile': return <Profile
                 soenFlow={soenFlow}
@@ -956,7 +995,7 @@ function App() {
             case 'Notifications': return <Notifications items={notifications} />;
             case 'Rewards': return <Rewards onBack={() => navigateTo('Profile')} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} setActiveTheme={handleSetActiveTheme} onPurchase={handlePurchaseReward} activeFocusBackground={activeFocusBackground} setActiveFocusBackground={handleSetActiveFocusBackground} />;
             case 'Focus': return focusTask ? <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} /> : <div/>;
-            default: return <SoenDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} />;
+            default: return <SoenDashboard tasks={tasks} notes={notes} healthData={healthData} briefing={briefing} goals={goals} setFocusTask={setFocusTask} dailyCompletionImage={dailyCompletionImage} categoryColors={categoryColors} isBriefingLoading={isBriefingLoading} navigateToScheduleDate={navigateToScheduleDate} inferredLocation={inferHomeLocation(tasks)} setScreen={navigateTo} onCompleteTask={(taskId) => handleCompleteTask(taskId, 0)} soenFlow={soenFlow} purchasedRewards={purchasedRewards} activeTheme={activeTheme} activeFocusBackground={activeFocusBackground} userName={userName} addTask={addTask} projects={projects} categories={categories} onAddNewCategory={handleAddNewCategory} showToast={showToast} />;
         }
     };
     
@@ -966,7 +1005,7 @@ function App() {
 
     return (
         <ErrorBoundary>
-            <div className={`min-h-screen font-sans bg-bg text-text transition-colors duration-300 flex`}>
+            <div className={`min-h-screen w-full font-sans bg-bg text-text transition-colors duration-300 flex overflow-x-hidden`} style={{ margin: 0, padding: 0, backgroundColor: '#0B0B0C' }}>
                 {focusTask ? (
                      <ErrorBoundary>
                          <FocusMode task={focusTask} onComplete={handleCompleteTask} onClose={() => setFocusTask(null)} activeFocusBackground={activeFocusBackground} />
@@ -974,9 +1013,12 @@ function App() {
                 ) : (
                     <>
                         <ErrorBoundary>
-                            <Navigation activeScreen={activeScreen} setScreen={navigateTo} />
+                            <Navigation activeScreen={activeScreen} setScreen={navigateTo} onCollapsedChange={setSidebarCollapsed} />
                         </ErrorBoundary>
-                        <main className="flex-1 ml-16 md:ml-20 min-w-0">
+                        <main 
+                            className={`flex-1 ml-0 min-w-0 pb-mobile-nav md:pb-0 bg-bg transition-all duration-500 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}
+                            style={{ backgroundColor: '#0B0B0C' }}
+                        >
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={activeScreen}

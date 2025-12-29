@@ -140,7 +140,7 @@ function Onboarding({ goals, setGoals, onComplete }: OnboardingProps) {
                                         value={currentStepData.value}
                                         onChange={(e) => (currentStepData.setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)}
                                         placeholder={currentStepData.placeholder}
-                                        className="w-full text-center bg-white/80 dark:bg-black/80 border border-black/20 dark:border-white/20 rounded-xl shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent text-lg text-black dark:text-white"
+                                        className="w-full text-center bg-white/80 dark:bg-black/80 border border-black/20 dark:border-white/20 rounded-xl shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] text-lg text-black dark:text-white"
                                     />
                                 </motion.div>
                             )}

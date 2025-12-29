@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Cog6ToothIcon, GoogleCalendarIcon, ChevronRightIcon, SparklesIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleLeftEllipsisIcon, CheckIcon } from './Icons';
+import { Cog6ToothIcon, GoogleCalendarIcon, ChevronRightIcon, SparklesIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleLeftEllipsisIcon, CheckIcon, TravelIcon, SickDayIcon, TemperatureUnitIcon } from './Icons';
 import { REWARDS_CATALOG, getThemeColors } from '../constants';
 
 interface SettingsProps {
@@ -58,6 +58,39 @@ function SettingsRow({ icon, title, subtitle, onClick, action }: SettingsRowProp
 
 function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme, setActiveTheme, purchasedRewards, browserPushEnabled, setBrowserPushEnabled }: SettingsProps) {
   const purchasedThemes = REWARDS_CATALOG.filter(r => r.type === 'theme' && purchasedRewards.includes(r.id));
+  
+  // Travel Mode, Sick Mode, and Temperature Unit state
+  const [travelMode, setTravelMode] = React.useState(false);
+  const [sickMode, setSickMode] = React.useState(false);
+  const [temperatureUnit, setTemperatureUnit] = React.useState<'c' | 'f'>('c');
+
+  React.useEffect(() => {
+    // Load modes from localStorage
+    const savedTravelMode = localStorage.getItem('soen-travel-mode') === 'true';
+    const savedSickMode = localStorage.getItem('soen-sick-mode') === 'true';
+    const savedTempUnit = (localStorage.getItem('soen-temperature-unit') || 'c') as 'c' | 'f';
+    setTravelMode(savedTravelMode);
+    setSickMode(savedSickMode);
+    setTemperatureUnit(savedTempUnit);
+  }, []);
+
+  const handleTravelModeToggle = () => {
+    const newValue = !travelMode;
+    setTravelMode(newValue);
+    localStorage.setItem('soen-travel-mode', String(newValue));
+  };
+
+  const handleSickModeToggle = () => {
+    const newValue = !sickMode;
+    setSickMode(newValue);
+    localStorage.setItem('soen-sick-mode', String(newValue));
+  };
+
+  const handleTemperatureUnitToggle = () => {
+    const newUnit = temperatureUnit === 'c' ? 'f' : 'c';
+    setTemperatureUnit(newUnit);
+    localStorage.setItem('soen-temperature-unit', newUnit);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-h-[calc(100vh-8.5rem)] overflow-y-auto pb-4 pr-2 -mr-2">
@@ -119,7 +152,7 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                             <button
                                 key={theme.id}
                                 onClick={() => setActiveTheme(theme.value)}
-                                className={`w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center ${activeTheme === theme.value ? 'ring-2 ring-offset-2 ring-offset-card ring-accent' : 'hover:scale-110'}`}
+                                className={`w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center ${activeTheme === theme.value ? 'ring-2 ring-offset-2 ring-offset-[var(--color-card)] ring-[var(--color-accent)]' : 'hover:scale-110'}`}
                                 style={{ background: getThemeGradient(theme.value) }}
                                 aria-label={`Select ${theme.name} theme`}
                             >
@@ -152,6 +185,41 @@ function Settings({ uiMode, toggleUiMode, onSyncCalendar, onLogout, activeTheme,
                             className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${browserPushEnabled ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}
                         >
                             <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${browserPushEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    }
+                />
+                <div className="border-t border-border/50 my-1 mx-2"></div>
+                <SettingsRow 
+                    icon={<TravelIcon className="w-6 h-6 text-teal-400" />}
+                    title="Travel Mode"
+                    subtitle="Adjust notifications and insights for travel"
+                    action={
+                        <button onClick={handleTravelModeToggle} role="switch" aria-checked={travelMode}
+                            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${travelMode ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${travelMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    }
+                />
+                <SettingsRow 
+                    icon={<SickDayIcon className="w-6 h-6 text-red-400" />}
+                    title="Sick Day Mode"
+                    subtitle="Reduce workload and adjust insights for recovery"
+                    action={
+                        <button onClick={handleSickModeToggle} role="switch" aria-checked={sickMode}
+                            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${sickMode ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${sickMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    }
+                />
+                <div className="border-t border-border/50 my-1 mx-2"></div>
+                <SettingsRow 
+                    icon={<TemperatureUnitIcon className="w-6 h-6 text-blue-400" />}
+                    title="Temperature Unit"
+                    subtitle={`Display temperature in ${temperatureUnit.toUpperCase() === 'C' ? 'Fahrenheit' : 'Celsius'}`}
+                    action={
+                        <button onClick={handleTemperatureUnitToggle} role="switch" aria-checked={temperatureUnit === 'f'}
+                            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${temperatureUnit === 'f' ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${temperatureUnit === 'f' ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     }
                 />

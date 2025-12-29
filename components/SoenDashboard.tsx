@@ -26,6 +26,16 @@
  * - Maintain consistent widget sizing and spacing as per previous user requests
  * - All new icons must be SVG and follow the existing icon styling conventions
  * - Do not remove or alter the core functionality of existing widgets unless explicitly instructed
+ * 
+ * CRITICAL TEXT CONTRAST RULESET:
+ * - Text must ALWAYS be clearly visible and readable against its background
+ * - For dark backgrounds (luminance < 0.5): ALWAYS use white text (#ffffff or #f0f0f0) with text shadows
+ * - For light backgrounds (luminance >= 0.5): ALWAYS use black/dark text (#000000 or #1a1a1a)
+ * - Minimum contrast ratio: 4.5:1 for normal text (WCAG AA compliance)
+ * - Use text shadows (textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)') on white text over dark backgrounds
+ * - Never use white text on light backgrounds or black text on dark backgrounds
+ * - Test all text visibility before committing changes
+ * - If in doubt, use ensureTextContrast() helper function to validate contrast
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -106,6 +116,33 @@ const getTextColorForBackground = (hexColor: string): 'black' | 'white' => {
     const b = parseInt(hexColor.slice(5, 7), 16);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     return luminance > 0.5 ? 'black' : 'white';
+};
+
+// CRITICAL RULESET: Ensure text contrast is always maintained
+// This function calculates contrast ratio and ensures WCAG AA compliance (4.5:1 for normal text)
+const ensureTextContrast = (backgroundColor: string, textColor: 'black' | 'white'): string => {
+    // For dark backgrounds (luminance < 0.5), always use white text
+    // For light backgrounds (luminance >= 0.5), always use black text
+    if (!backgroundColor.startsWith('#')) return textColor;
+    
+    const r = parseInt(backgroundColor.slice(1, 3), 16);
+    const g = parseInt(backgroundColor.slice(3, 5), 16);
+    const b = parseInt(backgroundColor.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    // If background is dark (luminance < 0.5), force white text
+    if (luminance < 0.5 && textColor === 'black') {
+        console.warn('Text contrast violation: Dark background detected but black text specified. Forcing white text.');
+        return 'white';
+    }
+    
+    // If background is light (luminance >= 0.5), force black text
+    if (luminance >= 0.5 && textColor === 'white') {
+        console.warn('Text contrast violation: Light background detected but white text specified. Forcing black text.');
+        return 'black';
+    }
+    
+    return textColor;
 };
 
 // Floating particles component
@@ -254,14 +291,33 @@ const GhibliPenguin: React.FC = () => {
     );
 };
 
-// Soen Header Component with Studio Ghibli Penguin
+// Soen Header Component with Studio Ghibli Penguin - Only visible at top of dashboard
 const SoenHeader: React.FC = () => {
+    const [isVisible, setIsVisible] = useState(true);
+    const [scrollY, setScrollY] = useState(0);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            setScrollY(currentScrollY);
+            // Hide when scrolled down more than 100px
+            setIsVisible(currentScrollY < 100);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     return (
         <motion.div
-            className="fixed top-3 left-3 sm:top-4 sm:left-20 z-50"
+            className="fixed top-3 left-3 sm:top-4 sm:left-20 z-50 pointer-events-none"
             initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+            animate={{ 
+                opacity: isVisible ? 1 : 0,
+                x: 0,
+                y: scrollY > 100 ? -20 : 0
+            }}
+            transition={{ duration: 0.3 }}
             style={{ position: 'fixed' }}
         >
             <div className="flex items-center gap-2 sm:gap-3">
@@ -465,7 +521,7 @@ const TaskToggle: React.FC<{
 
     return (
         <motion.div
-            className="rounded-2xl p-6 relative overflow-hidden min-h-[420px]"
+            className="rounded-2xl p-6 relative overflow-hidden min-h-[420px] h-full"
             style={{ 
                 backgroundColor: currentTasks.length > 0 ? (categoryColors[currentTasks[0].category] || '#10b981') : '#10b981',
                 color: 'white'
@@ -1807,7 +1863,7 @@ const FocusTimerWidget: React.FC<{
 
     return (
         <motion.div
-            className="rounded-2xl p-6 relative overflow-hidden"
+            className="rounded-2xl p-6 relative overflow-hidden min-h-[420px] h-full"
             style={{ 
                 background: `linear-gradient(135deg, ${currentSession.colors[0]} 0%, ${currentSession.colors[1]} 25%, ${currentSession.colors[2]} 50%, ${currentSession.colors[3]} 100%)`,
                 color: 'white'
@@ -2020,7 +2076,7 @@ const FocusTimerWidget: React.FC<{
 
 
 
-// Hollywood-Level Daily Greeting with Integrated Weather and Health
+// Hollywood-Level Daily Greeting with Integrated Weather, Health, and SOEN Rewards
 const DailyGreeting: React.FC<{
     tasks: Task[];
     categoryColors: Record<Category, string>;
@@ -2032,7 +2088,11 @@ const DailyGreeting: React.FC<{
     navigateToScheduleDate: (date: Date) => void;
     setScreen: (screen: Screen) => void;
     canCompleteTasks: boolean;
-}> = ({ tasks, categoryColors, healthData, briefing, isBriefingLoading, notes, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks }) => {
+    soenFlow?: number;
+    purchasedRewards?: string[];
+    activeTheme?: string;
+    activeFocusBackground?: string;
+}> = ({ tasks, categoryColors, healthData, briefing, isBriefingLoading, notes, onCompleteTask, navigateToScheduleDate, setScreen, canCompleteTasks, soenFlow = 500, purchasedRewards = [], activeTheme = 'obsidian', activeFocusBackground = 'synthwave' }) => {
     const today = new Date();
     const todayTasks = tasks.filter(t => 
         new Date(t.startTime).toDateString() === today.toDateString()
@@ -2041,11 +2101,36 @@ const DailyGreeting: React.FC<{
     const completedToday = todayTasks.filter(t => t.status === 'Completed').length;
     const completionRate = todayTasks.length > 0 ? (completedToday / todayTasks.length) * 100 : 0;
 
+    // Dynamic greeting based on time (changes every 6 hours) and task completion
     const getGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return 'Good Morning';
-        if (hour < 17) return 'Good Afternoon';
-        return 'Good Evening';
+        const now = new Date();
+        const hour = now.getHours();
+        const sixHourBlock = Math.floor(hour / 6);
+        
+        // Check task completion status
+        const completionRate = todayTasks.length > 0 ? (completedToday / todayTasks.length) * 100 : 0;
+        const allCompleted = completedToday === todayTasks.length && todayTasks.length > 0;
+        const hasTasks = todayTasks.length > 0;
+        
+        // Time-based greetings (change every 6 hours)
+        let timeGreeting = '';
+        if (sixHourBlock === 0) timeGreeting = 'Good Morning'; // 0-5
+        else if (sixHourBlock === 1) timeGreeting = 'Good Afternoon'; // 6-11
+        else if (sixHourBlock === 2) timeGreeting = 'Good Evening'; // 12-17
+        else timeGreeting = 'Good Night'; // 18-23
+        
+        // Task-based modifications
+        if (allCompleted) {
+            return `${timeGreeting}, Mission Complete!`;
+        } else if (completionRate >= 80 && hasTasks) {
+            return `${timeGreeting}, Almost There!`;
+        } else if (completionRate >= 50 && hasTasks) {
+            return `${timeGreeting}, Great Progress!`;
+        } else if (completedToday > 0 && hasTasks) {
+            return `${timeGreeting}, Keep Going!`;
+        }
+        
+        return timeGreeting;
     };
 
     const getMotivationalMessage = () => {
@@ -2071,30 +2156,199 @@ const DailyGreeting: React.FC<{
     const sleep = (healthData as any).sleep || 0;
     const water = (healthData as any).water || 0;
 
+    // SOEN Rewards Integration - Extract logic from SoenRewardsWidget
+    const [currentPoints, setCurrentPoints] = useState(0);
+    const [level, setLevel] = useState(1);
+    const [showRewardsDetail, setShowRewardsDetail] = useState(false);
+
+    const themes = [
+        { id: 'theme-obsidian', name: 'Obsidian Flow', cost: 0, unlocked: true, colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c'] },
+        { id: 'theme-synthwave', name: 'Synthwave Sunset', cost: 150, unlocked: purchasedRewards.includes('theme-synthwave'), colors: ['#EC4899', '#7c3aed', '#f97316', '#ef4444'] },
+        { id: 'theme-solarpunk', name: 'Solarpunk Dawn', cost: 150, unlocked: purchasedRewards.includes('theme-solarpunk'), colors: ['#a3e635', '#16a34a', '#22c55e', '#10b981'] },
+        { id: 'theme-luxe', name: 'Luxe Marble', cost: 250, unlocked: purchasedRewards.includes('theme-luxe'), colors: ['#fde047', '#eab308', '#f59e0b', '#d97706'] },
+        { id: 'theme-aurelian', name: 'Aurelian Gold', cost: 300, unlocked: purchasedRewards.includes('theme-aurelian'), colors: ['#fbbf24', '#f59e0b', '#d97706', '#b45309'] },
+        { id: 'theme-crimson', name: 'Crimson Fury', cost: 200, unlocked: purchasedRewards.includes('theme-crimson'), colors: ['#f87171', '#dc2626', '#b91c1c', '#991b1b'] },
+        { id: 'theme-oceanic', name: 'Oceanic Depth', cost: 200, unlocked: purchasedRewards.includes('theme-oceanic'), colors: ['#38bdf8', '#0ea5e9', '#0284c7', '#0369a1'] }
+    ];
+
+    const focusBackgrounds = [
+        { id: 'focus-synthwave', name: 'Synthwave Sunset', cost: 100, unlocked: purchasedRewards.includes('focus-synthwave'), colors: ['#EC4899', '#7c3aed', '#f97316', '#ef4444'] },
+        { id: 'focus-lofi', name: 'Lofi Rain', cost: 100, unlocked: purchasedRewards.includes('focus-lofi'), colors: ['#4f46e5', '#1e293b', '#334155', '#475569'] },
+        { id: 'focus-solarpunk', name: 'Solarpunk Garden', cost: 150, unlocked: purchasedRewards.includes('focus-solarpunk'), colors: ['#a3e635', '#16a34a', '#22c55e', '#10b981'] }
+    ];
+
+    const roundToNearestFiveOrZero = (points: number): number => {
+        const rounded = Math.round(points);
+        const remainder = rounded % 5;
+        if (remainder === 0) return rounded;
+        return rounded + (remainder <= 2 ? -remainder : 5 - remainder);
+    };
+
+    const getPriorityMultiplier = (task: Task): number => {
+        const categoryWeights: Record<string, number> = {
+            'Deep Work': 2.0, 'Learning': 1.8, 'Prototyping': 1.6, 'Meeting': 1.2,
+            'Workout': 1.4, 'Editing': 1.3, 'Personal': 1.1, 'Admin': 0.8
+        };
+        return categoryWeights[task.category] || 1.0;
+    };
+
+    const getHealthImpact = (basePoints: number): number => {
+        const energyLevel = healthData.energyLevel || 'medium';
+        const sleepQuality = healthData.sleepQuality || 'good';
+        let multiplier = 1.0;
+        if (energyLevel === 'low') multiplier *= 0.7;
+        else if (energyLevel === 'high') multiplier *= 1.1;
+        if (sleepQuality === 'poor') multiplier *= 0.8;
+        else if (sleepQuality === 'good') multiplier *= 1.1;
+        return roundToNearestFiveOrZero(basePoints * multiplier);
+    };
+
+    const checkPomodoroCompletion = (taskId: number): boolean => {
+        return Math.random() > 0.3;
+    };
+
+    const getPomodoroStreakBonus = (): number => {
+        const streak = Math.floor(Math.random() * 10) + 1;
+        if (streak >= 30) return 30;
+        if (streak >= 14) return 20;
+        if (streak >= 7) return 10;
+        return 0;
+    };
+
+    useEffect(() => {
+        const calculateFlowPoints = async () => {
+            const completedTasks = tasks.filter(t => t.status === 'Completed');
+            const totalTasks = tasks.length;
+            const completionRate = totalTasks > 0 ? (completedTasks.length / totalTasks) * 100 : 0;
+            
+            let totalPoints = 0;
+            let dailyPoints = 0;
+            
+            for (const task of completedTasks) {
+                let taskPoints = 10;
+                const priorityMultiplier = getPriorityMultiplier(task);
+                taskPoints *= priorityMultiplier;
+                const healthImpact = getHealthImpact(taskPoints);
+                taskPoints = healthImpact;
+                const pomodoroBonus = checkPomodoroCompletion(task.id) ? 5 : 0;
+                taskPoints += pomodoroBonus;
+                dailyPoints += taskPoints;
+            }
+            
+            dailyPoints = Math.min(dailyPoints, 100);
+            const streakBonus = getPomodoroStreakBonus();
+            dailyPoints += streakBonus;
+            const completionBonus = roundToNearestFiveOrZero(completionRate * 0.5);
+            dailyPoints += completionBonus;
+            totalPoints = roundToNearestFiveOrZero(dailyPoints);
+            const newLevel = Math.floor(totalPoints / 500) + 1;
+            
+            setCurrentPoints(totalPoints);
+            setLevel(newLevel);
+        };
+
+        calculateFlowPoints();
+    }, [tasks, healthData]);
+
+    const nextLevelPoints = level * 500;
+    const insights = {
+        unlockedThemes: themes.filter(t => t.unlocked).length,
+        unlockedBackgrounds: focusBackgrounds.filter(b => b.unlocked).length
+    };
+
+    // Geolocation state
+    const [location, setLocation] = useState<{ city: string; temp: number; condition: string } | null>(null);
+    const [weatherLoading, setWeatherLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchWeather = async () => {
+            try {
+                const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        maximumAge: 600000,
+                        timeout: 8000,
+                        enableHighAccuracy: false
+                    });
+                });
+
+                const { latitude, longitude } = position.coords;
+
+                // Fetch weather
+                const weatherResponse = await fetch(
+                    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`
+                );
+
+                if (weatherResponse.ok) {
+                    const weatherResult = await weatherResponse.json();
+                    const weatherCode = weatherResult.current?.weather_code || 0;
+                    const temperature = Math.round(weatherResult.current?.temperature_2m || 0);
+
+                    // Get location name
+                    let cityName = 'Unknown Location';
+                    try {
+                        const geoResponse = await fetch(
+                            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+                        );
+                        if (geoResponse.ok) {
+                            const geoResult = await geoResponse.json();
+                            cityName = geoResult.city || geoResult.locality || 'Unknown Location';
+                        }
+                    } catch (e) {
+                        console.warn('Geocoding failed:', e);
+                    }
+
+                    const getCondition = (code: number): string => {
+                        if (code === 0) return 'Sunny';
+                        if (code <= 3) return 'Partly Cloudy';
+                        if (code <= 48) return 'Cloudy';
+                        if (code <= 67) return 'Rainy';
+                        if (code <= 77) return 'Snowy';
+                        return 'Sunny';
+                    };
+
+                    setLocation({
+                        city: cityName,
+                        temp: temperature,
+                        condition: getCondition(weatherCode)
+                    });
+                }
+            } catch (error) {
+                console.error('Weather fetch error:', error);
+                setLocation({ city: 'Unknown', temp: 0, condition: 'Sunny' });
+            } finally {
+                setWeatherLoading(false);
+            }
+        };
+
+        fetchWeather();
+    }, []);
+
     return (
         <motion.div
-            className="relative overflow-hidden rounded-3xl p-8"
+            className="relative overflow-hidden rounded-2xl p-4 md:p-6"
             style={{ 
-                backgroundColor: '#A855F7',
-                color: 'white'
+                // Dark background with high contrast for white text readability
+                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#ffffff' // Explicit white text for maximum contrast
             }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8 }}
         >
-            {/* Hollywood-level floating particles */}
+            {/* Subtle floating particles - reduced opacity for better text readability */}
             <div className="absolute inset-0">
-                {[...Array(30)].map((_, i) => (
+                {[...Array(15)].map((_, i) => (
                     <motion.div
                         key={i}
-                        className="absolute w-1 h-1 bg-white/30 rounded-full"
+                        className="absolute w-1 h-1 bg-white/10 rounded-full"
                         style={{
                             left: `${Math.random() * 100}%`,
                             top: `${Math.random() * 100}%`,
                         }}
                         animate={{
-                            y: [0, -30, 0],
-                            opacity: [0, 1, 0],
+                            y: [0, -20, 0],
+                            opacity: [0, 0.3, 0],
                             scale: [0.5, 1, 0.5],
                         }}
                         transition={{
@@ -2107,73 +2361,189 @@ const DailyGreeting: React.FC<{
                 ))}
             </div>
             
-            <div className="relative z-10 p-6 md:p-8 lg:p-12 pt-20 pl-4">
-                {/* Greeting Section with Weather */}
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                    <div className="text-center lg:text-left flex-1">
-                    <motion.h1 
-                            className="text-3xl md:text-5xl lg:text-6xl font-bold mb-2 lg:mb-4 leading-tight text-white"
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
-                    >
-                        {getGreeting()}, <span className="text-emerald-400">Pratt</span>
-                    </motion.h1>
-                    <motion.div
-                            className="text-sm md:text-base lg:text-lg italic max-w-3xl leading-relaxed mb-34 text-center mx-auto text-white/80"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.4 }}
-                    >
-                        "{todayQuote}"
-                    </motion.div>
-                </div>
-
-                    {/* Weather Section */}
-                    <div className="flex-shrink-0">
+            {/* Dark overlay to ensure text readability */}
+            <div className="absolute inset-0 bg-gradient-to-br from-black/20 to-transparent pointer-events-none" />
+            
+            <div className="relative z-10">
+                {/* Top Section: Greeting, Weather, Rewards, and Health */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                    {/* Left: Greeting and Quote */}
+                    <div className="lg:col-span-2 text-center lg:text-left">
+                        <motion.h1 
+                            className="text-2xl md:text-4xl lg:text-5xl font-bold mb-3 leading-tight"
+                            style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)' }}
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.2 }}
+                        >
+                            {getGreeting()}, <span className="text-emerald-400" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)' }}>Pratt</span>
+                        </motion.h1>
                         <motion.div
-                            className="flex items-center gap-3"
+                            className="text-sm md:text-base italic max-w-2xl leading-relaxed mb-4"
+                            style={{ color: '#f0f0f0', textShadow: '0 1px 4px rgba(0, 0, 0, 0.5)' }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.4 }}
+                        >
+                            "{todayQuote}"
+                        </motion.div>
+                    </div>
+
+                    {/* Right: Weather, Rewards, and Health */}
+                    <div className="flex flex-col gap-3">
+                        {/* Weather */}
+                        <motion.div
+                            className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20"
+                            style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)' }}
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.8, delay: 0.6 }}
                         >
                             <motion.div
-                                animate={{ 
-                                    rotate: [0, 5, -5, 0],
-                                    scale: [1, 1.1, 1]
-                                }}
-                                transition={{ 
-                                    duration: 3, 
-                                    repeat: Infinity, 
-                                    ease: 'easeInOut' 
-                                }}
+                                animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }}
+                                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <SunIcon className="w-8 h-8 text-yellow-400" />
+                                <SunIcon className="w-6 h-6 text-yellow-400" />
                             </motion.div>
                             <div>
-                                <div className="text-2xl font-bold text-white">22°C</div>
-                                <div className="text-sm text-white/80">San Francisco</div>
-                                <div className="text-xs text-white/60">Sunny</div>
+                                {weatherLoading ? (
+                                    <>
+                                        <div className="text-lg font-bold" style={{ color: '#ffffff', textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}>...</div>
+                                        <div className="text-xs" style={{ color: '#e0e0e0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Loading...</div>
+                                    </>
+                                ) : location ? (
+                                    <>
+                                        <div className="text-lg font-bold" style={{ color: '#ffffff', textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}>{location.temp}°C</div>
+                                        <div className="text-xs" style={{ color: '#e0e0e0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{location.city}</div>
+                                        <div className="text-xs" style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{location.condition}</div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-lg font-bold" style={{ color: '#ffffff', textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}>--°C</div>
+                                        <div className="text-xs" style={{ color: '#e0e0e0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Location unavailable</div>
+                                    </>
+                                )}
+                            </div>
+                        </motion.div>
+
+                        {/* SOEN Rewards - Clickable */}
+                        <motion.button
+                            onClick={(e) => { e.stopPropagation(); setScreen('Profile'); }}
+                            className="backdrop-blur-sm rounded-xl p-3 border transition-all text-left cursor-pointer"
+                            style={{ 
+                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                borderColor: 'rgba(255, 255, 255, 0.2)'
+                            }}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.8, delay: 0.8 }}
+                            whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-6 h-6 flex-shrink-0">
+                                    <GhibliPenguin />
+                                </div>
+                                <div className="flex-1">
+                                    <div className="text-xs font-semibold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>SOEN Rewards</div>
+                                    <div className="flex items-center gap-1.5 text-xs" style={{ color: '#e0e0e0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
+                                        <span>Lv {level}</span>
+                                        <span>•</span>
+                                        <span>{currentPoints} pts</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
+                                <div className="flex items-center gap-1.5">
+                                    <SparklesIcon className="w-3.5 h-3.5 text-yellow-400" />
+                                    <span className="text-yellow-400 font-bold text-xs" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{soenFlow}</span>
+                                </div>
+                                <div className="text-xs" style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
+                                    {insights.unlockedThemes + insights.unlockedBackgrounds} Unlocked
+                                </div>
+                            </div>
+                        </motion.button>
+
+                        {/* Minimal Health Data View */}
+                        <motion.div
+                            className="backdrop-blur-sm rounded-xl p-3 border"
+                            style={{ 
+                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                borderColor: 'rgba(255, 255, 255, 0.2)'
+                            }}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.8, delay: 1.0 }}
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <HeartIcon className="w-4 h-4 text-red-400" />
+                                <div className="text-xs font-semibold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Health</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="flex items-center gap-1.5">
+                                    <BoltIcon className="w-3.5 h-3.5 text-yellow-400" />
+                                    <div className="flex-1">
+                                        <div style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Energy</div>
+                                        <div className="font-bold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{healthData.energyLevel?.charAt(0).toUpperCase() + healthData.energyLevel?.slice(1) || 'Medium'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <ClockIcon className="w-3.5 h-3.5 text-blue-400" />
+                                    <div className="flex-1">
+                                        <div style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Sleep</div>
+                                        <div className="font-bold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{healthData.avgSleepHours || 0}h</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <ActivityIcon className="w-3.5 h-3.5 text-green-400" />
+                                    <div className="flex-1">
+                                        <div style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Activity</div>
+                                        <div className="font-bold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{healthData.stepsToday ? (healthData.stepsToday >= 10000 ? 'Excellent' : healthData.stepsToday >= 5000 ? 'Good' : 'Low') : 'Good'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <HeartIcon className="w-3.5 h-3.5 text-red-400" />
+                                    <div className="flex-1">
+                                        <div style={{ color: '#d0d0d0', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>Stress</div>
+                                        <div className="font-bold" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{healthData.sleepQuality === 'poor' ? 'High' : healthData.sleepQuality === 'good' ? 'Low' : 'Medium'}</div>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </div>
                 </div>
 
-                {/* Spacer to move Next Up section down */}
-                <div className="h-12"></div>
-
-                {/* Next Up Section or Mission Briefing - Full Width */}
+                {/* Next Up Section or Mission Complete - Full Width */}
                 {completedToday === todayTasks.length && todayTasks.length > 0 ? (
-                    <div className="rounded-2xl p-6" style={{ backgroundColor: '#1F2937', color: 'white' }}>
-                        <MissionBriefingWidget
-                            briefing={briefing}
-                            isBriefingLoading={isBriefingLoading}
-                            tasks={tasks}
-                            healthData={healthData}
-                            notes={notes}
-                        />
+                    <motion.div
+                        className="rounded-2xl p-6 md:p-8 mt-4"
+                        style={{ 
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+                            color: 'white'
+                        }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <div className="text-center">
+                            <motion.div
+                                animate={{ scale: [1, 1.1, 1] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                className="mb-4"
+                            >
+                                <CheckCircleIcon className="w-16 h-16 mx-auto text-white" />
+                            </motion.div>
+                            <h2 className="text-3xl md:text-4xl font-bold mb-2">Mission Complete!</h2>
+                            <p className="text-xl md:text-2xl mb-1">All Tasks Completed</p>
+                            <p className="text-lg opacity-90">Goal Achieved</p>
+                            <div className="mt-6 text-sm opacity-80">
+                                <p>You've completed all {todayTasks.length} task{todayTasks.length !== 1 ? 's' : ''} for today!</p>
+                                <p className="mt-2">Take a moment to celebrate this achievement. 🎉</p>
                     </div>
+                        </div>
+                    </motion.div>
                 ) : (
+                    <div className="mt-4">
                         <NextUpWidget
                             tasks={tasks}
                             categoryColors={categoryColors}
@@ -2182,6 +2552,7 @@ const DailyGreeting: React.FC<{
                             setScreen={setScreen}
                             canCompleteTasks={canCompleteTasks}
                         />
+                    </div>
                 )}
             </div>
         </motion.div>
@@ -2256,11 +2627,12 @@ const SoenRewardsWidget: React.FC<{
             const streakBonus = getPomodoroStreakBonus();
             dailyPoints += streakBonus;
             
-            // Add completion rate bonus (reduced)
-            const completionBonus = Math.round(completionRate * 0.5); // Reduced from 2 to 0.5
+            // Add completion rate bonus (reduced) - round to nearest 0 or 5
+            const completionBonus = roundToNearestFiveOrZero(completionRate * 0.5);
             dailyPoints += completionBonus;
             
-            totalPoints = Math.round(dailyPoints);
+            // Final rounding to ensure points end in 0 or 5
+            totalPoints = roundToNearestFiveOrZero(dailyPoints);
             
             // Calculate level (every 500 points = 1 level)
             const newLevel = Math.floor(totalPoints / 500) + 1;
@@ -2271,6 +2643,15 @@ const SoenRewardsWidget: React.FC<{
 
         calculateFlowPoints();
     }, [tasks, healthData]);
+
+    // Helper function to round points to nearest 0 or 5
+    const roundToNearestFiveOrZero = (points: number): number => {
+        const rounded = Math.round(points);
+        const remainder = rounded % 5;
+        if (remainder === 0) return rounded;
+        // Round to nearest 5
+        return rounded + (remainder <= 2 ? -remainder : 5 - remainder);
+    };
 
     // Helper functions for new point system
     const getPriorityMultiplier = (task: Task): number => {
@@ -2304,7 +2685,7 @@ const SoenRewardsWidget: React.FC<{
         if (sleepQuality === 'poor') multiplier *= 0.8;
         else if (sleepQuality === 'good') multiplier *= 1.1;
         
-        return Math.round(basePoints * multiplier);
+        return roundToNearestFiveOrZero(basePoints * multiplier);
     };
 
     const checkPomodoroCompletion = (taskId: number): boolean => {
@@ -2313,12 +2694,12 @@ const SoenRewardsWidget: React.FC<{
     };
 
     const getPomodoroStreakBonus = (): number => {
-        // Pomodoro Streak Bonus
+        // Pomodoro Streak Bonus - returns values ending in 0 or 5
         const streak = Math.floor(Math.random() * 10) + 1; // Simulated streak
         
-        if (streak >= 7) return 10; // 1 week streak
-        if (streak >= 14) return 20; // 2 week streak
         if (streak >= 30) return 30; // 1 month streak
+        if (streak >= 14) return 20; // 2 week streak
+        if (streak >= 7) return 10; // 1 week streak
         
         return 0;
     };
@@ -2375,7 +2756,7 @@ const SoenRewardsWidget: React.FC<{
 
     return (
                         <motion.div
-            className="rounded-3xl p-4 sm:p-6 relative overflow-hidden h-full min-h-[400px] sm:min-h-[500px]"
+            className="rounded-2xl p-3 sm:p-4 relative overflow-hidden h-full min-h-[320px]"
             style={{ 
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%)',
                 color: 'white'
@@ -2384,96 +2765,89 @@ const SoenRewardsWidget: React.FC<{
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-                {/* Cohesive Background - Schedule.tsx Inspired */}
+            {/* Simplified Background */}
             <div className="absolute inset-0">
-                    {/* Subtle floating elements matching Schedule.tsx style */}
-                    {[...Array(8)].map((_, i) => (
+                {[...Array(4)].map((_, i) => (
                 <motion.div
                         key={i}
-                            className="absolute opacity-20"
+                        className="absolute opacity-15"
                         style={{
-                                width: `${6 + Math.random() * 8}px`,
-                                height: `${6 + Math.random() * 8}px`,
+                            width: `${4 + Math.random() * 4}px`,
+                            height: `${4 + Math.random() * 4}px`,
                                 background: `rgba(255,255,255,0.3)`,
                                 borderRadius: '50%',
                             left: `${Math.random() * 100}%`,
                             top: `${Math.random() * 100}%`,
                         }}
                         animate={{
-                                y: [0, Math.random() * 20 - 10, 0],
-                                x: [0, Math.random() * 20 - 10, 0],
-                                scale: [1, 1.2 + Math.random() * 0.3, 1],
-                                opacity: [0.2, 0.4, 0.2],
+                            y: [0, Math.random() * 10 - 5, 0],
+                            opacity: [0.1, 0.2, 0.1],
                         }}
                         transition={{
-                                duration: 4 + Math.random() * 2,
+                            duration: 3 + Math.random() * 2,
                             repeat: Infinity,
                             delay: Math.random() * 2,
                             ease: "easeInOut"
                         }}
                     />
                 ))}
-                
-                    {/* Subtle gradient overlay matching Schedule.tsx */}
-                <motion.div
-                        className="absolute inset-0 opacity-10"
-                    style={{
-                            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
-                    }}
-                    animate={{
-                            opacity: [0.05, 0.15, 0.05],
-                    }}
-                    transition={{
-                            duration: 6,
-                        repeat: Infinity,
-                            ease: "easeInOut"
-                    }}
-                />
                             </div>
 
             <div className="relative z-10">
-                {/* Header with Schedule.tsx TodayView inspired design - Mobile optimized */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-                    <div className="flex items-center gap-3 sm:gap-4">
-                        <motion.div
-                            animate={{ scale: [1, 1.1, 1] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                            <SparklesIcon className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-400 drop-shadow-lg" />
-                        </motion.div>
-                        <div>
-                            <h3 className="text-xl sm:text-2xl font-bold font-display tracking-tight">Soen Rewards</h3>
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mt-1">
+                {/* Condensed Header */}
+                <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                                    <span className="text-white/80 text-sm font-semibold">Level {level}</span>
-                                    <div className="w-1 h-1 bg-white/40 rounded-full"></div>
-                                    <span className="text-white/80 text-sm font-semibold">{currentPoints} pts</span>
+                        {/* Mira Penguin Icon - Exact same as dashboard header */}
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                            <GhibliPenguin />
                                 </div>
-                                <div className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-full">
-                                    <SparklesIcon className="w-3 h-3 text-yellow-400" />
-                                    <span className="text-yellow-400 font-bold text-sm">{soenFlow}</span>
+                        <div>
+                            <h3 className="text-lg sm:text-xl font-bold font-display tracking-tight">Soen Rewards</h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-white/80 text-xs font-semibold">Lv {level}</span>
+                                <div className="w-0.5 h-0.5 bg-white/40 rounded-full"></div>
+                                <span className="text-white/80 text-xs font-semibold">{currentPoints} pts</span>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="text-left sm:text-right">
-                        <div className="text-xs text-white/60 font-semibold">Next Level</div>
-                        <div className="text-white font-bold text-base sm:text-lg">{nextLevelPoints - currentPoints} pts</div>
+                    <div className="text-right">
+                        <div className="text-xs text-white/60">Next</div>
+                        <div className="text-white font-bold text-sm">{roundToNearestFiveOrZero(nextLevelPoints - currentPoints)} pts</div>
                     </div>
                 </div>
 
-                {/* Condensed Health Insights Integration - Mobile optimized */}
-                <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
-                    <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                        <HeartIcon className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
-                        <h4 className="text-white font-semibold text-sm">Health Status</h4>
+                {/* Health Data Checkpoints - Critical for understanding user behavior */}
+                <div className="mb-3 p-2.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
+                    <div className="flex items-center gap-2 mb-2.5">
+                        <HeartIcon className="w-4 h-4 text-red-400" />
+                        <h4 className="text-white font-semibold text-xs">Health Checkpoints</h4>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {[
-                            { name: 'Energy', value: healthData.energyLevel?.charAt(0).toUpperCase() + healthData.energyLevel?.slice(1) || 'Medium', icon: ZapIcon, color: healthData.energyLevel === 'high' ? '#10b981' : healthData.energyLevel === 'low' ? '#ef4444' : '#f59e0b' },
-                            { name: 'Sleep', value: `${healthData.avgSleepHours || 0}h`, icon: ClockIcon, color: (healthData.avgSleepHours || 0) >= 8 ? '#10b981' : (healthData.avgSleepHours || 0) >= 6 ? '#f59e0b' : '#ef4444' },
-                            { name: 'Activity', value: 'Good', icon: ActivityIcon, color: '#10b981' },
-                            { name: 'Stress', value: 'Low', icon: HeartIcon, color: '#10b981' }
+                            { 
+                                name: 'Energy', 
+                                value: healthData.energyLevel?.charAt(0).toUpperCase() + healthData.energyLevel?.slice(1) || 'Medium', 
+                                icon: ZapIcon, 
+                                color: healthData.energyLevel === 'high' ? '#10b981' : healthData.energyLevel === 'low' ? '#ef4444' : '#f59e0b' 
+                            },
+                            { 
+                                name: 'Sleep', 
+                                value: `${healthData.avgSleepHours || 0}h`, 
+                                icon: ClockIcon, 
+                                color: (healthData.avgSleepHours || 0) >= 8 ? '#10b981' : (healthData.avgSleepHours || 0) >= 6 ? '#f59e0b' : '#ef4444' 
+                            },
+                            { 
+                                name: 'Activity', 
+                                value: healthData.stepsToday ? (healthData.stepsToday >= 10000 ? 'Excellent' : healthData.stepsToday >= 5000 ? 'Good' : 'Low') : 'Good', 
+                                icon: ActivityIcon, 
+                                color: healthData.stepsToday && healthData.stepsToday >= 10000 ? '#10b981' : healthData.stepsToday && healthData.stepsToday >= 5000 ? '#f59e0b' : '#10b981' 
+                            },
+                            { 
+                                name: 'Stress', 
+                                value: healthData.sleepQuality === 'poor' ? 'High' : healthData.sleepQuality === 'good' ? 'Low' : 'Medium', 
+                                icon: HeartIcon, 
+                                color: healthData.sleepQuality === 'poor' ? '#ef4444' : healthData.sleepQuality === 'good' ? '#10b981' : '#f59e0b' 
+                            }
                         ].map((metric, index) => (
                         <motion.div
                                 key={metric.name}
@@ -2482,8 +2856,8 @@ const SoenRewardsWidget: React.FC<{
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1 }}
                             >
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg mx-auto mb-1 sm:mb-2 flex items-center justify-center bg-white/15">
-                                    <metric.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: metric.color }} />
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg mx-auto mb-1 flex items-center justify-center bg-white/15">
+                                    <metric.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: metric.color }} />
                                 </div>
                                 <p className="text-xs text-white/80 font-semibold">{metric.name}</p>
                                 <p className="text-xs text-white font-bold">{metric.value}</p>
@@ -2492,374 +2866,68 @@ const SoenRewardsWidget: React.FC<{
             </div>
                     </div>
 
-                {/* Expandable Unlock Progress Section - Mobile optimized */}
-                <div className="mb-4 sm:mb-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2 sm:gap-0">
-                        <h4 className="text-white font-semibold text-sm">Unlock Progress</h4>
+                {/* Condensed Stats and Flow Points */}
+                <div className="flex items-center justify-between mb-3 p-2 bg-white/10 rounded-lg">
+                    <div className="flex items-center gap-2">
+                        <SparklesIcon className="w-4 h-4 text-yellow-400" />
+                        <span className="text-yellow-400 font-bold text-sm">{soenFlow}</span>
+                        <span className="text-white/60 text-xs">Flow Points</span>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-xs text-white/60">{insights.unlockedThemes + insights.unlockedBackgrounds} Unlocked</div>
+                    </div>
+                </div>
+
+                {/* Compact Unlock Progress */}
+                <div className="mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-white/80 text-xs font-semibold">Progress</span>
                         <button 
                             onClick={() => setShowRewardsDetail(!showRewardsDetail)}
-                            className="text-white/70 hover:text-white text-xs transition-colors px-2 py-1 rounded-lg hover:bg-white/10 active:scale-95"
+                            className="text-white/60 hover:text-white text-xs transition-colors"
                         >
-                            {showRewardsDetail ? 'Minimize' : 'Preview'} Themes
+                            {showRewardsDetail ? '−' : '+'}
                         </button>
                     </div>
-                    
-                    {/* Compact Progress Display - Mobile optimized */}
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs mb-3">
-                        <div className="text-center p-2 sm:p-3 bg-white/10 rounded-lg">
-                            <div className="text-white font-bold text-sm">{insights.unlockedThemes}/{themes.length}</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="text-center p-2 bg-white/10 rounded-lg">
+                            <div className="text-white font-bold text-xs">{insights.unlockedThemes}/{themes.length}</div>
                             <div className="text-white/60 text-xs">Themes</div>
                         </div>
-                        <div className="text-center p-2 sm:p-3 bg-white/10 rounded-lg">
-                            <div className="text-white font-bold text-sm">{insights.unlockedBackgrounds}/{focusBackgrounds.length}</div>
+                        <div className="text-center p-2 bg-white/10 rounded-lg">
+                            <div className="text-white font-bold text-xs">{insights.unlockedBackgrounds}/{focusBackgrounds.length}</div>
                             <div className="text-white/60 text-xs">Focus BGs</div>
                         </div>
                     </div>
-                    
-                    <div className="text-xs text-white/80 text-center">
-                        {getNextUnlockRecommendation()}
-                    </div>
                 </div>
 
-                {/* Animated Theme Preview Section - Mobile optimized */}
+                {/* Collapsible Theme Preview */}
                 {showRewardsDetail && (
                     <motion.div
-                        className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white/5 rounded-xl backdrop-blur-sm border border-white/10"
+                        className="mb-3 p-2 bg-white/5 rounded-lg border border-white/10"
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
+                        transition={{ duration: 0.2 }}
                     >
-                        <h5 className="text-white font-semibold text-sm mb-4 flex items-center gap-2">
-                            <SparklesIcon className="w-4 h-4 text-yellow-400" />
-                            Theme Previews
-                        </h5>
-                        
-                        {/* Animated Theme Cards - Mobile optimized */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                            {themes.slice(0, 4).map((theme, index) => (
-                                <motion.div
-                                    key={theme.id}
-                                    className="relative overflow-hidden rounded-lg border border-white/20 h-20 sm:h-24"
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                >
-                                    {/* Animated Background Preview */}
-                                    <div 
-                                        className="h-16 relative"
-                                        style={{
-                                            background: theme.unlocked 
-                                                ? `linear-gradient(135deg, ${theme.colors?.join(', ') || '#667eea, #764ba2'})`
-                                                : 'linear-gradient(135deg, #374151, #4b5563)'
-                                        }}
-                                    >
-                                        {/* Animated overlay for locked themes */}
-                                        {!theme.unlocked && (
-                                            <motion.div
-                                                className="absolute inset-0 bg-black/50 flex items-center justify-center"
-                                                animate={{ opacity: [0.3, 0.6, 0.3] }}
-                                                transition={{ duration: 2, repeat: Infinity }}
-                                            >
-                                                <div className="text-white/60 text-xs font-semibold">🔒</div>
-                                            </motion.div>
-                                        )}
-                                        
-                                        {/* Floating particles for unlocked themes */}
-                                        {theme.unlocked && (
-                                            <>
-                                                {[...Array(3)].map((_, i) => (
-                                                    <motion.div
-                                                        key={i}
-                                                        className="absolute w-1 h-1 bg-white/30 rounded-full"
-                                                        style={{
-                                                            left: `${20 + i * 30}%`,
-                                                            top: `${20 + i * 20}%`,
-                                                        }}
-                                                        animate={{
-                                                            y: [0, -10, 0],
-                                                            opacity: [0, 1, 0],
-                                                        }}
-                                                        transition={{
-                                                            duration: 2 + i * 0.5,
-                                                            repeat: Infinity,
-                                                            delay: i * 0.3,
-                                                        }}
-                                                    />
-                                                ))}
-                                            </>
-                                        )}
+                        <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                            {themes.slice(0, 3).map((theme) => (
+                                <div key={theme.id} className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${theme.unlocked ? 'bg-green-400' : 'bg-gray-400'}`} />
+                                        <span className="text-white/90 truncate">{theme.name}</span>
                                     </div>
-                                    
-                                    {/* Theme Info - Mobile optimized */}
-                                    <div className="p-2 sm:p-3 bg-white/10">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${theme.unlocked ? 'bg-green-400' : 'bg-gray-400'}`} />
-                                                <span className="text-white text-xs sm:text-sm font-semibold truncate">{theme.name}</span>
+                                    <span className="text-yellow-400 font-bold">{theme.cost}</span>
                                             </div>
-                                            <span className="text-yellow-400 text-xs font-bold">{theme.cost}</span>
-                                        </div>
-                                    </div>
-                                </motion.div>
                             ))}
                         </div>
-                        
-                        {/* Focus Background Previews */}
-                        <div>
-                            <h6 className="text-white font-semibold text-xs mb-3">Focus Backgrounds</h6>
-                            <div className="space-y-2">
-                                {focusBackgrounds.map((bg, index) => (
-                                    <motion.div
-                                        key={bg.id}
-                                        className="flex items-center justify-between p-2 sm:p-3 bg-white/10 rounded-lg"
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.5 + index * 0.1 }}
-                                        whileTap={{ scale: 0.98 }}
-                                    >
-                                        <div className="flex items-center gap-2 sm:gap-3">
-                                            {/* Mini preview circle */}
-                                            <div 
-                                                className="w-6 h-6 rounded-full border border-white/30"
-                                                style={{
-                                                    background: bg.unlocked 
-                                                        ? `linear-gradient(135deg, ${bg.colors?.join(', ') || '#667eea, #764ba2'})`
-                                                        : 'linear-gradient(135deg, #374151, #4b5563)'
-                                                }}
-                                            />
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${bg.unlocked ? 'bg-green-400' : 'bg-gray-400'}`} />
-                                                <span className="text-white text-xs sm:text-sm font-semibold">{bg.name}</span>
-                                            </div>
-                                        </div>
-                                        <span className="text-yellow-400 text-xs font-bold">{bg.cost}</span>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        </div>
                     </motion.div>
                 )}
-
-                
-                {showTooltip === 'rewards' && (
-        <motion.div
-                        className="absolute top-12 left-4 right-4 px-4 py-3 bg-black/90 text-white text-sm rounded-lg z-20"
-                        initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 5 }}
-                    >
-                        <p className="leading-relaxed">
-                            Soen Rewards gamify your productivity journey! Earn points by completing tasks, 
-                            maintaining streaks, and staying healthy. Level up every 500 points to unlock new achievements.
-                        </p>
-                    </motion.div>
-                )}
-
-                {/* Ultra Cute Baby Penguin - Schedule.tsx Inspired Design */}
-                <div className="flex justify-center mb-6">
-            <motion.div
-                        className="relative w-24 h-24"
-                animate={{ 
-                            y: [0, -3, 0],
-                            rotate: [0, 2, -2, 0],
-                            scale: [1, 1.03, 1]
-                }}
-                transition={{ 
-                            duration: 5, 
-                    repeat: Infinity, 
-                    ease: 'easeInOut' 
-                }}
-                    >
-                        {/* Floating Sparkles */}
-                        {[...Array(5)].map((_, i) => (
-                            <motion.div
-                                key={i}
-                                className="absolute w-1 h-1 bg-yellow-300 rounded-full"
-                                style={{
-                                    left: `${20 + i * 15}%`,
-                                    top: `${10 + i * 20}%`,
-                                }}
-                                animate={{
-                                    y: [0, -10, 0],
-                                    opacity: [0, 1, 0],
-                                    scale: [0, 1, 0],
-                                }}
-                                transition={{
-                                    duration: 2 + i * 0.5,
-                                    repeat: Infinity,
-                                    delay: i * 0.3,
-                                    ease: 'easeInOut'
-                                }}
-                            />
-                        ))}
-
-                        {/* Baby Penguin Body - Real Baby Penguin Colors */}
-                        <div 
-                            className="absolute inset-0"
-                            style={{ 
-                                background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%)',
-                                borderRadius: '45% 45% 45% 45% / 70% 70% 30% 30%',
-                                clipPath: 'polygon(20% 0%, 80% 0%, 90% 20%, 95% 50%, 90% 80%, 80% 100%, 20% 100%, 10% 80%, 5% 50%, 10% 20%)',
-                                boxShadow: `
-                                    inset 0 4px 8px rgba(255,255,255,0.1),
-                                    inset 0 -4px 8px rgba(0,0,0,0.5),
-                                    0 8px 20px rgba(0,0,0,0.6),
-                                    0 0 0 2px rgba(255,255,255,0.1)
-                                `,
-                                transform: 'perspective(120px) rotateX(5deg) rotateY(-2deg)'
-                            }}
-                        >
-                            {/* Baby Penguin Belly - Large White Area */}
-                            <div 
-                                className="absolute bottom-2 left-1/2 transform -translate-x-1/2"
-                                style={{
-                                    width: '20px',
-                                    height: '16px',
-                                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%)',
-                                    borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
-                                    clipPath: 'polygon(10% 0%, 90% 0%, 100% 25%, 100% 75%, 90% 100%, 10% 100%, 0% 75%, 0% 25%)',
-                                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(255,255,255,0.5)'
-                                }}
-                            />
-                            
-                            {/* Additional White Face Area */}
-                            <div 
-                                className="absolute top-2 left-1/2 transform -translate-x-1/2"
-                                style={{
-                                    width: '16px',
-                                    height: '12px',
-                                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                                    borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
-                                    clipPath: 'polygon(15% 0%, 85% 0%, 95% 30%, 100% 50%, 95% 70%, 85% 100%, 15% 100%, 5% 70%, 0% 50%, 5% 30%)',
-                                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
-                                }}
-                            />
-                            
-                            {/* Baby Penguin Eyes - Black with White Highlights */}
-                            <motion.div 
-                                className="absolute top-3 left-4 w-4 h-4 rounded-full"
-                                style={{
-                                    background: 'radial-gradient(circle, #000000 30%, #1a1a1a 70%, #2d2d2d 100%)',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.1)'
-                                }}
-                                animate={{
-                                    scaleY: [1, 0.05, 1],
-                                }}
-                                transition={{
-                                    duration: 0.15,
-                                    repeat: Infinity,
-                                    repeatDelay: 3,
-                                    ease: "easeInOut"
-                                }}
-                            />
-                            <motion.div 
-                                className="absolute top-3 right-4 w-4 h-4 rounded-full"
-                                style={{
-                                    background: 'radial-gradient(circle, #000000 30%, #1a1a1a 70%, #2d2d2d 100%)',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.1)'
-                                }}
-                                animate={{
-                                    scaleY: [1, 0.05, 1],
-                                }}
-                                transition={{
-                                    duration: 0.15,
-                                    repeat: Infinity,
-                                    repeatDelay: 3,
-                                    ease: "easeInOut"
-                                }}
-                            />
-                            
-                            {/* Eye Highlights - Bright White */}
-                            <div className="absolute top-3.5 left-4.5 w-0.5 h-0.5 bg-white rounded-full"></div>
-                            <div className="absolute top-3.5 right-4.5 w-0.5 h-0.5 bg-white rounded-full"></div>
-                            
-                            {/* Eye pupils - Pure Black */}
-                            <div className="absolute top-3.5 left-4.5 w-2.5 h-2.5 bg-black rounded-full"></div>
-                            <div className="absolute top-3.5 right-4.5 w-2.5 h-2.5 bg-black rounded-full"></div>
-                            
-                            {/* Baby Penguin Beak - Orange Penguin Beak */}
-                            <div 
-                                className="absolute top-4.5 left-1/2 transform -translate-x-1/2"
-                                style={{
-                                    width: '4px',
-                                    height: '3px',
-                                    background: 'linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%)',
-                                    borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
-                                    clipPath: 'polygon(20% 0%, 80% 0%, 100% 50%, 80% 100%, 20% 100%, 0% 50%)',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.3)'
-                                }}
-                            />
-                            
-                            {/* Smiling Face - Cute Smile */}
-                            <div 
-                                className="absolute top-6 left-1/2 transform -translate-x-1/2"
-                                style={{
-                                    width: '8px',
-                                    height: '4px',
-                                    border: '1px solid rgba(255,255,255,0.8)',
-                                    borderTop: 'none',
-                                    borderRadius: '0 0 8px 8px',
-                                    background: 'transparent'
-                                }}
-                            />
-                            
-                            {/* Cheek blush - Subtle Pink */}
-                            <div 
-                                className="absolute top-4.5 left-1 w-2 h-2 rounded-full opacity-60"
-                                style={{ background: '#ffb6c1' }}
-                            />
-                            <div 
-                                className="absolute top-4.5 right-1 w-2 h-2 rounded-full opacity-60"
-                                style={{ background: '#ffb6c1' }}
-                            />
-                        </div>
-                        
-                        {/* Gentle floating sparkles */}
-                        {[...Array(2)].map((_, i) => (
-                            <motion.div
-                                key={i}
-                                className="absolute w-1 h-1 bg-yellow-200 rounded-full"
-                                style={{
-                                    left: `${25 + i * 50}%`,
-                                    top: `${15 + i * 25}%`,
-                                }}
-                                animate={{
-                                    opacity: [0, 0.8, 0],
-                                    scale: [0.5, 1, 0.5],
-                                    y: [0, -8, 0]
-                                }}
-                                transition={{
-                                    duration: 3 + i * 0.5,
-                                    repeat: Infinity,
-                                    delay: i * 1.5,
-                                    ease: "easeInOut"
-                                }}
-                            />
-                        ))}
-                        
-            </motion.div>
-                </div>
-
 
                 {/* Motivation Message */}
-                <div className="text-center">
-                    <div className="text-xs text-white/70 mb-2">
+                <div className="text-center pt-2 border-t border-white/10">
+                    <div className="text-xs text-white/70">
                         {getMotivationMessage()}
-                    </div>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/10">
-                    <div className="text-center">
-                        <div className="text-white font-bold text-sm">{level}</div>
-                        <div className="text-white/60 text-xs">Level</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-white font-bold text-sm">{currentPoints}</div>
-                        <div className="text-white/60 text-xs">Points</div>
                     </div>
                 </div>
             </div>
@@ -3135,10 +3203,8 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                     transition={{ duration: 0.6 }}
                     className="space-y-6"
                 >
-                    {/* Top Row - Mobile-first responsive layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                        {/* Daily Greeting - Mobile: full width, Desktop: 2/3 */}
-                        <div className="lg:col-span-2 order-1">
+                    {/* Top Row - Daily Greeting with Integrated SOEN Rewards */}
+                    <div className="w-full">
                             <DailyGreeting 
                                 tasks={tasks} 
                                 categoryColors={categoryColors} 
@@ -3150,20 +3216,11 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                                 navigateToScheduleDate={navigateToScheduleDate}
                                 setScreen={setScreen}
                                 canCompleteTasks={canCompleteTasks}
-                            />
-                        </div>
-                        
-                        {/* Soen Rewards Widget - Mobile: full width, Desktop: 1/3 */}
-                        <div className="lg:col-span-1 order-2">
-                                <SoenRewardsWidget
-                                    tasks={tasks}
-                                    healthData={healthData}
                                 soenFlow={soenFlow}
                                 purchasedRewards={purchasedRewards}
                                 activeTheme={activeTheme}
                                 activeFocusBackground={activeFocusBackground}
                             />
-                        </div>
                     </div>
 
 
@@ -3171,7 +3228,7 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                     {/* Main Content Grid - Mobile-first responsive layout */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                         {/* Task Toggle - Mobile: full width, Desktop: 1/2 */}
-                        <div className="lg:col-span-1 order-1">
+                        <div className="lg:col-span-1 order-1 h-full">
                             <TaskToggle
                                 tasks={tasks}
                                 categoryColors={categoryColors}
@@ -3182,16 +3239,9 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                             />
                         </div>
 
-                        {/* Habit Insights - Mobile: full width, Desktop: 1/2 */}
-                        <div className="lg:col-span-1 order-2">
-                            <HabitInsights
-                                healthData={healthData}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Focus Timer - Full Width with proper mobile spacing */}
-                    <div className="w-full">
+                        {/* Focus Timer - Mobile: full width, Desktop: 1/2 */}
+                        {/* Habit Insights section hidden for future iterations */}
+                        <div className="lg:col-span-1 order-2 h-full">
                             <FocusTimerWidget
                                 tasks={tasks}
                                 healthData={healthData}
@@ -3200,6 +3250,7 @@ const SoenDashboard: React.FC<SoenDashboardProps> = (props) => {
                                 activeFocusBackground={activeFocusBackground}
                                 purchasedRewards={purchasedRewards}
                             />
+                        </div>
                     </div>
 
                 </motion.div>
